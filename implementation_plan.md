@@ -241,6 +241,32 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
   - Operational evidence gap disclosures for the 10 unverified runtime controls.
   - Recommended next steps for production.
 
+### Phase 2.6 — Testing Intelligence *(STATUS: COMPLETE)*
+- [x] Authoritative Domain Testing Intelligence Engine (`packages/core/src/testing-intelligence/`):
+  - Data contracts (`types.ts`): `PropertyCategory`, `PropertyImportance`, `PropertyVerificationStatus`, `TestingEvidenceSource`, `CoverageLevel`, `SecurityPropertyDefinition`, `PropertyEvidence`, `TestingEvidence`, `PropertyEvaluation`, `CoverageGap`, `CategoryCoverageSummary`, `RegressionIntelligence`, `TestingCoverageSummary`, and `TestingIntelligenceResult`.
+  - Authoritative 20-Property Security Catalog (`catalog.ts`):
+    - Network Security: `public-ingress-control`, `database-isolation`, `management-plane-isolation`, `network-segmentation`, `deny-boundary-enforcement`
+    - Communication Security: `sensitive-traffic-encryption`, `secure-protocol-enforcement`
+    - Access Control: `least-privilege-access`, `wildcard-access-prevention`, `administrative-access-restriction`
+    - Attack Resistance: `critical-asset-reachability`, `high-risk-attack-path-prevention`, `lateral-movement-containment`, `blast-radius-control`
+    - Architecture: `tier-separation`, `dependency-concentration`, `single-point-of-failure-detection`, `perimeter-boundary`
+    - Remediation: `finding-resolution-verification`, `regression-detection`
+  - Deterministic Regression Intelligence (`regressions.ts`): Evaluates fix verification baseline transitions, distinguishing `healthy` (zero regressions), `regressions-detected` (with exact rule IDs of reintroduced flaws), and explicit `no-baseline`.
+  - Evidence-Based Coverage Evaluator (`coverage.ts`): Evaluates evidence from unit tests, scenarios, fix verification, and graph invariants into `VERIFIED` (1.0 weight), `PARTIAL` (0.5 weight), or `UNVERIFIED` (0.0 weight). Zero fabricated coverage on sparse/empty environments.
+  - Primary Testing Analyzer (`analyzer.ts`): `assessTestingIntelligence(environment, options)` calculating weighted scores (critical = 3, high = 2, normal = 1), qualitative levels (`EXCELLENT`, `GOOD`, `MODERATE`, `WEAK`, `INSUFFICIENT`), 6 category coverage summaries, structured coverage gaps sorted by severity, and deterministic test recommendations.
+- [x] Comprehensive Automated Test Suite:
+  - 253 unit and integration tests passing across 22 test files (22 new tests in `tests/testing-intelligence.test.ts` covering secure web app coverage, database isolation across scenarios, attack-path containment evidence, fix verification evidence, unmodeled operational properties, critical property weighting, half-weight partial evidence, deterministic calculation, canvas coordinate independence, byte-for-byte JSON serialization, category score accuracy, coverage gap severity mapping, deterministic recommendations, scenario catalog reuse, explicit no-baseline status, healthy regression status, regression detection, deterministic gap sorting, DENY boundary verification, encryption status verification, sparse environment protection, and operational capability verification without false claims).
+- [x] Interactive UI Console (`TestingIntelligencePanel.tsx` & `FindingsDrawer.tsx`):
+  - Dedicated `TESTING (${score}/100)` Tab 7 in `FindingsDrawer` with `FlaskConical` icon.
+  - Engineering verification console styling with coverage score, qualitative level badge, and summary.
+  - Critical Coverage, High Coverage, and Overall Coverage progress bars.
+  - Section filters: `Overview`, `Coverage Gaps`, `Properties`, `Categories`, `Regressions`, `Recommendations`.
+  - Regression status card with baseline tracking and warning alerts.
+  - Category breakdown cards with scores, mini progress bars, and property counts.
+  - Structured coverage gap cards with severity badges, "Why It Matters", "Recommended Test", and one-click "Locate" canvas integration.
+  - Security property catalog with status pills (`VERIFIED`, `PARTIAL`, `UNVERIFIED`) and evidence provenance tags.
+  - Ordered deterministic test recommendations.
+
 ---
 
 ## Phase 3 — Defense, Verification & Proof ("Prove")

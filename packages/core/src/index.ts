@@ -11,3 +11,4 @@ export * from './attack-path/index.js';
 export * from './blast-radius/index.js';
 export * from './architecture/index.js';
 export * from './production-readiness/index.js';
+export * from './testing-intelligence/index.js';

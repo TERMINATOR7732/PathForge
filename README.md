@@ -86,7 +86,7 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 231 tests passing)
+├── tests/                       # Automated test suite (Vitest — 253 tests passing)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
@@ -107,6 +107,7 @@ PathForge/
 │   ├── attack-path-risk.test.ts # Phase 2.3 risk-weighted attack path intelligence tests
 │   ├── architecture-analysis.test.ts # Phase 2.4 architecture analysis intelligence tests
 │   ├── production-readiness.test.ts # Phase 2.5 production readiness assessment tests
+│   ├── testing-intelligence.test.ts # Phase 2.6 testing intelligence & verification coverage tests
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -417,6 +418,83 @@ Rather than a generic scorecard, PathForge composes all existing intelligence la
 
 ---
 
+## Testing Intelligence & Verification Coverage (Phase 2.6)
+
+PathForge adds a deterministic **Testing Intelligence** layer that evaluates the modeled infrastructure and its verification evidence, answering:
+
+> *"How well is this modeled infrastructure protected by verification and test coverage, and where are important security/architecture assumptions currently unverified?"*
+
+> [!NOTE]
+> **Scope & Limitations**: Testing Intelligence measures verification evidence represented in PathForge; it is **not** a replacement for application test suites, CI systems, runtime monitoring, or real production validation. It does not connect to external GitHub/CI systems or make assumptions about unmodeled software codebases.
+
+- **Authoritative 20-Property Security Catalog (`@pathforge/core/testing-intelligence`)**:
+  - **Network Security**:
+    - `public-ingress-control` (Critical): Untrusted ingress constrained to designated perimeter entry points.
+    - `database-isolation` (Critical): Databases isolated from public ingress and only accessible from authorized compute tiers.
+    - `management-plane-isolation` (High): Administrative bastions and management planes isolated from untrusted ingress.
+    - `network-segmentation` (High): Components partitioned into distinct trust zones with boundary enforcement.
+    - `deny-boundary-enforcement` (High): Configured DENY packet filtering rules deterministically block unauthorized reachability.
+  - **Communication Security**:
+    - `sensitive-traffic-encryption` (Critical): Sensitive database and cache communication channels require transport encryption (TLS/SSH).
+    - `secure-protocol-enforcement` (High): Communication links operate over secure encrypted protocols rather than cleartext.
+  - **Access Control**:
+    - `least-privilege-access` (High): Access policies specify discrete port numbers without open wildcard access.
+    - `wildcard-access-prevention` (Critical): Ingress links prohibit `ANY:ANY` wildcard port permissions.
+    - `administrative-access-restriction` (High): Administrative protocols (SSH 22, RDP 3389) restricted from untrusted ingress.
+  - **Attack Resistance**:
+    - `critical-asset-reachability` (Critical): Zero direct or critical attack paths reach crown jewel assets.
+    - `high-risk-attack-path-prevention` (High): Zero unmediated critical-risk or direct high-risk paths from untrusted ingress to internal assets.
+    - `lateral-movement-containment` (High): Trust zone boundaries prevent unrestricted lateral traversal across workloads.
+    - `blast-radius-control` (Normal): Compromise blast radius is constrained by zone segmentation.
+  - **Architecture Integrity**:
+    - `tier-separation` (Critical): Enforces distinct multi-tier separation without direct edge-to-data bridging.
+    - `dependency-concentration` (Normal): Workload dependencies avoid excessive architectural fan-in concentration.
+    - `single-point-of-failure-detection` (Normal): Detects critical assets operating without redundancy.
+    - `perimeter-boundary` (High): Perimeter firewalls or load balancers mediate external untrusted ingress.
+  - **Remediation & Regressions**:
+    - `finding-resolution-verification` (Critical): Remediated findings are mathematically proven resolved against baseline snapshots.
+    - `regression-detection` (High): Topology modifications are continuously verified against baseline to guarantee zero newly introduced regressions.
+
+- **Evidence Model & Sources**:
+  - `unit-test`: Directly verified by automated validation rule evaluations.
+  - `scenario`: Verified by reference catalog scenarios (e.g. `secure-web-app`, `public-db-exposure`).
+  - `fix-verification`: Verified by immutable baseline comparisons and revalidation cycles.
+  - `regression-test`: Verified through fix verification regression suites.
+  - `model-invariant`: Proven by deterministic graph topology invariants (e.g., zero reachable attack paths, explicit DENY edges).
+  - `manual-verification`: Verified via explicit engineer-driven remediation confirmation.
+
+- **Coverage Statuses & Scoring Formulation**:
+  - `VERIFIED`: Evidence fully supports the property (full weight: 1.0).
+  - `PARTIAL`: Property partially modeled or mediated (half weight: 0.5).
+  - `UNVERIFIED`: Property assumption is unverified, violated, or unmodeled (zero weight: 0.0).
+  - Importance Weighting: Critical properties = weight 3; High properties = weight 2; Normal properties = weight 1.
+  - Score Formula: $\mathrm{round}\left(\frac{\sum (\text{weight} \times \text{earnedFactor})}{\sum \text{weight}} \times 100\right)$.
+  - Tiers Computed: `criticalCoverage`, `highCoverage`, `normalCoverage`, and `overallCoverage` (0–100 integer).
+  - Qualitative Levels: `EXCELLENT` (90–100), `GOOD` (75–89), `MODERATE` (50–74), `WEAK` (25–49), `INSUFFICIENT` (0–24).
+  - Zero Fabricated Coverage: Empty or single-node topologies deterministically return score `0` and level `INSUFFICIENT`.
+
+- **Structured Coverage Gaps**:
+  - Gaps automatically generated for unverified or partially verified properties.
+  - Severity Mapping: Critical unverified $\to$ `HIGH` gap; High unverified $\to$ `MEDIUM` gap; Normal unverified $\to$ `LOW` gap.
+  - Deterministically sorted by severity priority, then property identifier.
+  - Contains "Why It Matters", actionable "Recommended Verification Test", and interactive canvas "Locate" button.
+
+- **Deterministic Regression Intelligence**:
+  - `healthy`: Baseline active and zero reintroduced findings.
+  - `regressions-detected`: Explicit warning listing exact rule IDs of reintroduced flaws.
+  - `no-baseline`: Explicitly states no baseline exists rather than fabricating historical data.
+
+- **Interactive UI (`TestingIntelligencePanel`)**:
+  - Integrated as **Tab 7: `TESTING (${score}/100)`** in `FindingsDrawer` with `FlaskConical` icon.
+  - Engineering verification console styling with level badge and summary sentence.
+  - Progress bars for Critical, High, and Overall coverage.
+  - Category breakdown cards across all 6 functional categories with scores and counts.
+  - Filterable security properties catalog (`ALL`, `VERIFIED`, `PARTIAL`, `UNVERIFIED`).
+  - Interactive "Locate Asset" buttons syncing with the canvas highlight ring.
+  - Ordered deterministic test recommendations.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -436,7 +514,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (231 unit & integration tests across 21 test files):
+Execute the full Vitest suite (253 unit & integration tests across 22 test files):
 
 ```bash
 npm run test
