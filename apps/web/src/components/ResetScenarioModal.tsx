@@ -14,23 +14,44 @@ export const ResetScenarioModal: React.FC<ResetScenarioModalProps> = ({
   onClose,
   onConfirmReset,
 }) => {
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 font-mono select-none">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 font-mono select-none"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reset-modal-title"
+    >
       <div className="w-full max-w-md rounded-lg bg-[#111318] border border-[#30363d] shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="px-4 py-3 border-b border-[#222630] bg-[#0d0f14] flex items-center justify-between">
           <div className="flex items-center space-x-2 text-[#f0883e]">
             <AlertTriangle className="w-4 h-4" />
-            <span className="text-xs font-bold tracking-wide uppercase">
+            <span id="reset-modal-title" className="text-xs font-bold tracking-wide uppercase">
               Reset Scenario
             </span>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1 rounded text-[#8b949e] hover:text-white hover:bg-[#21262d] transition-colors"
+            className="p-1 rounded text-[#8b949e] hover:text-white hover:bg-[#21262d] focus:outline-hidden focus:ring-1 focus:ring-[#388bfd] transition-colors"
+            title="Cancel (Esc)"
+            aria-label="Close reset modal"
           >
             <X className="w-3.5 h-3.5" />
           </button>

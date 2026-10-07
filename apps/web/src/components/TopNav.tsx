@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   ShieldAlert,
   ShieldCheck,
@@ -9,9 +9,20 @@ import {
   RotateCcw,
   ChevronDown,
   Layers,
+  FileText,
+  FileCode,
+  Printer,
+  Image,
 } from 'lucide-react';
 import { ValidationResult } from '@pathforge/shared';
-import { getScenarioById } from '@pathforge/core';
+import { Environment, FixVerificationResult, getScenarioById } from '@pathforge/core';
+import {
+  exportReportAsMarkdown,
+  exportReportAsJson,
+  printOrSaveReportAsHtml,
+  exportEnvironmentSvg,
+  exportTopologyModelJson,
+} from '../utils/exportHelpers.js';
 
 interface TopNavProps {
   currentScenarioId: string;
@@ -19,6 +30,8 @@ interface TopNavProps {
   onOpenResetModal: () => void;
   onValidate: () => void;
   onExport: () => void;
+  environment?: Environment;
+  latestVerification?: FixVerificationResult | null;
   validationResult: ValidationResult | null;
   isValidationStale?: boolean;
 }
@@ -29,9 +42,36 @@ export const TopNav: React.FC<TopNavProps> = ({
   onOpenResetModal,
   onValidate,
   onExport,
+  environment,
+  latestVerification = null,
   validationResult,
   isValidationStale = false,
 }) => {
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const exportDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        exportDropdownRef.current &&
+        !exportDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsExportOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsExportOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   const currentScenario = getScenarioById(currentScenarioId);
   const scenarioName = currentScenario?.name ?? 'Custom Environment';
 
@@ -113,14 +153,129 @@ export const TopNav: React.FC<TopNavProps> = ({
 
       {/* Action Buttons */}
       <div className="flex items-center space-x-2">
-        <button
-          onClick={onExport}
-          className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#181c24] border border-[#2a303c] text-xs text-[#c9d1d9] hover:bg-[#202530] hover:text-white transition-colors font-mono"
-          title="Export topology definition as JSON"
-        >
-          <Download className="w-3 h-3 text-[#8b949e]" />
-          <span className="hidden sm:inline">Export JSON</span>
-        </button>
+        {/* Export Dropdown */}
+        <div className="relative" ref={exportDropdownRef}>
+          <button
+            onClick={() => setIsExportOpen(!isExportOpen)}
+            className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#181c24] border border-[#2a303c] text-xs text-[#c9d1d9] hover:bg-[#202530] hover:text-white hover:border-[#388bfd]/60 transition-colors font-mono focus:outline-hidden focus:ring-1 focus:ring-[#388bfd]"
+            title="Export engineering reports, diagrams, and topology"
+            aria-expanded={isExportOpen}
+            aria-haspopup="true"
+            aria-label="Export artifacts menu"
+          >
+            <Download className="w-3 h-3 text-[#58a6ff]" />
+            <span className="hidden sm:inline">Export</span>
+            <ChevronDown className="w-3 h-3 text-[#8b949e]" />
+          </button>
+
+          {isExportOpen && (
+            <div
+              className="absolute right-0 mt-1.5 w-60 rounded-md bg-[#161a22] border border-[#30363d] shadow-xl z-50 py-1 font-mono text-xs text-[#c9d1d9] space-y-0.5"
+              role="menu"
+            >
+              <div className="px-3 py-1 text-[10px] uppercase font-bold text-[#8b949e] border-b border-[#21262d]">
+                Engineering Artifacts
+              </div>
+
+              {environment && (
+                <>
+                  <button
+                    onClick={() => {
+                      exportReportAsMarkdown({
+                        environment,
+                        validationResult,
+                        verification: latestVerification,
+                      });
+                      setIsExportOpen(false);
+                    }}
+                    className="w-full flex items-center space-x-2 px-3 py-1.5 hover:bg-[#21262d] hover:text-white transition-colors text-left"
+                    role="menuitem"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-[#58a6ff]" />
+                    <div className="truncate">
+                      <div className="font-medium text-white text-[11px]">Verification Report (.md)</div>
+                      <div className="text-[9px] text-[#8b949e]">Markdown proof artifact</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      exportReportAsJson({
+                        environment,
+                        validationResult,
+                        verification: latestVerification,
+                      });
+                      setIsExportOpen(false);
+                    }}
+                    className="w-full flex items-center space-x-2 px-3 py-1.5 hover:bg-[#21262d] hover:text-white transition-colors text-left"
+                    role="menuitem"
+                  >
+                    <FileCode className="w-3.5 h-3.5 text-[#79c0ff]" />
+                    <div className="truncate">
+                      <div className="font-medium text-white text-[11px]">Verification Report (.json)</div>
+                      <div className="text-[9px] text-[#8b949e]">Machine-readable JSON schema</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      printOrSaveReportAsHtml({
+                        environment,
+                        validationResult,
+                        verification: latestVerification,
+                      });
+                      setIsExportOpen(false);
+                    }}
+                    className="w-full flex items-center space-x-2 px-3 py-1.5 hover:bg-[#21262d] hover:text-white transition-colors text-left"
+                    role="menuitem"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-[#3fb950]" />
+                    <div className="truncate">
+                      <div className="font-medium text-white text-[11px]">Print Report / Save as PDF</div>
+                      <div className="text-[9px] text-[#8b949e]">Print-styled HTML document</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      exportEnvironmentSvg(environment);
+                      setIsExportOpen(false);
+                    }}
+                    className="w-full flex items-center space-x-2 px-3 py-1.5 hover:bg-[#21262d] hover:text-white transition-colors text-left"
+                    role="menuitem"
+                  >
+                    <Image className="w-3.5 h-3.5 text-[#d2a8ff]" />
+                    <div className="truncate">
+                      <div className="font-medium text-white text-[11px]">Architecture Diagram (.svg)</div>
+                      <div className="text-[9px] text-[#8b949e]">Vector network topology</div>
+                    </div>
+                  </button>
+
+                  <div className="h-px bg-[#21262d] my-1" />
+                </>
+              )}
+
+              <button
+                onClick={() => {
+                  if (environment) {
+                    exportTopologyModelJson(environment);
+                  } else {
+                    onExport();
+                  }
+                  setIsExportOpen(false);
+                }}
+                className="w-full flex items-center space-x-2 px-3 py-1.5 hover:bg-[#21262d] hover:text-white transition-colors text-left"
+                role="menuitem"
+              >
+                <Download className="w-3.5 h-3.5 text-[#8b949e]" />
+                <div className="truncate">
+                  <div className="font-medium text-white text-[11px]">Topology Model (.json)</div>
+                  <div className="text-[9px] text-[#8b949e]">Raw canvas graph definition</div>
+                </div>
+              </button>
+            </div>
+          )}
+        </div>
 
         <button
           onClick={onValidate}

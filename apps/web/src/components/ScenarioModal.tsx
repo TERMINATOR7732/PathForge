@@ -57,12 +57,31 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
   onClose,
   onSelectScenario,
 }) => {
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const scenarios = getAllScenarios();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 font-mono select-none">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 font-mono select-none"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="scenario-modal-title"
+    >
       <div className="w-full max-w-3xl rounded-lg bg-[#111318] border border-[#30363d] shadow-2xl overflow-hidden flex flex-col max-h-[88vh]">
         {/* Header */}
         <div className="px-5 py-3.5 border-b border-[#222630] bg-[#0d0f14] flex items-center justify-between">
@@ -71,7 +90,7 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
               <Layers className="w-3.5 h-3.5" />
             </div>
             <div>
-              <div className="text-sm font-semibold text-white tracking-wide">
+              <div id="scenario-modal-title" className="text-sm font-semibold text-white tracking-wide">
                 SCENARIO LAB
               </div>
               <div className="text-[11px] text-[#8b949e]">
@@ -82,8 +101,9 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded text-[#8b949e] hover:text-white hover:bg-[#21262d] transition-colors"
-            title="Close scenario picker"
+            className="p-1.5 rounded text-[#8b949e] hover:text-white hover:bg-[#21262d] focus:outline-hidden focus:ring-1 focus:ring-[#388bfd] transition-colors"
+            title="Close scenario picker (Esc)"
+            aria-label="Close scenario picker"
           >
             <X className="w-4 h-4" />
           </button>

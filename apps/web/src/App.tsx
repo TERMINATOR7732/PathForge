@@ -307,6 +307,8 @@ export const App: React.FC = () => {
         onOpenResetModal={() => setIsResetModalOpen(true)}
         onValidate={handleValidate}
         onExport={handleExportJson}
+        environment={environment}
+        latestVerification={latestVerification}
         validationResult={validationResult}
         isValidationStale={isValidationStale}
       />
@@ -352,6 +354,7 @@ export const App: React.FC = () => {
       <FindingsDrawer
         findings={validationResult?.findings ?? []}
         environment={environment}
+        validationResult={validationResult}
         isValidationStale={isValidationStale}
         resolvedFindings={resolvedFindings}
         latestVerification={latestVerification}

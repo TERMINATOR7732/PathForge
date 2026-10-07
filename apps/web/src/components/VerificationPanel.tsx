@@ -1,5 +1,6 @@
 import React from 'react';
-import { FixVerificationResult } from '@pathforge/core';
+import { FixVerificationResult, Environment } from '@pathforge/core';
+import { ValidationResult } from '@pathforge/shared';
 import {
   CheckCircle2,
   AlertTriangle,
@@ -11,39 +12,109 @@ import {
   FileCheck,
   AlertOctagon,
   Layers,
+  Download,
+  FileText,
+  FileCode,
+  Printer,
+  Image,
 } from 'lucide-react';
+import {
+  exportReportAsMarkdown,
+  exportReportAsJson,
+  printOrSaveReportAsHtml,
+  exportEnvironmentSvg,
+} from '../utils/exportHelpers.js';
 
 interface VerificationPanelProps {
   verification: FixVerificationResult | null;
   onLocateElement: (target: { id: string; type: 'node' | 'edge' }) => void;
   onSelectNode: (nodeId: string) => void;
   onRequestValidate: () => void;
+  environment?: Environment;
+  validationResult?: ValidationResult | null;
 }
 
 export const VerificationPanel: React.FC<VerificationPanelProps> = ({
   verification,
   onLocateElement,
   onRequestValidate,
+  environment,
+  validationResult = null,
 }) => {
+  const renderExportBar = () => {
+    if (!environment) return null;
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded bg-[#14171d] border border-[#222630]">
+        <div className="flex items-center space-x-2 text-[10px] uppercase font-bold tracking-wider text-[#8b949e]">
+          <Download className="w-3.5 h-3.5 text-[#58a6ff]" />
+          <span>ENGINEERING EXPORTS:</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={() => exportReportAsMarkdown({ environment, validationResult, verification })}
+            className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#1c2128] border border-[#30363d] text-[11px] text-[#e6edf3] hover:bg-[#282e38] hover:border-[#58a6ff]/50 transition-colors"
+            title="Export human-readable Markdown engineering verification report"
+            aria-label="Export Markdown report"
+          >
+            <FileText className="w-3 h-3 text-[#58a6ff]" />
+            <span>Markdown (.md)</span>
+          </button>
+          <button
+            onClick={() => exportReportAsJson({ environment, validationResult, verification })}
+            className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#1c2128] border border-[#30363d] text-[11px] text-[#e6edf3] hover:bg-[#282e38] hover:border-[#58a6ff]/50 transition-colors"
+            title="Export machine-readable JSON verification report"
+            aria-label="Export JSON report"
+          >
+            <FileCode className="w-3 h-3 text-[#79c0ff]" />
+            <span>JSON (.json)</span>
+          </button>
+          <button
+            onClick={() => printOrSaveReportAsHtml({ environment, validationResult, verification })}
+            className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#1c2128] border border-[#30363d] text-[11px] text-[#e6edf3] hover:bg-[#282e38] hover:border-[#58a6ff]/50 transition-colors"
+            title="Open printable HTML report for browser Print / Save as PDF"
+            aria-label="Print report or save as PDF"
+          >
+            <Printer className="w-3 h-3 text-[#3fb950]" />
+            <span>Print / PDF</span>
+          </button>
+          <button
+            onClick={() => exportEnvironmentSvg(environment)}
+            className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#1c2128] border border-[#30363d] text-[11px] text-[#e6edf3] hover:bg-[#282e38] hover:border-[#58a6ff]/50 transition-colors"
+            title="Export vector architecture diagram with security semantics"
+            aria-label="Export SVG diagram"
+          >
+            <Image className="w-3 h-3 text-[#d2a8ff]" />
+            <span>Diagram (.svg)</span>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   if (!verification) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center font-mono space-y-3">
-        <FileCheck className="w-10 h-10 text-[#58a6ff]/60" />
-        <div className="text-sm font-semibold text-[#e6edf3]">
-          No Validated Baseline Available
+      <div className="flex-1 overflow-y-auto p-6 bg-[#0d0f12] flex flex-col justify-between font-mono space-y-6">
+        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3">
+          <FileCheck className="w-10 h-10 text-[#58a6ff]/60" />
+          <div className="text-sm font-semibold text-[#e6edf3]">
+            No Validated Baseline Available
+          </div>
+          <p className="text-xs text-[#8b949e] max-w-md leading-relaxed">
+            Validate this environment to establish a verified baseline. As you apply
+            remediations or change infrastructure, revalidating will prove that security findings
+            have been genuinely eliminated.
+          </p>
+          <button
+            onClick={onRequestValidate}
+            className="mt-2 px-3.5 py-2 rounded bg-[#238636] text-white hover:bg-[#2ea043] transition-colors text-xs font-semibold flex items-center space-x-1.5 shadow-sm"
+            aria-label="Validate environment to establish baseline"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Validate Environment to Establish Baseline</span>
+          </button>
         </div>
-        <p className="text-xs text-[#8b949e] max-w-md leading-relaxed">
-          Validate this environment to establish a verified baseline. As you apply
-          remediations or change infrastructure, revalidating will prove that security findings
-          have been genuinely eliminated.
-        </p>
-        <button
-          onClick={onRequestValidate}
-          className="mt-2 px-3 py-1.5 rounded bg-[#238636] text-white hover:bg-[#2ea043] transition-colors text-xs font-semibold flex items-center space-x-1.5 shadow-sm"
-        >
-          <ShieldCheck className="w-4 h-4" />
-          <span>Validate Environment to Establish Baseline</span>
-        </button>
+
+        {renderExportBar()}
       </div>
     );
   }
@@ -65,6 +136,9 @@ export const VerificationPanel: React.FC<VerificationPanelProps> = ({
 
   return (
     <div className="flex-1 overflow-y-auto p-4 bg-[#0d0f12] text-xs font-mono space-y-4">
+      {/* 0. Engineering Export Bar */}
+      {renderExportBar()}
+
       {/* 1. Verification Outcome Header */}
       <div
         className={`p-3.5 rounded border space-y-2 ${

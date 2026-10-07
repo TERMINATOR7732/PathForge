@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Finding, RuleCategory, Severity } from '@pathforge/shared';
+import { Finding, RuleCategory, Severity, ValidationResult } from '@pathforge/shared';
 import { Environment, FixVerificationResult } from '@pathforge/core';
 import { getRemediationActions, RemediationAction } from '@pathforge/validator';
 import {
@@ -28,6 +28,7 @@ interface FindingsDrawerProps {
   isValidationStale: boolean;
   resolvedFindings?: Finding[];
   latestVerification?: FixVerificationResult | null;
+  validationResult?: ValidationResult | null;
   onSelectNode: (nodeId: string) => void;
   onLocateElement: (target: { id: string; type: 'node' | 'edge' }) => void;
   onHoverFinding: (finding: Finding | null) => void;
@@ -67,6 +68,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   isValidationStale,
   resolvedFindings = [],
   latestVerification,
+  validationResult,
   onSelectNode,
   onLocateElement,
   onHoverFinding,
@@ -284,6 +286,8 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
             {activeTab === 'verification' ? (
               <VerificationPanel
                 verification={latestVerification ?? null}
+                environment={environment}
+                validationResult={validationResult}
                 onLocateElement={onLocateElement}
                 onSelectNode={onSelectNode}
                 onRequestValidate={onRequestValidate ?? (() => {})}

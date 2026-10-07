@@ -86,7 +86,7 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 137 tests passing)
+├── tests/                       # Automated test suite (Vitest — 147 tests passing)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
@@ -101,6 +101,7 @@ PathForge/
 │   ├── fix-verification.test.ts # Phase 1.6 baseline snapshot, diff & fix verification tests
 │   ├── scenario-lab.test.ts     # Phase 1.7 scenario library & chaos workflow tests
 │   ├── phase17-manual-qa.test.ts # Phase 1.7 automated 5-step manual QA test suite
+│   ├── verification-reports.test.ts # Phase 1.8 verification report model & export tests
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -230,6 +231,26 @@ PathForge provides a deterministic Scenario Lab and a permissive Chaos engineeri
 
 ---
 
+## Verification Reports & Engineering Export (Phase 1.8)
+
+PathForge makes verification results portable outside the application, enabling engineers to generate concrete proof that misconfigurations have been resolved:
+
+- **Deterministic Verification Reports (`VerificationReport`)**:
+  Assembles domain-level proof models containing metadata, executive summaries, before/after security delta tables, resolved findings with verification proofs, unresolved issues, regression warnings, and the authoritative production gate state (`PASSED` vs `BLOCKED`).
+- **Truthful Semantics (Discipline Principle)**:
+  PathForge never manufactures a false PASS. When evaluated without a baseline snapshot, reports truthfully indicate `NO BASELINE AVAILABLE` and evaluate current compliance without fictitious before/after deltas. When regressions exist, reports issue prominent warnings and hold the gate `BLOCKED`.
+- **4 Comprehensive Export Formats**:
+  1. **Markdown (`.md`)**: GitHub-flavored engineering artifact featuring metadata tables, metric deltas, visual flow comparison boxes (`BEFORE: Internet → [ALLOW] → DB` vs `AFTER: Internet → [DENY] → DB`), and audit trails.
+  2. **JSON (`.json`)**: Machine-readable schema representation of the verification report for pipeline automation and external audit tooling.
+  3. **Printable HTML (Print to PDF)**: Standalone, print-optimized HTML (`@media print`, `@page`) with zero external network dependencies, ready for browser `Print → Save as PDF` with a ₹0 footprint.
+  4. **Vector Architecture Diagram (`.svg`)**: Standalone vector graphic preserving critical security semantics: green/blue arrows for allowed traffic, transport encryption `[TLS]` tags, dashed red lines with `[DENY]` markers, zone color headers, and service port pills.
+- **Compact Engineering Export UX**:
+  Integrated export toolbar in the `VerificationPanel` and a drop-down export menu in `TopNav` provide instant downloads (`.md`, `.json`, `.svg`) and print previews.
+- **Accessibility & Keyboard Polish**:
+  All modal dialogs (`ScenarioModal`, `ResetScenarioModal`, `RemediationModal`) support `Escape` key dismissal, backdrop click closing, `role="dialog"`, `aria-modal="true"`, and accessible focus outlines.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -249,7 +270,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (137 unit & integration tests):
+Execute the full Vitest suite (147 unit & integration tests across 16 test files):
 
 ```bash
 npm run test

@@ -118,10 +118,26 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
 - [x] Full Product Polish Pass: Visual consistency, uniform monospace styling, distinct status semantics (`VALIDATED`, `VALIDATION STALE`, `PRODUCTION GATE: BLOCKED/PASSED`, `VERIFICATION PASSED`, `VERIFICATION REQUIRES ATTENTION`).
 - [x] Automated Test Suite: 137 unit and integration tests passing across 15 test files (including tests for scenario loading, expected security states, reset isolation, chaos workflows, and exact 5-step manual QA workflows).
 
-### Phase 1.8 — Exportable Audit Report & Workspace Hardening *(NEXT RECOMMENDED STEP)*
-- [ ] Exportable audit report (Markdown / JSON / printable summary documenting verified before/after proof)
-- [ ] Keyboard navigation and accessibility auditing
-- [ ] Canvas export as SVG/PNG architecture diagram
+### Phase 1.8 — Verification Reports & Engineering Export *(STATUS: COMPLETE)*
+- [x] Authoritative Domain Verification Report Model (`packages/core/src/reports/`):
+  - `VerificationReport`, `ReportMetadata`, `ReportExecutiveSummary`, `ReportSecurityDeltaSummary`, `ReportResolvedFinding`, `ReportUnresolvedFinding`, `ReportRegressionFinding`, `ReportInfrastructureChange`, `ReportRemediationRecord`, `ReportGateState`.
+- [x] Deterministic Report Generator (`generateVerificationReport`):
+  - Ingests `Environment`, `ValidationResult`, `EnvironmentSnapshot` baseline, `FixVerificationResult`, and applied remediation metadata.
+  - Truthful semantics: accurately outputs `no-baseline` state without fabricating fake PASS metrics; enforces `BLOCKED` when unresolved findings or regressions persist.
+- [x] 4 Multi-Format Engineering Formatters:
+  - **Markdown Formatter (`formatReportAsMarkdown`)**: Clean GitHub-flavored Markdown with metadata table, executive summary, metric delta comparison grid, Before/After flow comparison boxes, regression warnings, and infrastructure change log.
+  - **JSON Formatter (`formatReportAsJson`)**: Machine-readable JSON representation of the complete report schema for CI/CD pipelines and external tooling.
+  - **Printable HTML Formatter (`formatReportAsPrintableHtml`)**: Standalone, print-optimized document with zero external network dependencies, styled for browser `Print → Save as PDF` with a strict ₹0 footprint.
+  - **Vector Architecture Diagram Exporter (`exportEnvironmentAsSvg`)**: Mathematical SVG layout preserving all security semantics (directed flows, green TLS locks, dashed red `[DENY]` markers, zone colors, node types, service listeners).
+- [x] Compact Export UX:
+  - Engineering export strip in `VerificationPanel` (`Markdown (.md)`, `JSON (.json)`, `Print / PDF`, `Diagram (.svg)`).
+  - Integrated `Export ▾` dropdown menu in `TopNav` covering both raw topology models and all verification artifacts.
+- [x] Keyboard & Accessibility Hardening:
+  - `Escape` key dismisses `ScenarioModal`, `ResetScenarioModal`, and `RemediationModal`.
+  - Backdrop click dismissal and `role="dialog"` / `aria-modal="true"` on all modals.
+  - Visible focus outlines and explicit `aria-label` tags on all icon-only action triggers.
+- [x] Comprehensive Automated Test Suite:
+  - 147 unit and integration tests passing across 16 test files (10 new tests in `tests/verification-reports.test.ts` covering passed reports, blocked reports, regressions, no-baseline truthfulness, JSON, Markdown, HTML, and SVG exports).
 
 ---
 

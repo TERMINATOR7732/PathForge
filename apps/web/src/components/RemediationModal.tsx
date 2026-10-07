@@ -28,18 +28,27 @@ export const RemediationModal: React.FC<RemediationModalProps> = ({
   }, [onCancel]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs select-none">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs select-none"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="remediation-modal-title"
+    >
       <div className="w-[520px] rounded-lg bg-[#14171d] border border-[#30363d] shadow-2xl overflow-hidden font-mono text-xs">
         {/* Modal Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-[#161b22] border-b border-[#2d333b]">
           <div className="flex items-center space-x-2 text-[#e6edf3]">
             <Wrench className="w-4 h-4 text-[#3fb950]" />
-            <span className="font-semibold text-sm">Confirm Remediation Action</span>
+            <span id="remediation-modal-title" className="font-semibold text-sm">Confirm Remediation Action</span>
           </div>
           <button
             onClick={onCancel}
-            className="text-[#8b949e] hover:text-[#c9d1d9] transition-colors p-1"
+            className="text-[#8b949e] hover:text-[#c9d1d9] focus:outline-hidden focus:ring-1 focus:ring-[#388bfd] transition-colors p-1"
             title="Cancel (Esc)"
+            aria-label="Cancel remediation action"
           >
             <X className="w-4 h-4" />
           </button>
