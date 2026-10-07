@@ -371,6 +371,18 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
                       attackPathCount: 0,
                       highestRisk: 'none',
                     },
+                    intelligence: {
+                      totalAttackPaths: 0,
+                      criticalAttackPaths: 0,
+                      highRiskAttackPaths: 0,
+                      mediumRiskAttackPaths: 0,
+                      lowRiskAttackPaths: 0,
+                      reachableCriticalAssets: 0,
+                      entryPointExposures: [],
+                      exposedAssets: [],
+                      mostDangerousPath: null,
+                      mostExposedAsset: null,
+                    },
                   }
                 }
                 selectedPathId={selectedAttackPathId ?? null}

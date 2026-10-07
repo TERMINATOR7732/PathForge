@@ -180,6 +180,30 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
   - `FindingsDrawer` integration: Dedicated `BLAST RADIUS (${count})` tab with Radio icon and automatic tab switching upon node selection.
   - Canvas Visualization: Compromised origin pulsing amber ring (`#f0883e`) with `COMPROMISED` badge; reachable assets purple ring (`#a371f7`) with `LATERAL (+depth)` pills (or crimson `CRITICAL (+depth)`); lateral movement edges in dashed purple with purple arrowheads (`#a371f7`).
 
+### Phase 2.3 — Risk-Weighted Attack Paths & Reachability Intelligence *(STATUS: COMPLETE)*
+- [x] Dedicated Risk Evaluation Layer (`packages/core/src/attack-path/risk.ts`):
+  - Architecture: Traversal discovers paths via directed BFS; dedicated risk layer evaluates and weights discovered paths without changing traversal semantics.
+  - Deterministic 0–100 Integer Risk Score (`score` and `level`):
+    - `75–100`: `critical`
+    - `50–74`: `high`
+    - `25–49`: `medium`
+    - `0–24`: `low`
+  - Explicit non-probability principle: scores prioritize modeled architectural exposure, not real-world exploit probability.
+  - Observable Risk Factors: Entry exposure (Internet vs DMZ vs Internal), target criticality (`critical`, `high`, `medium`), sensitive roles (database, admin, redis), path depth (1-hop direct vs shallow vs deep), trust boundary crossings (0 unsegmented vs 1 vs 2+), wildcard ports/ANY protocols, administrative ports (22, 3389), cleartext sensitive communication.
+  - Mitigating Architectural Defenses: TLS encryption, multi-tier segmentation insulations, discrete explicit port restrictions.
+  - Dominant Factor Extraction: Top weighted reasons highlighting why a path is dangerous.
+- [x] Reachability Intelligence Engine (`packages/core/src/attack-path/analyzer.ts`):
+  - `mostDangerousPath`: Deterministic ordering by risk score desc, risk level desc, target criticality desc, hop count asc, stable ID asc.
+  - `mostExposedAsset`: Sensitive asset reachable from the greatest number of distinct entry points (with tiebreaker).
+  - `entryPointExposures`: Comprehensive reachability metrics per entry point.
+  - `exposedAssets`: Comprehensive exposure intelligence per sensitive target.
+- [x] Comprehensive Automated Test Suite:
+  - 194 unit and integration tests passing across 19 test files (15 new tests in `tests/attack-path-risk.test.ts` covering direct public DB, internal low exposure, target criticality upgrades, public vs internal entry, cleartext vs TLS, wildcard ports, exact baseline scores, most dangerous path selection, most exposed asset selection, entry point exposures, byte-for-byte determinism, canvas coordinate independence, and catalog scenarios).
+- [x] Interactive UI Intelligence (`AttackPathsPanel.tsx`):
+  - Header intelligence banner: Quick-jump triggers to the Most Dangerous Path and Most Exposed Asset.
+  - Risk cards displaying color-coded risk levels and scores (`CRITICAL · 92`).
+  - Deep Risk Assessment inspection card with score progress bar, dominant factors, contributing factors with weights, and verified mitigating defensive controls.
+
 ---
 
 ## Phase 3 — Defense, Verification & Proof ("Prove")

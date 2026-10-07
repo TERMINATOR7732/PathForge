@@ -86,7 +86,7 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 179 tests passing)
+├── tests/                       # Automated test suite (Vitest — 194 tests passing)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
@@ -104,6 +104,7 @@ PathForge/
 │   ├── verification-reports.test.ts # Phase 1.8 verification report model & export tests
 │   ├── attack-path.test.ts      # Phase 2.1 deterministic attack path analysis tests
 │   ├── blast-radius.test.ts     # Phase 2.2 blast radius & lateral movement tests
+│   ├── attack-path-risk.test.ts # Phase 2.3 risk-weighted attack path intelligence tests
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -302,6 +303,35 @@ PathForge provides deterministic lateral movement analysis answering:
 
 ---
 
+## Risk-Weighted Attack Paths & Reachability Intelligence (Phase 2.3)
+
+PathForge introduces deterministic risk-weighted prioritization answering:
+> *"Which reachable attack paths are actually the most dangerous, why are they dangerous, and what makes one path worse than another?"*
+
+> [!NOTE]
+> **Important Engineering Principle**: PathForge risk scores prioritize modeled architectural exposure. They are not probabilities of real-world compromise.
+
+- **Authoritative Risk Intelligence Layer (`@pathforge/core/attack-path/risk.ts`)**:
+  - **Decoupled Architecture**: Graph traversal discovers reachable paths via deterministic BFS, while the dedicated risk layer scores and prioritizes them without altering traversal semantics.
+  - **Deterministic 0–100 Integer Risk Score**:
+    - `75–100`: **CRITICAL** (immediate crown-jewel exposure, public DB access, shallow traversal to restricted assets).
+    - `50–74`: **HIGH** (multi-tier deep paths to critical assets, high-criticality targets, multiple boundary crossings).
+    - `25–49`: **MEDIUM** (limited exposure, internal targets, medium criticality).
+    - `0–24`: **LOW** (isolated or low-value targets).
+  - **Observable Risk Factors**: Evaluates entry exposure (Internet vs DMZ vs Internal), target business criticality (`critical`, `high`, `medium`), sensitive asset roles (database, admin, redis), path depth (direct 1-hop vs shallow vs deep), trust boundaries crossed, wildcard ports/ANY protocol, and cleartext sensitive traffic.
+  - **Mitigating Architectural Defenses**: Encrypted communication (TLS/SSH), multi-tier intermediate segmentation (firewalls, reverse proxies), and discrete port restrictions reduce the raw risk score.
+  - **Dominant Factor Extraction**: Automatically extracts the top contributing factors justifying the path's risk level.
+- **Reachability Intelligence & Prioritization**:
+  - **Most Dangerous Path**: Deterministically ordered by risk score descending, risk severity descending, target criticality descending, hop count ascending, and stable ID.
+  - **Most Exposed Asset**: Identifies the crown jewel reached through the greatest number of distinct attacker entry points.
+  - **Entry Point Exposures**: Calculates reachable asset counts, sensitive targets, critical targets, and maximum boundary penetration per entry point.
+- **Enhanced Attack Paths UI (`AttackPathsPanel`)**:
+  - Header intelligence banner with quick-jump triggers to the **Most Dangerous Path** and **Most Exposed Asset**.
+  - Risk cards displaying color-coded risk levels and scores (e.g., `CRITICAL · 92`).
+  - Deep **Risk Assessment** inspection card displaying score progress bar, dominant factors, contributing factors with weights, and verified mitigating defensive controls.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -321,7 +351,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (179 unit & integration tests across 18 test files):
+Execute the full Vitest suite (194 unit & integration tests across 19 test files):
 
 ```bash
 npm run test

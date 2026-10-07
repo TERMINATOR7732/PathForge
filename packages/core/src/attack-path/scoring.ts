@@ -3,8 +3,10 @@ import {
   AttackPathEdgeSummary,
   AttackPathRisk,
   TraversalStepFact,
+  RiskAssessment,
 } from './types.js';
 import { isTrustBoundaryCrossing } from './traversal.js';
+import { evaluateAttackPathRisk } from './risk.js';
 
 export interface PathScoringInput {
   entryPoint: AttackPathNodeSummary;
@@ -17,6 +19,8 @@ export interface PathScoringResult {
   hopCount: number;
   trustBoundariesCrossed: number;
   risk: AttackPathRisk;
+  riskScore: number;
+  riskAssessment: RiskAssessment;
   riskFactors: readonly string[];
   whyItExists: readonly string[];
   steps: readonly TraversalStepFact[];
@@ -27,8 +31,8 @@ export interface PathScoringResult {
  * - Hop count
  * - Trust boundaries crossed
  * - Granular traversal step facts
- * - Deterministic explainable risk classification
- * - Human-readable risk factors and existence rationale
+ * - Deterministic explainable risk classification and normalized score
+ * - Human-readable risk factors, mitigating factors, and existence rationale
  */
 export function scoreAttackPath(input: PathScoringInput): PathScoringResult {
   const { entryPoint, target, nodes, edges } = input;
@@ -87,98 +91,23 @@ export function scoreAttackPath(input: PathScoringInput): PathScoringResult {
     `Reachable target "${target.name}" is reached by attacker (${target.criticality} criticality, '${target.zone}' zone).`
   );
 
-  // Deterministic Risk Classification
-  const isPublicEntry =
-    entryPoint.zone === 'public' ||
-    entryPoint.type === 'internet' ||
-    entryPoint.type === 'external_network';
-
-  const isTargetCritical = target.criticality === 'critical';
-  const isTargetHigh = target.criticality === 'high';
-  const isTargetRestricted = target.zone === 'restricted';
-  const isDirectOrShallow = hopCount <= 2;
-  const isCoreDataOrAdmin =
-    target.type === 'database' || target.type === 'admin' || target.type === 'redis';
-
-  const hasUnencrypted = edges.some((e) => !e.encrypted);
-  const hasWildcard = edges.some((e) => e.ports === 'ANY' || e.ports === '*');
-
-  let risk: AttackPathRisk = 'low';
-
-  // 1. CRITICAL Risk Rules
-  if (
-    (isPublicEntry && (isTargetCritical || isTargetRestricted) && (trustBoundariesCrossed <= 1 || isDirectOrShallow)) ||
-    (isPublicEntry && isCoreDataOrAdmin && hopCount <= 2) ||
-    (isPublicEntry && isTargetCritical && hasWildcard) ||
-    (isPublicEntry && target.type === 'database' && hopCount === 1)
-  ) {
-    risk = 'critical';
-  }
-  // 2. HIGH Risk Rules
-  else if (
-    (isPublicEntry && (isTargetCritical || isTargetRestricted) && trustBoundariesCrossed >= 2) ||
-    (isPublicEntry && isTargetHigh) ||
-    (!isPublicEntry && isTargetCritical && trustBoundariesCrossed <= 1) ||
-    (isTargetRestricted && isCoreDataOrAdmin)
-  ) {
-    risk = 'high';
-  }
-  // 3. MEDIUM Risk Rules
-  else if (
-    (isPublicEntry && target.criticality === 'medium') ||
-    (!isPublicEntry && (isTargetHigh || isTargetRestricted)) ||
-    (target.type === 'internal_network' || target.type === 'vpn' || target.type === 'redis')
-  ) {
-    risk = 'medium';
-  }
-  // 4. LOW Risk
-  else {
-    risk = 'low';
-  }
-
-  // Generate explainable risk factors
-  const riskFactors: string[] = [];
-
-  if (isPublicEntry) {
-    riskFactors.push(`Public untrusted attacker entry point ("${entryPoint.name}")`);
-  }
-  if (isTargetCritical) {
-    riskFactors.push(`Target asset "${target.name}" has CRITICAL criticality rating`);
-  } else if (isTargetHigh) {
-    riskFactors.push(`Target asset "${target.name}" has HIGH criticality rating`);
-  }
-  if (isTargetRestricted) {
-    riskFactors.push(`Target resides within RESTRICTED security zone`);
-  }
-  if (isCoreDataOrAdmin) {
-    riskFactors.push(`High-value sensitive asset role: ${target.type.toUpperCase()}`);
-  }
-  if (hopCount === 1) {
-    riskFactors.push(`Direct 1-hop exposure to attacker`);
-  } else if (isDirectOrShallow) {
-    riskFactors.push(`Shallow attack path: reached in only ${hopCount} network hops`);
-  } else {
-    riskFactors.push(`Multi-hop traversal across ${hopCount} network hops`);
-  }
-  if (trustBoundariesCrossed === 0) {
-    riskFactors.push(`Zero defensive security boundaries separating entry point from target`);
-  } else if (trustBoundariesCrossed === 1) {
-    riskFactors.push(`Only 1 perimeter trust boundary traversed`);
-  } else {
-    riskFactors.push(`Crosses ${trustBoundariesCrossed} distinct security trust boundaries`);
-  }
-  if (hasUnencrypted) {
-    riskFactors.push(`Cleartext unencrypted network traffic permitted along path`);
-  }
-  if (hasWildcard) {
-    riskFactors.push(`Broad wildcard port access ('ANY') permitted along path`);
-  }
+  // Evaluate Risk via Dedicated Risk Intelligence Engine
+  const riskAssessment = evaluateAttackPathRisk({
+    entryPoint,
+    target,
+    nodes,
+    edges,
+    hopCount,
+    trustBoundariesCrossed,
+  });
 
   return {
     hopCount,
     trustBoundariesCrossed,
-    risk,
-    riskFactors,
+    risk: riskAssessment.level,
+    riskScore: riskAssessment.score,
+    riskAssessment,
+    riskFactors: riskAssessment.factors.map((f) => f.reason),
     whyItExists,
     steps,
   };
