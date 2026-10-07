@@ -1,0 +1,21 @@
+{
+  "name": "@pathforge/validator",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "dependencies": {
+    "@pathforge/shared": "*",
+    "@pathforge/core": "*"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\""
+  }
+}

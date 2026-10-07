@@ -1,0 +1,158 @@
+{
+  "id": "env-demo-standard-web",
+  "name": "Standard Secure 3-Tier Web Application",
+  "description": "Hardened baseline architecture: Public ingress passes through a perimeter firewall and load balancer to web frontend, routed through internal API microservices to isolated PostgreSQL and Redis caching tiers.",
+  "nodes": [
+    {
+      "id": "node-internet",
+      "type": "internet",
+      "name": "Public Internet",
+      "position": { "x": 100, "y": 240 },
+      "metadata": {
+        "zone": "public",
+        "description": "Untrusted external incoming network traffic"
+      }
+    },
+    {
+      "id": "node-firewall",
+      "type": "firewall",
+      "name": "Perimeter WAF & Firewall",
+      "position": { "x": 300, "y": 240 },
+      "metadata": {
+        "zone": "dmz",
+        "description": "Edge inspection filtering TLS 443, rate limiting, and DDoS mitigation"
+      }
+    },
+    {
+      "id": "node-lb",
+      "type": "load_balancer",
+      "name": "Ingress Load Balancer",
+      "position": { "x": 500, "y": 240 },
+      "metadata": {
+        "zone": "dmz",
+        "description": "Layer 7 reverse proxy terminating TLS and balancing requests"
+      }
+    },
+    {
+      "id": "node-web",
+      "type": "web_server",
+      "name": "Frontend Web Cluster",
+      "position": { "x": 700, "y": 240 },
+      "metadata": {
+        "zone": "dmz",
+        "description": "Stateless React/Next.js edge server nodes"
+      }
+    },
+    {
+      "id": "node-api",
+      "type": "api_server",
+      "name": "Core API Service",
+      "position": { "x": 900, "y": 240 },
+      "metadata": {
+        "zone": "private",
+        "description": "Internal business logic API microservice with token authorization"
+      }
+    },
+    {
+      "id": "node-db",
+      "type": "database",
+      "name": "Primary PostgreSQL DB",
+      "position": { "x": 1100, "y": 180 },
+      "metadata": {
+        "zone": "restricted",
+        "description": "Encrypted relational database cluster in private subnet"
+      }
+    },
+    {
+      "id": "node-redis",
+      "type": "redis",
+      "name": "Redis Session Cache",
+      "position": { "x": 1100, "y": 320 },
+      "metadata": {
+        "zone": "restricted",
+        "description": "Encrypted in-memory cache and session store"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-internet-to-fw",
+      "source": "node-internet",
+      "target": "node-firewall",
+      "metadata": {
+        "protocol": "https",
+        "ports": "443",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": true
+      }
+    },
+    {
+      "id": "edge-fw-to-lb",
+      "source": "node-firewall",
+      "target": "node-lb",
+      "metadata": {
+        "protocol": "https",
+        "ports": "443",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": true
+      }
+    },
+    {
+      "id": "edge-lb-to-web",
+      "source": "node-lb",
+      "target": "node-web",
+      "metadata": {
+        "protocol": "http",
+        "ports": "8080",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": false
+      }
+    },
+    {
+      "id": "edge-web-to-api",
+      "source": "node-web",
+      "target": "node-api",
+      "metadata": {
+        "protocol": "https",
+        "ports": "8443",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": true
+      }
+    },
+    {
+      "id": "edge-api-to-db",
+      "source": "node-api",
+      "target": "node-db",
+      "metadata": {
+        "protocol": "tcp",
+        "ports": "5432",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": true
+      }
+    },
+    {
+      "id": "edge-api-to-redis",
+      "source": "node-api",
+      "target": "node-redis",
+      "metadata": {
+        "protocol": "tcp",
+        "ports": "6379",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": true
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "createdAt": "2026-10-07T12:00:00.000Z",
+    "updatedAt": "2026-10-07T12:00:00.000Z",
+    "author": "PathForge Security Architecture Team",
+    "tags": ["demo", "three-tier", "hardened", "baseline"]
+  }
+}

@@ -1,0 +1,67 @@
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #0d0f12;
+    color: #d1d5db;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', Menlo, Consolas, monospace;
+  }
+}
+
+/* Custom technical styling */
+:root {
+  --bg-workspace: #0d0f12;
+  --bg-surface: #14171d;
+  --bg-surface-elevated: #1a1e26;
+  --bg-panel: #111318;
+  --border-subtle: #222630;
+  --border-active: #384152;
+  --text-primary: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #5c6370;
+  --accent-blue: #388bfd;
+  --accent-cyan: #39c5bb;
+  --severity-critical: #f85149;
+  --severity-high: #f0883e;
+  --severity-medium: #d29922;
+  --severity-low: #58a6ff;
+  --severity-info: #8b949e;
+}
+
+/* Engineering Canvas Grid Background */
+.canvas-grid {
+  background-color: var(--bg-workspace);
+  background-image: 
+    radial-gradient(circle, #252a35 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-panel);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a303c;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3b4252;
+}

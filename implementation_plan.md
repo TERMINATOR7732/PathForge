@@ -1,0 +1,143 @@
+# PathForge Implementation Plan
+
+> **Build. Break. Defend. Prove.**
+> Interactive Infrastructure Security Simulator & Learning Lab
+
+---
+
+## Roadmap Overview
+
+```text
+Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
+  │
+  ├── Phase 2: Deterministic Attack Simulation
+  │
+  └── Phase 3: Defense, Remediation & Verification ("Prove")
+```
+
+---
+
+## Phase 1 — Infrastructure Modeling & Validation
+
+### Phase 1.1 — Project Foundation *(STATUS: COMPLETE)*
+- [x] Repository initialization, monorepo structure (`packages/shared`, `packages/core`, `packages/validator`, `apps/web`)
+- [x] Strict TypeScript configuration with composite project references
+- [x] Core domain model: `Environment`, `InfrastructureNode`, `InfrastructureEdge`
+- [x] Extensible Node types: `internet`, `firewall`, `load_balancer`, `web_server`, `api_server`, `database`, `redis`, `admin`, `vpn`, `internal_network`, `external_network`
+- [x] Edge relationship model with initial protocol, ports, direction, trust, and encryption metadata
+- [x] UI-agnostic `InfrastructureGraph` abstraction (directed adjacency maps, successors, predecessors, degree, cascading edge removals, cloning)
+- [x] Deterministic JSON serialization and deserialization with strict schema validation
+- [x] Validation architecture: `ValidationRule`, `ValidationContext`, `RuleRegistry`, `ValidatorEngine`, `ValidationResult`
+- [x] Initial security rule implementations:
+  - `PF-001` Public Database Exposure (Critical)
+  - `PF-002` Public Admin Exposure (High)
+  - `PF-003` Missing Security Boundary (High)
+  - `PF-004` Untrusted Network → Internal Network (Critical)
+  - `PF-005` Excessive Trust Relationship / Tier Bypass (Medium)
+  - `PF-006` Invalid or Anomalous Topology (Medium)
+  - `PF-007` Overly Broad Access (High)
+- [x] Explanatory finding model answering: *what is wrong*, *why it matters*, *threat impact*, *recommended architecture*, and *concrete remediation*
+- [x] Deterministic demo environments: `standard-web-app.json` (hardened baseline) and `compromised-direct-db.json` (chaos anti-pattern)
+- [x] Technical workspace web UI foundation (Eraser/Botpress inspired aesthetic: Palette, Grid Canvas, Node/Edge Inspector, Security Findings Drawer)
+- [x] Comprehensive test suite (29 unit & integration tests passing across all packages)
+
+---
+
+### Phase 1.2 — Interactive Visual Network Canvas & Drag-and-Drop Editor *(NEXT RECOMMENDED STEP)*
+- [ ] Interactive node dragging with persistent coordinates
+- [ ] Palette drag-and-drop to spawn new nodes onto the canvas
+- [ ] Interactive edge connection handles (click and drag from source handle to target handle)
+- [ ] Smooth zoom, pan, and minimap controls
+- [ ] Multi-node selection and bulk movement
+- [ ] Keyboard shortcuts (`Delete`/`Backspace` to remove, `Ctrl+Z`/`Ctrl+Y` undo/redo)
+
+### Phase 1.3 — Node & Edge Deep Configuration
+- [ ] In-canvas and inspector property editors for nodes (rename, change zone, attach IP/CIDR, tags)
+- [ ] Edge configuration modal/inspector (protocol selector: TCP/UDP/HTTP/HTTPS/SSH, port ranges, encryption toggle, access: allow/deny)
+- [ ] Visual badge indicators on edges representing port, protocol, and encryption status
+
+### Phase 1.4 — Validation Engine Expansion & Custom Rules
+- [ ] Live continuous validation mode (runs on graph mutation with debounce)
+- [ ] Zone isolation rules (e.g. DMZ isolation from Restricted data zone)
+- [ ] Egress rule filtering (blocking unexpected outbound connections)
+- [ ] Custom rule builder (JSON-based deterministic rule definitions)
+
+### Phase 1.5 — Finding Explanations & Threat Modeling Integration
+- [ ] Interactive canvas highlighting of finding paths when hovering over finding cards
+- [ ] Rich finding drawer with filtering by severity, category, and affected node
+- [ ] Exportable audit report (Markdown / PDF / JSON summary)
+
+### Phase 1.6 — Fix & Revalidation Workflow
+- [ ] "Apply Remediation" one-click action for standard findings (e.g., auto-disconnect bad edge, auto-insert firewall)
+- [ ] Re-evaluation indicator showing finding elimination in real time
+- [ ] History log of applied fixes and security score delta
+
+### Phase 1.7 — Pre-packaged Scenario Lab
+- [ ] Library of archetypal infrastructure topologies:
+  - Microservices on Kubernetes with Service Mesh
+  - Multi-region Cloud Enterprise VPC
+  - Fintech payment gateway with PCI-DSS isolation
+  - Vulnerable legacy monolith
+- [ ] Scenario loader with problem descriptions and learning objectives
+
+### Phase 1.8 — Testing, Accessibility & Polish
+- [ ] End-to-end integration tests for canvas interactions
+- [ ] Dark/Light mode calibration
+- [ ] Keyboard navigation and accessibility auditing
+
+---
+
+## Phase 2 — Attack Simulation (Deterministic Graph Traversal)
+
+### Phase 2.1 — Attack Entry Point Identification
+- Identifying untrusted ingress nodes (`internet`, `external_network`, compromised branch)
+- Identifying high-value targets (crown jewels: `database`, `admin`, secret stores)
+
+### Phase 2.2 — Reachability & Path Finding Algorithms
+- Deterministic graph search (BFS / Dijkstra / All Paths)
+- Port & protocol constraint evaluation along candidate paths
+- Firewall & security boundary traversal evaluation
+
+### Phase 2.3 — Attack Path Graph Generation & Visualization
+- Visualizing animated packet flows along identified attack paths on the canvas
+- Step-by-step traversal breakdown showing each hop and trust boundary crossed
+
+### Phase 2.4 — Lateral Movement & Vulnerability Chaining
+- Chaining multi-hop pivot points (e.g., `Internet → Public Web → API Server → Database`)
+- Exploitation prerequisites modeling per node type
+
+### Phase 2.5 — Risk Scoring & Blast Radius
+- Deterministic severity scoring formula (path length, asset value, boundary absence)
+- Blast radius calculation (how many downstream nodes can be reached from a compromised node)
+
+---
+
+## Phase 3 — Defense, Verification & Proof ("Prove")
+
+### Phase 3.1 — Remediation Recommendations
+- Automated suggestions for defensive placement (where to place firewalls, WAFs, bastions)
+- Least-privilege port restriction suggestions
+
+### Phase 3.2 — Simulated Defensive Interventions
+- "What-If" defense staging mode (simulate adding a firewall without modifying baseline)
+- Live preview of attack path breakage
+
+### Phase 3.3 — Before/After Graph Comparison
+- Visual side-by-side diff of topology graphs
+- Diff of findings and attack paths
+
+### Phase 3.4 — Attack-Path Elimination Verification ("Prove")
+- Formal proof report: "Attack Path `P-01` is eliminated. Reachability = `UNREACHABLE`."
+- Verification certificate of hardened architecture
+
+### Phase 3.5 — Chaos Lab & Drift Simulation
+- Random or scenario-based network sabotage (e.g., firewall rule dropped, port opened)
+- Student / engineer challenges: fix the topology within 3 moves
+
+### Phase 3.6 — Assess Mode & Harden Mode Workflows
+- **Assess Mode**: Audit existing topologies, highlight risks and compliance gaps
+- **Harden Mode**: Step-by-step guided security transformation
+
+### Phase 3.7 — Infrastructure-as-Code (IaC) Import & Export
+- Import parser for Terraform HCL graph / AWS CloudFormation / Docker Compose
+- Export hardened topology to Terraform or network policy manifests

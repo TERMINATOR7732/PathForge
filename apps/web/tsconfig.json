@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true
+  },
+  "references": [
+    { "path": "../../packages/shared" },
+    { "path": "../../packages/core" },
+    { "path": "../../packages/validator" }
+  ],
+  "include": ["src/**/*"]
+}

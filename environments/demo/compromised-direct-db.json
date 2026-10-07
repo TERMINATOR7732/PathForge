@@ -1,0 +1,116 @@
+{
+  "id": "env-demo-compromised-chaos",
+  "name": "Chaos Lab — Anti-Pattern & Exposed Database Topology",
+  "description": "Vulnerable testbed modeling critical infrastructure anti-patterns: A direct edge from Public Internet to PostgreSQL, exposed Admin dashboard, and wildcard access bypass.",
+  "nodes": [
+    {
+      "id": "node-internet",
+      "type": "internet",
+      "name": "Public Internet",
+      "position": { "x": 100, "y": 240 },
+      "metadata": {
+        "zone": "public",
+        "description": "Untrusted external incoming network traffic"
+      }
+    },
+    {
+      "id": "node-firewall",
+      "type": "firewall",
+      "name": "Perimeter Firewall",
+      "position": { "x": 300, "y": 140 },
+      "metadata": {
+        "zone": "dmz",
+        "description": "Perimeter firewall"
+      }
+    },
+    {
+      "id": "node-web",
+      "type": "web_server",
+      "name": "Frontend Web Server",
+      "position": { "x": 550, "y": 140 },
+      "metadata": {
+        "zone": "dmz",
+        "description": "Exposed web app"
+      }
+    },
+    {
+      "id": "node-db",
+      "type": "database",
+      "name": "Production Database",
+      "position": { "x": 800, "y": 240 },
+      "metadata": {
+        "zone": "restricted",
+        "description": "Production database containing user credentials and PII"
+      }
+    },
+    {
+      "id": "node-admin",
+      "type": "admin",
+      "name": "Admin Management Console",
+      "position": { "x": 800, "y": 380 },
+      "metadata": {
+        "zone": "restricted",
+        "description": "Cluster management portal"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-internet-to-fw",
+      "source": "node-internet",
+      "target": "node-firewall",
+      "metadata": {
+        "protocol": "https",
+        "ports": "443",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": true
+      }
+    },
+    {
+      "id": "edge-fw-to-web",
+      "source": "node-firewall",
+      "target": "node-web",
+      "metadata": {
+        "protocol": "http",
+        "ports": "80",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": false
+      }
+    },
+    {
+      "id": "edge-chaos-internet-to-db",
+      "source": "node-internet",
+      "target": "node-db",
+      "metadata": {
+        "protocol": "tcp",
+        "ports": "5432",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": false,
+        "description": "DANGEROUS: Direct public database access configured for quick debugging"
+      }
+    },
+    {
+      "id": "edge-chaos-internet-to-admin",
+      "source": "node-internet",
+      "target": "node-admin",
+      "metadata": {
+        "protocol": "all",
+        "ports": "*",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": false,
+        "description": "DANGEROUS: Wildcard admin access exposed directly to Internet"
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "createdAt": "2026-10-07T12:00:00.000Z",
+    "updatedAt": "2026-10-07T12:00:00.000Z",
+    "author": "PathForge Security Architecture Team",
+    "tags": ["demo", "chaos", "vulnerable", "anti-pattern"]
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "pathforge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PathForge — Interactive Infrastructure Security Simulator & Learning Lab",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev": "npm run dev --workspace=@pathforge/web"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.7"
+  }
+}
