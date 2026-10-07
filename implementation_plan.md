@@ -267,6 +267,32 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
   - Security property catalog with status pills (`VERIFIED`, `PARTIAL`, `UNVERIFIED`) and evidence provenance tags.
   - Ordered deterministic test recommendations.
 
+### Phase 2.7 — Technical Debt & Engineering Risk Tracking *(STATUS: COMPLETE)*
+- [x] Authoritative Domain Technical Debt Engine (`packages/core/src/technical-debt/`):
+  - Data contracts (`types.ts`): `DebtCategory` (security, architecture, resilience, access-control, testing, operational, complexity), `DebtSeverity` (CRITICAL, HIGH, MEDIUM, LOW), `DebtPriority` (P0, P1, P2, P3), `DebtStatus` (ACTIVE, MITIGATED, UNVERIFIED), `DebtImpactType`, `FutureChangeImpact`, `DebtSourceAnalysis`, `PriorityFactor`, `TechnicalDebtDefinition`, `TechnicalDebtItem`, `DebtRating` (LOW_DEBT, MANAGEABLE, ELEVATED, HIGH, SEVERE), `TechnicalDebtSummary`, `TechnicalDebtAssessment`, `TechnicalDebtOptions`.
+  - Authoritative 22-Pattern Debt Catalog (`catalog.ts`):
+    - Security Debt: `TD-001` (Public Sensitive Asset Exposure), `TD-002` (Unencrypted Sensitive Communication), `TD-003` (Excessive Trust Relationship), `TD-004` (Broad Network Access)
+    - Architecture Debt: `TD-005` (Flat Network Architecture), `TD-006` (Tier Bypass), `TD-007` (Weak Perimeter Segmentation), `TD-008` (Dependency Concentration)
+    - Resilience Debt: `TD-009` (Potential Single Point of Failure), `TD-010` (Critical Dependency Concentration)
+    - Access-Control Debt: `TD-011` (Wildcard Access), `TD-012` (Excessive Administrative Reachability), `TD-013` (Overly Broad Protocol/Port Access)
+    - Testing Debt: `TD-014` (Missing Critical Verification Coverage), `TD-015` (Missing Regression Baseline), `TD-016` (Unverified High-Risk Property)
+    - Operational Debt: `TD-017` (Missing Operational Evidence), `TD-018` (Unverified Recovery Controls), `TD-019` (Unverified Monitoring/Alerting)
+    - Complexity Debt: `TD-020` (High Connectivity Concentration), `TD-021` (Excessive Trust Boundaries), `TD-022` (Infrastructure Topology Complexity)
+  - Deterministic Prioritization & Scoring (`prioritization.ts`): Transparent 0–100 formula prioritizing items into `P0`, `P1`, `P2`, `P3`, strict tie-breaking (`score → severity → category → id`), and aggregate health score (100 = clean/minimal debt, 0 = severe debt).
+  - Evidence-Based Debt Detectors (`detectors.ts`): Evaluates existing validation, attack-path, architecture, readiness, testing, and fix verification evidence. Handles `ACTIVE`, `MITIGATED` (via revalidation proof), and `UNVERIFIED` (for unmodeled runtime controls).
+  - Primary Debt Analyzer (`analyzer.ts`): `assessTechnicalDebt(environment, options)` producing structured summary, active/mitigated/unverified collections, category distribution, and deterministic recommendations.
+- [x] Comprehensive Automated Test Suite:
+  - 278 unit and integration tests passing across 23 test files (25 new tests in `tests/technical-debt.test.ts` covering reference secure web app, public database exposure, flat network architecture, unencrypted sensitive links, wildcard ANY:ANY access, SPOF resilience bottlenecks, fan-in dependency concentration, testing coverage gaps, missing regression baseline, unmodeled operational controls as UNVERIFIED debt, authentic evidence provenance without fabrication, determinism, P0–P3 mapping, strict tie-breaking, canvas coordinate independence, explicit DENY boundary filtering, TLS encryption clearing, revalidation-verified mitigation, active finding retention, deterministic sorting, byte-for-byte serialization, category aggregation, sparse/empty topology protection, operational capability truthfulness, and catalog integrity).
+- [x] Interactive UI Console (`TechnicalDebtPanel.tsx` & `FindingsDrawer.tsx`):
+  - Dedicated `DEBT (${activeCount} active)` Tab 8 in `FindingsDrawer` with `Coins` icon.
+  - Debt health score banner with color-coded rating badge, score bar, and metric counters (Active, P0, P1, P2, P3, Mitigated, Unverified).
+  - Sub-tabs: `PRIORITIZED BACKLOG`, `CATEGORIES & SPREAD`, `RESOLUTION ROADMAP`, `GOVERNANCE & BOUNDARIES`.
+  - Filter toolbar for Priority (`ALL`, `P0`, `P1`, `P2`, `P3`) and Status (`ALL`, `ACTIVE`, `MITIGATED`, `UNVERIFIED`).
+  - Prioritized debt cards with "Why It Matters (Future Engineering Cost)", transparent priority factor points, evidence provenance tags, and interactive "Locate" canvas actions.
+  - Interactive Categories & Spread breakdown cards with item counters and P0 indicators.
+  - Deterministic step-by-step Resolution Roadmap.
+  - Governance & Scope Boundary disclosures explaining ₹0 operating model, no fake monetary estimates, and verified mitigation requirements.
+
 ---
 
 ## Phase 3 — Defense, Verification & Proof ("Prove")

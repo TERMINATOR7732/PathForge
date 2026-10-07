@@ -8,6 +8,7 @@ import {
   ArchitectureAnalysisResult,
   ProductionReadinessAssessment,
   TestingIntelligenceResult,
+  TechnicalDebtAssessment,
 } from '@pathforge/core';
 import { getRemediationActions, RemediationAction } from '@pathforge/validator';
 import {
@@ -29,6 +30,7 @@ import {
   Radio,
   Gauge,
   FlaskConical,
+  Coins,
 } from 'lucide-react';
 import { RecommendedArchitectureView } from './RecommendedArchitectureView.js';
 import { RemediationModal } from './RemediationModal.js';
@@ -38,6 +40,7 @@ import { BlastRadiusPanel } from './BlastRadiusPanel.js';
 import { ArchitecturePanel } from './ArchitecturePanel.js';
 import { ProductionReadinessPanel } from './ProductionReadinessPanel.js';
 import { TestingIntelligencePanel } from './TestingIntelligencePanel.js';
+import { TechnicalDebtPanel } from './TechnicalDebtPanel.js';
 
 interface FindingsDrawerProps {
   findings: Finding[];
@@ -56,6 +59,7 @@ interface FindingsDrawerProps {
   architectureResult?: ArchitectureAnalysisResult | null;
   productionReadiness?: ProductionReadinessAssessment | null;
   testingIntelligence?: TestingIntelligenceResult | null;
+  technicalDebt?: TechnicalDebtAssessment | null;
   onSelectNode: (nodeId: string) => void;
   onLocateElement: (target: { id: string; type: 'node' | 'edge' }) => void;
   onHoverFinding: (finding: Finding | null) => void;
@@ -106,6 +110,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   architectureResult,
   productionReadiness,
   testingIntelligence,
+  technicalDebt,
   onSelectNode,
   onLocateElement,
   onHoverFinding,
@@ -114,7 +119,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   onRequestValidate,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<'findings' | 'attack-paths' | 'blast-radius' | 'verification' | 'architecture' | 'readiness' | 'testing'>('findings');
+  const [activeTab, setActiveTab] = useState<'findings' | 'attack-paths' | 'blast-radius' | 'verification' | 'architecture' | 'readiness' | 'testing' | 'debt'>('findings');
   const [expandedFindingId, setExpandedFindingId] = useState<string | null>(
     findings[0]?.id ?? null
   );
@@ -353,6 +358,24 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
               </span>
             </button>
 
+            {/* Tab 8: Technical Debt & Engineering Risk */}
+            <button
+              onClick={() => {
+                setActiveTab('debt');
+                setIsOpen(true);
+              }}
+              className={`flex items-center space-x-1.5 px-2 py-1 rounded text-xs font-mono transition-colors ${
+                activeTab === 'debt'
+                  ? 'bg-[#181d26] text-[#e6edf3] font-semibold border border-[#e3b341]'
+                  : 'text-[#8b949e] hover:text-[#c9d1d9] border border-transparent'
+              }`}
+            >
+              <Coins className="w-3.5 h-3.5 text-[#e3b341]" />
+              <span>
+                DEBT ({technicalDebt ? `${technicalDebt.summary.activeCount} active` : '—'})
+              </span>
+            </button>
+
             {/* Stale Validation Warning */}
             {isValidationStale && (
               <span className="px-2 py-0.5 rounded bg-[#2b1f14] text-[#f0883e] border border-[#f0883e]/50 text-[10px] font-semibold animate-pulse ml-1">
@@ -493,6 +516,12 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
             ) : activeTab === 'testing' && testingIntelligence ? (
               <TestingIntelligencePanel
                 intelligence={testingIntelligence}
+                onLocateElement={onLocateElement}
+                onSelectTab={setActiveTab}
+              />
+            ) : activeTab === 'debt' && technicalDebt ? (
+              <TechnicalDebtPanel
+                assessment={technicalDebt}
                 onLocateElement={onLocateElement}
                 onSelectTab={setActiveTab}
               />

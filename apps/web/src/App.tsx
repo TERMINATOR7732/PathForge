@@ -14,6 +14,7 @@ import {
   analyzeArchitecture,
   assessProductionReadiness,
   assessTestingIntelligence,
+  assessTechnicalDebt,
 } from '@pathforge/core';
 import { createDefaultRuleRegistry, ValidatorEngine, RemediationAction } from '@pathforge/validator';
 import { NodeType, ValidationResult, Finding } from '@pathforge/shared';
@@ -141,6 +142,31 @@ export const App: React.FC = () => {
     attackPathAnalysis,
     architectureResult,
     blastRadiusResult,
+    latestVerification,
+    activeScenarioId,
+  ]);
+
+  // Technical Debt & Risk Tracking (Phase 2.7)
+  const technicalDebt = useMemo(() => {
+    return assessTechnicalDebt(environment, {
+      validationResult,
+      attackPathAnalysis,
+      architectureAnalysis: architectureResult,
+      blastRadiusAnalysis: blastRadiusResult,
+      productionReadiness,
+      testingIntelligence,
+      fixVerification: latestVerification,
+      scenarioId: activeScenarioId,
+    });
+  }, [
+    environment,
+    graphVersion,
+    validationResult,
+    attackPathAnalysis,
+    architectureResult,
+    blastRadiusResult,
+    productionReadiness,
+    testingIntelligence,
     latestVerification,
     activeScenarioId,
   ]);
@@ -452,6 +478,7 @@ export const App: React.FC = () => {
         architectureResult={architectureResult}
         productionReadiness={productionReadiness}
         testingIntelligence={testingIntelligence}
+        technicalDebt={technicalDebt}
         onSelectNode={(nodeId) => {
           setSelectedNodeId(nodeId);
           setSelectedEdgeId(null);

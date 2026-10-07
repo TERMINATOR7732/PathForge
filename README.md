@@ -86,7 +86,7 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 253 tests passing)
+├── tests/                       # Automated test suite (Vitest — 278 tests passing)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
@@ -108,6 +108,7 @@ PathForge/
 │   ├── architecture-analysis.test.ts # Phase 2.4 architecture analysis intelligence tests
 │   ├── production-readiness.test.ts # Phase 2.5 production readiness assessment tests
 │   ├── testing-intelligence.test.ts # Phase 2.6 testing intelligence & verification coverage tests
+│   ├── technical-debt.test.ts   # Phase 2.7 technical debt & engineering risk tracking tests
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -495,6 +496,49 @@ PathForge adds a deterministic **Testing Intelligence** layer that evaluates the
 
 ---
 
+## Technical Debt & Engineering Risk Tracking (Phase 2.7)
+
+PathForge provides a deterministic **Technical Debt & Engineering Risk Tracking** layer. Rather than simply identifying today's active vulnerabilities, this intelligence layer tracks engineering shortcuts and structural compromises that make the modeled infrastructure harder to secure, operate, evolve, and verify over time.
+
+- **Authoritative Debt Pattern Catalog (`TD-001` through `TD-022`)**:
+  - **Security Debt (`TD-001`–`TD-004`)**: Public sensitive asset exposure, unencrypted transport links, excessive trust relationships, broad network access.
+  - **Architecture Debt (`TD-005`–`TD-008`)**: Flat internal network topologies, tier bypasses, weak perimeter segmentation, fan-in dependency concentration.
+  - **Resilience Debt (`TD-009`–`TD-010`)**: Single points of failure in core infrastructure roles, critical asset bottleneck concentration.
+  - **Access-Control Debt (`TD-011`–`TD-013`)**: Wildcard `ANY:ANY` port/protocol allowances, administrative reachability, broad port ranges.
+  - **Testing Debt (`TD-014`–`TD-016`)**: Missing verification for critical security properties, missing regression baseline, unverified high-risk properties.
+  - **Operational Debt (`TD-017`–`TD-019`)**: Missing operational evidence, unverified recovery/backup controls, unverified telemetry/alerting pipelines.
+  - **Complexity Debt (`TD-020`–`TD-022`)**: Extreme connectivity concentration, excessive trust boundaries traversed, dense mesh topology ratios.
+
+- **Deterministic Prioritization & P0–P3 Scoring**:
+  - Transparent 0–100 integer score incorporating:
+    - Base severity points (`CRITICAL`: 40, `HIGH`: 25, `MEDIUM`: 15, `LOW`: 10)
+    - Crown jewel or sensitive asset involvement (+10 to +20)
+    - Untrusted ingress reachability context from attack path intelligence (+20)
+    - Multi-component architectural scope (+10)
+    - Verification gap (+5 to +10)
+  - Strict deterministic tiers:
+    - `P0`: Critical security or architecture debt with active untrusted reachability.
+    - `P1`: High-severity structural debt or unverified critical verification assumptions.
+    - `P2`: Medium-severity structural compromises or missing verification.
+    - `P3`: Low-severity cleanup, minor complexity, or informational debt.
+  - Strict tie-breaking: `priorityScore (desc) → severity (desc) → category (asc) → id (asc)`.
+
+- **Truthful Governance & Boundary Rules**:
+  - **₹0 Operating Model & No Monetary Fiction**: Zero fake dollar estimates (`$14,500 remediation cost`) or invented developer-hours. Prioritization is derived entirely from structural graph properties.
+  - **Explicit Scope Disclosures**: Runtime operational controls (backups, metrics, alert pipelines) are explicitly classified as `UNVERIFIED` evidence debt rather than pretending to scan external cloud hypervisors.
+  - **Revalidation-Verified Resolution**: Debt items are only marked `MITIGATED` when an immutable revalidation comparison snapshot confirms that the underlying flaw has been resolved.
+
+- **Interactive UI (`TechnicalDebtPanel`)**:
+  - Integrated as **Tab 8: `DEBT (${activeCount} active)`** in `FindingsDrawer` with `Coins` icon.
+  - Health Score (`0–100`) and Rating badge (`LOW_DEBT`, `MANAGEABLE`, `ELEVATED`, `HIGH`, `SEVERE`).
+  - Active, P0, P1, P2, P3, Mitigated, and Unverified metric counters.
+  - Priority and status filter toolbars (`ALL`, `P0`, `P1`, `P2`, `P3`, `ACTIVE`, `MITIGATED`, `UNVERIFIED`).
+  - Detailed backlog cards showing "Why It Matters (Future Engineering Cost)", transparent priority factors, evidence sources, and "Locate" canvas buttons.
+  - Categories & Spread overview card grid.
+  - Deterministic step-by-step Resolution Roadmap.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -514,7 +558,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (253 unit & integration tests across 22 test files):
+Execute the full Vitest suite (278 unit & integration tests across 23 test files):
 
 ```bash
 npm run test

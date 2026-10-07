@@ -12,3 +12,4 @@ export * from './blast-radius/index.js';
 export * from './architecture/index.js';
 export * from './production-readiness/index.js';
 export * from './testing-intelligence/index.js';
+export * from './technical-debt/index.js';
