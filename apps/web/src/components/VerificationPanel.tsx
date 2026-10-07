@@ -96,7 +96,11 @@ export const VerificationPanel: React.FC<VerificationPanelProps> = ({
                 : 'bg-[#21262d] border-[#30363d] text-[#8b949e]'
             }`}
           >
-            {status.toUpperCase()}
+            {status === 'verified'
+              ? 'VERIFICATION PASSED'
+              : status === 'requires-attention'
+              ? 'VERIFICATION REQUIRES ATTENTION'
+              : 'VERIFICATION UNCHANGED'}
           </span>
         </div>
 

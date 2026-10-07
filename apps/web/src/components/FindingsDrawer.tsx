@@ -218,8 +218,8 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
 
             {/* Stale Validation Warning */}
             {isValidationStale && (
-              <span className="px-2 py-0.5 rounded bg-[#2b1f14] text-[#f0883e] border border-[#f0883e]/40 text-[10px] font-semibold animate-pulse ml-1">
-                Topology Modified — Validation Stale
+              <span className="px-2 py-0.5 rounded bg-[#2b1f14] text-[#f0883e] border border-[#f0883e]/50 text-[10px] font-semibold animate-pulse ml-1">
+                VALIDATION STALE · TOPOLOGY MODIFIED
               </span>
             )}
 
@@ -241,9 +241,9 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
               >
                 <span>
                   {latestVerification.status === 'verified'
-                    ? `✓ VERIFIED (${latestVerification.resolvedFindings.length} RESOLVED)`
+                    ? `✓ VERIFICATION PASSED (${latestVerification.resolvedFindings.length} RESOLVED)`
                     : latestVerification.status === 'requires-attention'
-                    ? `⚠ ATTENTION (${latestVerification.newFindings.length} NEW)`
+                    ? `⚠ VERIFICATION REQUIRES ATTENTION (${latestVerification.newFindings.length} NEW)`
                     : 'VERIFICATION UNCHANGED'}
                 </span>
               </button>

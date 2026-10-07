@@ -1,10 +1,22 @@
 import React from 'react';
-import { ShieldAlert, ShieldCheck, Play, Download, Terminal, RefreshCw } from 'lucide-react';
+import {
+  ShieldAlert,
+  ShieldCheck,
+  Play,
+  Download,
+  Terminal,
+  RefreshCw,
+  RotateCcw,
+  ChevronDown,
+  Layers,
+} from 'lucide-react';
 import { ValidationResult } from '@pathforge/shared';
+import { getScenarioById } from '@pathforge/core';
 
 interface TopNavProps {
-  currentEnvId: string;
-  onSelectEnv: (envId: string) => void;
+  currentScenarioId: string;
+  onOpenScenarioModal: () => void;
+  onOpenResetModal: () => void;
   onValidate: () => void;
   onExport: () => void;
   validationResult: ValidationResult | null;
@@ -12,16 +24,20 @@ interface TopNavProps {
 }
 
 export const TopNav: React.FC<TopNavProps> = ({
-  currentEnvId,
-  onSelectEnv,
+  currentScenarioId,
+  onOpenScenarioModal,
+  onOpenResetModal,
   onValidate,
   onExport,
   validationResult,
   isValidationStale = false,
 }) => {
+  const currentScenario = getScenarioById(currentScenarioId);
+  const scenarioName = currentScenario?.name ?? 'Custom Environment';
+
   return (
     <header className="h-12 border-b border-[#222630] bg-[#111318] flex items-center justify-between px-4 select-none z-30">
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-3">
         {/* Brand */}
         <div className="flex items-center space-x-2">
           <div className="w-5 h-5 rounded bg-[#388bfd]/10 border border-[#388bfd]/30 flex items-center justify-center text-[#388bfd]">
@@ -31,50 +47,61 @@ export const TopNav: React.FC<TopNavProps> = ({
             <span className="font-semibold text-sm tracking-wide text-white font-mono">
               PathForge
             </span>
-            <span className="text-[10px] text-[#5c6370] uppercase font-mono tracking-wider">
-              v0.2.0 · Phase 1.2
+            <span className="text-[10px] text-[#5c6370] uppercase font-mono tracking-wider hidden sm:inline">
+              v0.3.0 · Phase 1.7
             </span>
           </div>
         </div>
 
         <div className="h-4 w-px bg-[#222630]" />
 
-        {/* Environment Picker */}
-        <div className="flex items-center space-x-2 text-xs">
-          <span className="text-[#8b949e] font-mono">ENV:</span>
-          <select
-            value={currentEnvId}
-            onChange={(e) => onSelectEnv(e.target.value)}
-            className="bg-[#181c24] border border-[#2a303c] rounded px-2.5 py-1 text-xs text-[#e6edf3] font-mono focus:outline-none focus:border-[#388bfd] transition-colors"
+        {/* Scenario Lab Trigger */}
+        <div className="flex items-center space-x-1.5">
+          <button
+            onClick={onOpenScenarioModal}
+            className="flex items-center space-x-2 px-2.5 py-1 rounded bg-[#181c24] border border-[#2a303c] text-xs text-[#e6edf3] font-mono hover:bg-[#202530] hover:border-[#388bfd]/60 transition-colors shadow-sm"
+            title="Open Scenario Lab to load preconfigured topologies"
           >
-            <option value="standard-web">Standard Secure 3-Tier Web App</option>
-            <option value="compromised-chaos">Chaos Lab — Direct DB & Exposed Admin</option>
-          </select>
+            <Layers className="w-3.5 h-3.5 text-[#58a6ff]" />
+            <span className="text-[#8b949e]">SCENARIO:</span>
+            <span className="font-semibold text-white truncate max-w-[150px] sm:max-w-[220px]">
+              {scenarioName}
+            </span>
+            <ChevronDown className="w-3 h-3 text-[#8b949e]" />
+          </button>
+
+          {/* Reset Scenario Button */}
+          <button
+            onClick={onOpenResetModal}
+            className="flex items-center space-x-1 px-2 py-1 rounded bg-[#181c24] border border-[#2a303c] text-xs text-[#8b949e] hover:bg-[#241a18] hover:text-[#f85149] hover:border-[#da3633]/40 transition-colors font-mono"
+            title="Reset scenario to original baseline definition"
+          >
+            <RotateCcw className="w-3 h-3" />
+            <span className="hidden md:inline">Reset</span>
+          </button>
         </div>
       </div>
 
       {/* Middle Status Indicator */}
-      <div className="flex items-center space-x-3">
+      <div className="hidden lg:flex items-center space-x-3">
         {isValidationStale ? (
-          <div className="flex items-center space-x-2 px-2.5 py-0.5 rounded bg-[#d29922]/15 border border-[#d29922]/40 text-[#d29922] text-xs font-mono">
-            <RefreshCw className="w-3 h-3 animate-spin" />
-            <span>TOPOLOGY MODIFIED · VALIDATION OUTDATED</span>
+          <div className="flex items-center space-x-2 px-2.5 py-0.5 rounded bg-[#2b1f14] border border-[#f0883e]/50 text-[#f0883e] text-xs font-mono animate-pulse">
+            <RefreshCw className="w-3 h-3" />
+            <span>TOPOLOGY MODIFIED · VALIDATION STALE</span>
           </div>
         ) : validationResult ? (
           <div className="flex items-center space-x-2">
             {validationResult.summary.passed ? (
-              <div className="flex items-center space-x-1.5 px-2.5 py-0.5 rounded bg-[#238636]/10 border border-[#238636]/30 text-[#3fb950] text-xs font-mono">
+              <div className="flex items-center space-x-1.5 px-2.5 py-0.5 rounded bg-[#14261b] border border-[#238636]/50 text-[#3fb950] text-xs font-mono">
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>TOPOLOGY SECURE</span>
+                <span>VALIDATED · PRODUCTION GATE: PASSED</span>
               </div>
             ) : (
-              <div className="flex items-center space-x-2 px-2.5 py-0.5 rounded bg-[#da3633]/10 border border-[#da3633]/30 text-[#f85149] text-xs font-mono">
+              <div className="flex items-center space-x-2 px-2.5 py-0.5 rounded bg-[#2d1519] border border-[#da3633]/50 text-[#f85149] text-xs font-mono">
                 <ShieldAlert className="w-3.5 h-3.5" />
                 <span>
-                  {validationResult.summary.totalFindings} FINDING
-                  {validationResult.summary.totalFindings > 1 ? 'S' : ''} (
-                  {validationResult.summary.criticalCount} CRITICAL,{' '}
-                  {validationResult.summary.highCount} HIGH)
+                  VALIDATED · PRODUCTION GATE: BLOCKED ({validationResult.summary.totalFindings} FINDING
+                  {validationResult.summary.totalFindings > 1 ? 'S' : ''})
                 </span>
               </div>
             )}
@@ -92,7 +119,7 @@ export const TopNav: React.FC<TopNavProps> = ({
           title="Export topology definition as JSON"
         >
           <Download className="w-3 h-3 text-[#8b949e]" />
-          <span>Export JSON</span>
+          <span className="hidden sm:inline">Export JSON</span>
         </button>
 
         <button

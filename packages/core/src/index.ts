@@ -5,3 +5,4 @@ export * from './domain/configuration-validation.js';
 export * from './graph/infrastructure-graph.js';
 export * from './serialization/serializer.js';
 export * from './comparison/index.js';
+export * from './scenarios/index.js';

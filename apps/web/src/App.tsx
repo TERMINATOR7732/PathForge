@@ -1,27 +1,31 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import {
-  deserializeEnvironment,
   serializeEnvironment,
   Environment,
   createEnvironmentSnapshot,
   verifyFix,
   EnvironmentSnapshot,
   FixVerificationResult,
+  instantiateScenario,
+  getScenarioById,
+  getDefaultScenario,
 } from '@pathforge/core';
 import { createDefaultRuleRegistry, ValidatorEngine, RemediationAction } from '@pathforge/validator';
 import { NodeType, ValidationResult, Finding } from '@pathforge/shared';
-
-import standardEnvJson from '../../../environments/demo/standard-web-app.json';
-import chaosEnvJson from '../../../environments/demo/compromised-direct-db.json';
 
 import { TopNav } from './components/TopNav.js';
 import { ComponentPalette } from './components/ComponentPalette.js';
 import { NetworkCanvas } from './components/canvas/NetworkCanvas.js';
 import { InspectorPanel } from './components/InspectorPanel.js';
 import { FindingsDrawer } from './components/FindingsDrawer.js';
+import { ScenarioModal } from './components/ScenarioModal.js';
+import { ResetScenarioModal } from './components/ResetScenarioModal.js';
 
 export const App: React.FC = () => {
-  const [activeEnvType, setActiveEnvType] = useState<string>('standard-web');
+  const [activeScenarioId, setActiveScenarioId] = useState<string>(() => getDefaultScenario().id);
+  const [isScenarioModalOpen, setIsScenarioModalOpen] = useState<boolean>(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState<boolean>(false);
+
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [isValidationStale, setIsValidationStale] = useState<boolean>(false);
@@ -55,7 +59,7 @@ export const App: React.FC = () => {
 
   // Load and hold authoritative Environment instance
   const [environment, setEnvironment] = useState<Environment>(() => {
-    return deserializeEnvironment(standardEnvJson);
+    return instantiateScenario(getDefaultScenario().id);
   });
 
   // Compute validation result
@@ -108,25 +112,35 @@ export const App: React.FC = () => {
     lastAppliedRemediation,
   ]);
 
-  const handleSelectEnv = (envId: string) => {
-    setActiveEnvType(envId);
-    setSelectedNodeId(null);
-    setSelectedEdgeId(null);
-    setFocusedElement(null);
-    setHoveredFinding(null);
-    setResolvedFindings([]);
-    setLastAppliedRemediation(null);
-    const newEnv = deserializeEnvironment(
-      envId === 'standard-web' ? standardEnvJson : chaosEnvJson
-    );
-    const newResult = validatorEngine.evaluate(newEnv);
-    setEnvironment(newEnv);
-    setValidationResult(newResult);
-    setBaselineSnapshot(createEnvironmentSnapshot(newEnv, newResult));
-    setLatestVerification(null);
-    setIsValidationStale(false);
-    bumpGraphVersion();
-  };
+  const handleLoadScenario = useCallback(
+    (scenarioId: string) => {
+      setActiveScenarioId(scenarioId);
+      setSelectedNodeId(null);
+      setSelectedEdgeId(null);
+      setFocusedElement(null);
+      setHoveredFinding(null);
+      setResolvedFindings([]);
+      setLastAppliedRemediation(null);
+
+      // Cleanly instantiate new environment
+      const newEnv = instantiateScenario(scenarioId);
+      const newResult = validatorEngine.evaluate(newEnv);
+
+      setEnvironment(newEnv);
+      setValidationResult(newResult);
+      // Clean baseline snapshot matching new scenario
+      setBaselineSnapshot(createEnvironmentSnapshot(newEnv, newResult));
+      // Stale verification and deltas from previous scenario are cleanly purged
+      setLatestVerification(null);
+      setIsValidationStale(false);
+      bumpGraphVersion();
+    },
+    [validatorEngine, bumpGraphVersion]
+  );
+
+  const handleResetScenario = useCallback(() => {
+    handleLoadScenario(activeScenarioId);
+  }, [handleLoadScenario, activeScenarioId]);
 
   const handleUpdateNodePosition = useCallback(
     (nodeId: string, x: number, y: number) => {
@@ -158,7 +172,7 @@ export const App: React.FC = () => {
         setIsValidationStale(true);
         bumpGraphVersion();
       } catch (err) {
-        console.warn('Failed to create edge:', err);
+        console.error('Edge creation failed:', err);
       }
     },
     [environment, bumpGraphVersion]
@@ -166,12 +180,9 @@ export const App: React.FC = () => {
 
   const handleDeleteNode = useCallback(
     (nodeId: string) => {
-      const removed = environment.removeNode(nodeId);
-      if (removed) {
-        if (selectedNodeId === nodeId) {
-          setSelectedNodeId(null);
-        }
-        setSelectedEdgeId(null);
+      const deleted = environment.removeNode(nodeId);
+      if (deleted) {
+        if (selectedNodeId === nodeId) setSelectedNodeId(null);
         setIsValidationStale(true);
         bumpGraphVersion();
       }
@@ -181,11 +192,9 @@ export const App: React.FC = () => {
 
   const handleDeleteEdge = useCallback(
     (edgeId: string) => {
-      const removed = environment.removeEdge(edgeId);
-      if (removed) {
-        if (selectedEdgeId === edgeId) {
-          setSelectedEdgeId(null);
-        }
+      const deleted = environment.removeEdge(edgeId);
+      if (deleted) {
+        if (selectedEdgeId === edgeId) setSelectedEdgeId(null);
         setIsValidationStale(true);
         bumpGraphVersion();
       }
@@ -194,11 +203,8 @@ export const App: React.FC = () => {
   );
 
   const handleUpdateNodeConfig = useCallback(
-    (
-      nodeId: string,
-      patch: Parameters<Environment['updateNodeConfig']>[1]
-    ) => {
-      const updated = environment.updateNodeConfig(nodeId, patch);
+    (nodeId: string, config: Parameters<typeof environment.updateNodeConfig>[1]) => {
+      const updated = environment.updateNodeConfig(nodeId, config);
       if (updated) {
         setIsValidationStale(true);
         bumpGraphVersion();
@@ -208,11 +214,8 @@ export const App: React.FC = () => {
   );
 
   const handleUpdateEdgeConfig = useCallback(
-    (
-      edgeId: string,
-      patch: Parameters<Environment['updateEdgeConfig']>[1]
-    ) => {
-      const updated = environment.updateEdgeConfig(edgeId, patch);
+    (edgeId: string, config: Parameters<typeof environment.updateEdgeConfig>[1]) => {
+      const updated = environment.updateEdgeConfig(edgeId, config);
       if (updated) {
         setIsValidationStale(true);
         bumpGraphVersion();
@@ -221,8 +224,10 @@ export const App: React.FC = () => {
     [environment, bumpGraphVersion]
   );
 
+  // Focus and Canvas navigation
   const handleLocateElement = useCallback(
     (target: { id: string; type: 'node' | 'edge' }) => {
+      setFocusedElement({ ...target, timestamp: Date.now() });
       if (target.type === 'node') {
         setSelectedNodeId(target.id);
         setSelectedEdgeId(null);
@@ -230,53 +235,83 @@ export const App: React.FC = () => {
         setSelectedEdgeId(target.id);
         setSelectedNodeId(null);
       }
-      setFocusedElement({ id: target.id, type: target.type, timestamp: Date.now() });
     },
     []
   );
 
+  // Apply deterministic remediation action
   const handleApplyRemediation = useCallback(
     (action: RemediationAction) => {
-      if (action.apply) {
-        const success = action.apply(environment);
-        if (success) {
-          setLastAppliedRemediation({
-            actionId: action.id,
-            type: action.type,
-            title: action.title,
-          });
-          setIsValidationStale(true);
-          bumpGraphVersion();
-        }
+      if (!action.isAutomated) return;
+
+      if (action.type === 'deny-edge' && action.targetEdgeId) {
+        environment.updateEdgeConfig(action.targetEdgeId, { access: 'deny' });
+      } else if (action.type === 'remove-edge' && action.targetEdgeId) {
+        environment.removeEdge(action.targetEdgeId);
+      } else if (action.type === 'enable-encryption' && action.targetEdgeId) {
+        environment.updateEdgeConfig(action.targetEdgeId, {
+          encrypted: true,
+          protocol: 'HTTPS',
+        });
+      } else if (action.type === 'restrict-port' && action.targetEdgeId) {
+        const edge = environment.getEdge(action.targetEdgeId);
+        const targetNode = edge ? environment.getNode(edge.target) : undefined;
+        const portVal = targetNode?.service?.port ?? 443;
+        environment.updateEdgeConfig(action.targetEdgeId, {
+          ports: String(portVal),
+          portConfig: { type: 'single', value: portVal },
+        });
+      } else if (action.type === 'align-port' && action.targetEdgeId) {
+        const edge = environment.getEdge(action.targetEdgeId);
+        const targetNode = edge ? environment.getNode(edge.target) : undefined;
+        const portVal = targetNode?.service?.port ?? 443;
+        environment.updateEdgeConfig(action.targetEdgeId, {
+          ports: String(portVal),
+          portConfig: { type: 'single', value: portVal },
+        });
       }
+
+      // Record applied remediation for subsequent fix verification attribution
+      setLastAppliedRemediation({
+        actionId: action.id,
+        type: action.type,
+        title: action.title,
+      });
+
+      // Mark validation as STALE (discipline principle)
+      setIsValidationStale(true);
+      bumpGraphVersion();
     },
     [environment, bumpGraphVersion]
   );
 
-  const handleExport = () => {
-    const jsonStr = serializeEnvironment(environment, true);
+  const handleExportJson = () => {
+    const jsonStr = serializeEnvironment(environment);
     const blob = new Blob([jsonStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${environment.id}.json`;
+    a.download = `${environment.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-topology.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
+  const activeScenario = getScenarioById(activeScenarioId);
+
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0d0f12] text-[#d1d5db]">
-      {/* Top Header */}
+    <div className="h-screen w-screen flex flex-col bg-[#0d0f12] text-[#e6edf3] overflow-hidden select-none">
+      {/* Top Navigation */}
       <TopNav
-        currentEnvId={activeEnvType}
-        onSelectEnv={handleSelectEnv}
+        currentScenarioId={activeScenarioId}
+        onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
+        onOpenResetModal={() => setIsResetModalOpen(true)}
         onValidate={handleValidate}
-        onExport={handleExport}
+        onExport={handleExportJson}
         validationResult={validationResult}
         isValidationStale={isValidationStale}
       />
 
-      {/* Main Workspace (Palette | Canvas | Inspector) */}
+      {/* Main Workspace Body */}
       <div className="flex-1 flex overflow-hidden">
         <ComponentPalette
           onAddNodeType={(type) => {
@@ -297,6 +332,9 @@ export const App: React.FC = () => {
           activeFindings={validationResult?.findings ?? []}
           hoveredFinding={hoveredFinding}
           focusedElement={focusedElement}
+          activeScenarioId={activeScenarioId}
+          onOpenScenarioLab={() => setIsScenarioModalOpen(true)}
+          onLoadScenario={handleLoadScenario}
         />
         <InspectorPanel
           environment={environment}
@@ -326,6 +364,22 @@ export const App: React.FC = () => {
         onApplyRemediation={handleApplyRemediation}
         onClearResolved={() => setResolvedFindings([])}
         onRequestValidate={handleValidate}
+      />
+
+      {/* Scenario Lab Picker Modal */}
+      <ScenarioModal
+        isOpen={isScenarioModalOpen}
+        activeScenarioId={activeScenarioId}
+        onClose={() => setIsScenarioModalOpen(false)}
+        onSelectScenario={handleLoadScenario}
+      />
+
+      {/* Reset Scenario Confirmation Modal */}
+      <ResetScenarioModal
+        isOpen={isResetModalOpen}
+        scenarioName={activeScenario?.name ?? 'Current Scenario'}
+        onClose={() => setIsResetModalOpen(false)}
+        onConfirmReset={handleResetScenario}
       />
     </div>
   );

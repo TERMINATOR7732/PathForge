@@ -1,0 +1,173 @@
+{
+  "id": "env-demo-flat-network",
+  "name": "Flat / Poorly Segmented Network",
+  "description": "Weak segmentation anti-pattern: Public Internet is bridged directly to an internal switch where Web, API, Database, and Admin reside with no firewall boundary.",
+  "nodes": [
+    {
+      "id": "node-internet",
+      "type": "internet",
+      "name": "Public Internet",
+      "position": { "x": 100, "y": 250 },
+      "metadata": {
+        "zone": "public",
+        "description": "Untrusted external incoming network traffic"
+      }
+    },
+    {
+      "id": "node-internal-net",
+      "type": "internal_network",
+      "name": "Corp Internal LAN",
+      "position": { "x": 360, "y": 250 },
+      "metadata": {
+        "zone": "internal",
+        "cidr": "10.0.0.0/16",
+        "description": "Shared internal subnet switch connecting all company servers without VLANs"
+      }
+    },
+    {
+      "id": "node-web",
+      "type": "web_server",
+      "name": "Web Portal",
+      "position": { "x": 660, "y": 100 },
+      "metadata": {
+        "zone": "internal",
+        "description": "Company web portal running on shared internal subnet",
+        "service": {
+          "name": "http",
+          "port": 80,
+          "protocol": "HTTP"
+        }
+      }
+    },
+    {
+      "id": "node-api",
+      "type": "api_server",
+      "name": "Backend API Service",
+      "position": { "x": 660, "y": 200 },
+      "metadata": {
+        "zone": "internal",
+        "description": "Internal business API service",
+        "service": {
+          "name": "http",
+          "port": 8080,
+          "protocol": "HTTP"
+        }
+      }
+    },
+    {
+      "id": "node-db",
+      "type": "database",
+      "name": "Customer Database",
+      "position": { "x": 660, "y": 300 },
+      "metadata": {
+        "zone": "internal",
+        "criticality": "critical",
+        "description": "Production database co-located in same subnet with frontend workloads",
+        "service": {
+          "name": "postgres",
+          "port": 5432,
+          "protocol": "TCP"
+        }
+      }
+    },
+    {
+      "id": "node-admin",
+      "type": "admin",
+      "name": "Internal Admin Console",
+      "position": { "x": 660, "y": 400 },
+      "metadata": {
+        "zone": "internal",
+        "description": "System administration server with exposed SSH access",
+        "service": {
+          "name": "ssh",
+          "port": 22,
+          "protocol": "SSH"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-internet-to-lan",
+      "source": "node-internet",
+      "target": "node-internal-net",
+      "metadata": {
+        "protocol": "ANY",
+        "ports": "ANY",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": false,
+        "description": "DANGEROUS: Untrusted public ingress bridged directly to internal network"
+      }
+    },
+    {
+      "id": "edge-lan-to-web",
+      "source": "node-internal-net",
+      "target": "node-web",
+      "metadata": {
+        "protocol": "HTTP",
+        "ports": "80",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": false
+      }
+    },
+    {
+      "id": "edge-lan-to-api",
+      "source": "node-internal-net",
+      "target": "node-api",
+      "metadata": {
+        "protocol": "HTTP",
+        "ports": "8080",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": false
+      }
+    },
+    {
+      "id": "edge-lan-to-db",
+      "source": "node-internal-net",
+      "target": "node-db",
+      "metadata": {
+        "protocol": "TCP",
+        "ports": "5432",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": false
+      }
+    },
+    {
+      "id": "edge-lan-to-admin",
+      "source": "node-internal-net",
+      "target": "node-admin",
+      "metadata": {
+        "protocol": "SSH",
+        "ports": "22",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": true
+      }
+    },
+    {
+      "id": "edge-web-to-db",
+      "source": "node-web",
+      "target": "node-db",
+      "metadata": {
+        "protocol": "TCP",
+        "ports": "5432",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": false,
+        "relationship": "trust",
+        "description": "Improper direct trust link from presentation tier directly to DB"
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "createdAt": "2026-10-07T15:00:00.000Z",
+    "updatedAt": "2026-10-07T15:00:00.000Z",
+    "author": "PathForge Security Architecture Team",
+    "tags": ["demo", "vulnerable", "flat-network", "poor-segmentation"]
+  }
+}

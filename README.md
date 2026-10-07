@@ -86,7 +86,7 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 121 tests passing)
+├── tests/                       # Automated test suite (Vitest — 137 tests passing)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
@@ -99,6 +99,8 @@ PathForge/
 │   ├── semantic-validation.test.ts # Phase 1.4 semantic security validation, positive/negative/DENY tests
 │   ├── remediation-ux.test.ts   # Phase 1.5 finding explanation & safe remediation tests
 │   ├── fix-verification.test.ts # Phase 1.6 baseline snapshot, diff & fix verification tests
+│   ├── scenario-lab.test.ts     # Phase 1.7 scenario library & chaos workflow tests
+│   ├── phase17-manual-qa.test.ts # Phase 1.7 automated 5-step manual QA test suite
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -210,6 +212,24 @@ PathForge enforces the core product principle: **"A fix is not proven until the 
 
 ---
 
+## Demo Environment Library & Chaos Lab (Phase 1.7)
+
+PathForge provides a deterministic Scenario Lab and a permissive Chaos engineering environment:
+
+- **Scenario Library**:
+  1. **Secure Web Application** (`secure-web-app`): Production-ready reference architecture (`Internet → Firewall → LB → Web → API → Database & Redis`) with defense-in-depth perimeter inspection, proper zone segmentation, and zero critical/high findings (`Production Gate: PASSED`).
+  2. **Public Database Exposure** (`public-db-exposure`): Intentional single-flaw anti-pattern (`Internet → Database` over cleartext 5432) designed for practicing the complete `Find → Explain → Fix → Revalidate → Prove` loop.
+  3. **Flat / Poorly Segmented Network** (`flat-network`): Inexperienced-engineer anti-pattern where Internet is bridged directly to an internal switch co-locating Web, API, Database, and Admin systems without firewall boundaries or tier segmentation.
+  4. **Chaos Lab** (`chaos-lab`): Deliberately compromised experimental sandbox modeling direct database exposure, public SSH admin console, unmediated internal network bridging, and unencrypted wildcard DB access.
+- **Permissive Chaos Interaction Principle**:
+  PathForge never silently blocks users from creating insecure architecture. Users can freely create `Internet → Database`, `Internet → Admin`, `Web → Database : ANY`, or cross-boundary trust links. Insecure architecture is permitted and analyzed, empowering users to learn through hands-on experimentation.
+- **Safe Scenario Reset**:
+  Users can reset any active scenario back to its pristine definition at any time. Resetting replaces the domain model, recalculates findings, establishes a fresh baseline snapshot, and completely purges stale cross-scenario verification states.
+- **First-Run Canvas Experience**:
+  When opened without a loaded environment, the workspace presents an engineering-focused workflow guide (`1. Validate → 2. Fix → 3. Prove`) with direct quick-load triggers, preserving the large interactive grid as the primary surface.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -229,7 +249,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (121 unit & integration tests):
+Execute the full Vitest suite (137 unit & integration tests):
 
 ```bash
 npm run test

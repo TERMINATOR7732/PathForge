@@ -104,19 +104,24 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
 - [x] Findings Drawer Integration: Dual-mode header tabs (`ACTIVE FINDINGS` vs `FIX VERIFICATION`) with real-time status pill.
 - [x] Comprehensive test suite: 121 unit and integration tests passing across 13 test files (11 new tests in `tests/fix-verification.test.ts`).
 
-### Phase 1.7 — Pre-packaged Scenario Lab & Exportable Audit Report *(NEXT RECOMMENDED STEP)*
-- [ ] Exportable audit report (Markdown / PDF / JSON summary)
-- [ ] Library of archetypal infrastructure topologies:
-  - Microservices on Kubernetes with Service Mesh
-  - Multi-region Cloud Enterprise VPC
-  - Fintech payment gateway with PCI-DSS isolation
-  - Vulnerable legacy monolith
-- [ ] Scenario loader with problem descriptions and learning objectives
+### Phase 1.7 — Demo Environments, Chaos Lab & Product Polish *(STATUS: COMPLETE)*
+- [x] Scenario Library Module (`@pathforge/core/scenarios`): 4 deterministic prebuilt topologies:
+  - Scenario A: **Secure Web Application** (Hardened 3-tier reference architecture, zero findings, Production Gate: PASSED)
+  - Scenario B: **Public Database Exposure** (Intentional flaw for practicing the full Build → Break → Explain → Fix → Prove loop)
+  - Scenario C: **Flat / Poorly Segmented Network** (Weak segmentation, co-locating Web, API, DB, Admin without firewall)
+  - Scenario D: **Chaos Lab** (Deliberately compromised sandbox modeling multiple severe anti-patterns for free experimentation)
+- [x] Scenario Selector UX (`ScenarioModal`): Compact engineering-tool modal with risk badges, purpose statements, learning objectives, and topology preview flows.
+- [x] Permissive Chaos Lab Interaction: PathForge never blocks insecure connections; malformed data may be rejected, but insecure architecture is accepted and analyzed deterministically.
+- [x] Chaos Lab Affordance & Status: Dedicated top banner ("CHAOS LAB · Experiment freely. PathForge will not block insecure designs") and permissive modeling chips.
+- [x] Safe Scenario Reset (`ResetScenarioModal`): Cleanly reinstantiates pristine scenario definition, establishes fresh baseline snapshot, and purges all stale cross-scenario verifications.
+- [x] Empty Canvas First-Run Experience: Centered workflow guide (`1. Validate → 2. Fix → 3. Prove`) with instant quick-load scenario actions on empty canvas.
+- [x] Full Product Polish Pass: Visual consistency, uniform monospace styling, distinct status semantics (`VALIDATED`, `VALIDATION STALE`, `PRODUCTION GATE: BLOCKED/PASSED`, `VERIFICATION PASSED`, `VERIFICATION REQUIRES ATTENTION`).
+- [x] Automated Test Suite: 137 unit and integration tests passing across 15 test files (including tests for scenario loading, expected security states, reset isolation, chaos workflows, and exact 5-step manual QA workflows).
 
-### Phase 1.8 — Testing, Accessibility & Polish
-- [ ] End-to-end integration tests for canvas interactions
-- [ ] Dark/Light mode calibration
+### Phase 1.8 — Exportable Audit Report & Workspace Hardening *(NEXT RECOMMENDED STEP)*
+- [ ] Exportable audit report (Markdown / JSON / printable summary documenting verified before/after proof)
 - [ ] Keyboard navigation and accessibility auditing
+- [ ] Canvas export as SVG/PNG architecture diagram
 
 ---
 

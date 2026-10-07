@@ -1,90 +1,98 @@
 {
   "id": "env-demo-compromised-chaos",
-  "name": "Chaos Lab — Anti-Pattern & Exposed Database Topology",
-  "description": "Vulnerable testbed modeling critical infrastructure anti-patterns: A direct edge from Public Internet to PostgreSQL, exposed Admin dashboard, and wildcard access bypass.",
+  "name": "Chaos Lab — Anti-Pattern Sandbox",
+  "description": "Intentionally compromised environment designed for experimentation: Direct internet database access, exposed admin console, unmediated internal network bridge, and excessive trust bypasses.",
   "nodes": [
     {
       "id": "node-internet",
       "type": "internet",
       "name": "Public Internet",
-      "position": { "x": 100, "y": 240 },
+      "position": { "x": 80, "y": 240 },
       "metadata": {
         "zone": "public",
         "description": "Untrusted external incoming network traffic"
       }
     },
     {
-      "id": "node-firewall",
-      "type": "firewall",
-      "name": "Perimeter Firewall",
-      "position": { "x": 300, "y": 140 },
+      "id": "node-web",
+      "type": "web_server",
+      "name": "Frontend Web App",
+      "position": { "x": 380, "y": 90 },
       "metadata": {
         "zone": "dmz",
-        "description": "Perimeter firewall"
+        "description": "Public-facing web server",
+        "service": {
+          "name": "http",
+          "port": 80,
+          "protocol": "HTTP"
+        }
       }
     },
     {
-      "id": "node-web",
-      "type": "web_server",
-      "name": "Frontend Web Server",
-      "position": { "x": 550, "y": 140 },
+      "id": "node-api",
+      "type": "api_server",
+      "name": "Core API Service",
+      "position": { "x": 380, "y": 210 },
       "metadata": {
-        "zone": "dmz",
-        "description": "Exposed web app"
+        "zone": "internal",
+        "description": "Backend API service",
+        "service": {
+          "name": "http",
+          "port": 8080,
+          "protocol": "HTTP"
+        }
+      }
+    },
+    {
+      "id": "node-internal-net",
+      "type": "internal_network",
+      "name": "Internal Subnet",
+      "position": { "x": 380, "y": 350 },
+      "metadata": {
+        "zone": "internal",
+        "cidr": "10.0.0.0/24",
+        "description": "Internal network segment"
       }
     },
     {
       "id": "node-db",
       "type": "database",
       "name": "Production Database",
-      "position": { "x": 800, "y": 240 },
+      "position": { "x": 740, "y": 150 },
       "metadata": {
         "zone": "restricted",
-        "description": "Production database containing user credentials and PII"
+        "criticality": "critical",
+        "description": "Core database cluster containing user credentials and PII",
+        "service": {
+          "name": "postgres",
+          "port": 5432,
+          "protocol": "TCP"
+        }
       }
     },
     {
       "id": "node-admin",
       "type": "admin",
       "name": "Admin Management Console",
-      "position": { "x": 800, "y": 380 },
+      "position": { "x": 740, "y": 310 },
       "metadata": {
-        "zone": "restricted",
-        "description": "Cluster management portal"
+        "zone": "management",
+        "description": "Cluster management console with administrative shell",
+        "service": {
+          "name": "ssh",
+          "port": 22,
+          "protocol": "SSH"
+        }
       }
     }
   ],
   "edges": [
     {
-      "id": "edge-internet-to-fw",
-      "source": "node-internet",
-      "target": "node-firewall",
-      "metadata": {
-        "protocol": "https",
-        "ports": "443",
-        "direction": "unidirectional",
-        "access": "allow",
-        "encrypted": true
-      }
-    },
-    {
-      "id": "edge-fw-to-web",
-      "source": "node-firewall",
-      "target": "node-web",
-      "metadata": {
-        "protocol": "http",
-        "ports": "80",
-        "direction": "unidirectional",
-        "access": "allow",
-        "encrypted": false
-      }
-    },
-    {
       "id": "edge-chaos-internet-to-db",
       "source": "node-internet",
       "target": "node-db",
       "metadata": {
-        "protocol": "tcp",
+        "protocol": "TCP",
         "ports": "5432",
         "direction": "unidirectional",
         "access": "allow",
@@ -97,20 +105,59 @@
       "source": "node-internet",
       "target": "node-admin",
       "metadata": {
-        "protocol": "all",
-        "ports": "*",
+        "protocol": "SSH",
+        "ports": "22",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": true,
+        "description": "DANGEROUS: Admin management SSH console exposed directly to Internet"
+      }
+    },
+    {
+      "id": "edge-chaos-internet-to-internal",
+      "source": "node-internet",
+      "target": "node-internal-net",
+      "metadata": {
+        "protocol": "ANY",
+        "ports": "ANY",
         "direction": "unidirectional",
         "access": "allow",
         "encrypted": false,
-        "description": "DANGEROUS: Wildcard admin access exposed directly to Internet"
+        "description": "DANGEROUS: Untrusted public ingress bridging directly into internal subnet"
+      }
+    },
+    {
+      "id": "edge-chaos-web-to-db",
+      "source": "node-web",
+      "target": "node-db",
+      "metadata": {
+        "protocol": "TCP",
+        "ports": "ANY",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": false,
+        "description": "DANGEROUS: Web tier queries database with wildcard ports bypassing API"
+      }
+    },
+    {
+      "id": "edge-chaos-api-to-db",
+      "source": "node-api",
+      "target": "node-db",
+      "metadata": {
+        "protocol": "TCP",
+        "ports": "5432",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": false,
+        "description": "API tier connects to DB over unencrypted cleartext channel"
       }
     }
   ],
   "metadata": {
     "version": "1.0.0",
-    "createdAt": "2026-10-07T12:00:00.000Z",
-    "updatedAt": "2026-10-07T12:00:00.000Z",
+    "createdAt": "2026-10-07T15:00:00.000Z",
+    "updatedAt": "2026-10-07T15:00:00.000Z",
     "author": "PathForge Security Architecture Team",
-    "tags": ["demo", "chaos", "vulnerable", "anti-pattern"]
+    "tags": ["demo", "chaos", "vulnerable", "experimentation-sandbox"]
   }
 }

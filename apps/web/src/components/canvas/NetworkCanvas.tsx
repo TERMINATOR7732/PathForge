@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Environment, InfrastructureEdge, InfrastructureNode } from '@pathforge/core';
 import { Finding, NodeType } from '@pathforge/shared';
+import { Flame } from 'lucide-react';
 import { CanvasNode } from './CanvasNode.js';
 import { CanvasEdge } from './CanvasEdge.js';
 import { ConnectionPreview } from './ConnectionPreview.js';
@@ -22,6 +23,9 @@ interface NetworkCanvasProps {
   activeFindings: Finding[];
   hoveredFinding?: Finding | null;
   focusedElement?: { id: string; type: 'node' | 'edge'; timestamp: number } | null;
+  activeScenarioId?: string;
+  onOpenScenarioLab?: () => void;
+  onLoadScenario?: (scenarioId: string) => void;
 }
 
 export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
@@ -38,6 +42,9 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   activeFindings,
   hoveredFinding,
   focusedElement,
+  activeScenarioId,
+  onOpenScenarioLab,
+  onLoadScenario,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -468,6 +475,81 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
           })}
         </div>
       </div>
+
+      {/* Subtle Top-Center Affordance Banner */}
+      {activeScenarioId === 'chaos-lab' ? (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded bg-[#241733]/90 border border-[#8957e5]/50 text-[#d2a8ff] text-[11px] font-mono flex items-center space-x-1.5 shadow-md backdrop-blur-sm pointer-events-none select-none">
+          <Flame className="w-3.5 h-3.5 text-[#d2a8ff]" />
+          <span className="font-bold">CHAOS LAB</span>
+          <span className="text-[#8b949e]">·</span>
+          <span>Experiment freely. PathForge will not block insecure designs.</span>
+        </div>
+      ) : (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded bg-[#13161c]/80 border border-[#222630]/80 text-[#8b949e] text-[10px] font-mono flex items-center space-x-1.5 backdrop-blur-sm pointer-events-none select-none">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#3fb950]" />
+          <span>Permissive Modeling Active · Insecure topologies allowed & analyzed</span>
+        </div>
+      )}
+
+      {/* Empty Canvas First-Run Workflow Experience */}
+      {nodes.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 p-4 select-none">
+          <div className="w-full max-w-lg p-6 rounded-lg bg-[#111318]/95 border border-[#30363d] shadow-2xl backdrop-blur-md pointer-events-auto font-mono text-center space-y-4">
+            <div className="space-y-1">
+              <div className="text-xs uppercase tracking-widest text-[#58a6ff] font-bold">
+                Build Your Environment
+              </div>
+              <p className="text-xs text-[#8b949e] max-w-md mx-auto leading-relaxed">
+                Add infrastructure components to the canvas and connect them to model communication and trust boundaries.
+              </p>
+            </div>
+
+            {/* 3 Core Product Steps */}
+            <div className="grid grid-cols-3 gap-2 text-left text-[11px] pt-1">
+              <div className="p-2.5 rounded bg-[#161b24] border border-[#222630] space-y-1">
+                <span className="text-[10px] font-bold text-[#58a6ff] uppercase block">1. Validate</span>
+                <span className="text-[#8b949e] text-[10px] leading-tight block">
+                  Find security and topology misconfigurations deterministically.
+                </span>
+              </div>
+              <div className="p-2.5 rounded bg-[#161b24] border border-[#222630] space-y-1">
+                <span className="text-[10px] font-bold text-[#f0883e] uppercase block">2. Fix</span>
+                <span className="text-[#8b949e] text-[10px] leading-tight block">
+                  Apply recommended automated or manual remediations.
+                </span>
+              </div>
+              <div className="p-2.5 rounded bg-[#161b24] border border-[#222630] space-y-1">
+                <span className="text-[10px] font-bold text-[#3fb950] uppercase block">3. Prove</span>
+                <span className="text-[#8b949e] text-[10px] leading-tight block">
+                  Revalidate and verify that the attack surface was eliminated.
+                </span>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="pt-2 flex items-center justify-center gap-2 flex-wrap">
+              <button
+                onClick={() => onLoadScenario?.('secure-web-app')}
+                className="px-3 py-1.5 rounded bg-[#238636] hover:bg-[#2ea043] text-white text-xs font-semibold transition-colors shadow-sm"
+              >
+                Load Secure Web App
+              </button>
+              <button
+                onClick={() => onLoadScenario?.('public-db-exposure')}
+                className="px-3 py-1.5 rounded bg-[#1f6feb] hover:bg-[#388bfd] text-white text-xs font-semibold transition-colors shadow-sm"
+              >
+                Load Public DB Lab
+              </button>
+              <button
+                onClick={() => onOpenScenarioLab?.()}
+                className="px-3 py-1.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] text-xs font-medium transition-colors"
+              >
+                Browse All Scenarios
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Canvas Navigation Controls */}
       <CanvasControls

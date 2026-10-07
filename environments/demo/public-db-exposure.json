@@ -1,0 +1,55 @@
+{
+  "id": "env-demo-public-db",
+  "name": "Public Database Exposure",
+  "description": "Critical anti-pattern: A production database is directly exposed to the public Internet with ALLOW access policy over cleartext TCP 5432.",
+  "nodes": [
+    {
+      "id": "node-internet",
+      "type": "internet",
+      "name": "Public Internet",
+      "position": { "x": 160, "y": 240 },
+      "metadata": {
+        "zone": "public",
+        "description": "Untrusted external incoming network traffic"
+      }
+    },
+    {
+      "id": "node-db",
+      "type": "database",
+      "name": "Customer Database",
+      "position": { "x": 580, "y": 240 },
+      "metadata": {
+        "zone": "restricted",
+        "criticality": "critical",
+        "description": "Relational PostgreSQL database containing customer records and credentials",
+        "service": {
+          "name": "postgres",
+          "port": 5432,
+          "protocol": "TCP"
+        }
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-internet-to-db",
+      "source": "node-internet",
+      "target": "node-db",
+      "metadata": {
+        "protocol": "TCP",
+        "ports": "5432",
+        "direction": "unidirectional",
+        "access": "allow",
+        "encrypted": false,
+        "description": "DANGEROUS: Unmediated direct public access to database port 5432"
+      }
+    }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "createdAt": "2026-10-07T15:00:00.000Z",
+    "updatedAt": "2026-10-07T15:00:00.000Z",
+    "author": "PathForge Security Architecture Team",
+    "tags": ["demo", "vulnerable", "public-db", "remediation-lab"]
+  }
+}
