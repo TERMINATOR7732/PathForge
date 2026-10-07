@@ -21,6 +21,8 @@ interface CanvasNodeProps {
   isCritical: boolean;
   isHigh: boolean;
   isConnectionTarget: boolean;
+  isHoveredFromFinding?: boolean;
+  isFocusedTarget?: boolean;
   degree: { inDegree: number; outDegree: number; total: number };
   onSelect: (nodeId: string) => void;
   onStartDrag: (nodeId: string, clientX: number, clientY: number) => void;
@@ -61,6 +63,8 @@ export const CanvasNode: React.FC<CanvasNodeProps> = ({
   isCritical,
   isHigh,
   isConnectionTarget,
+  isHoveredFromFinding,
+  isFocusedTarget,
   degree,
   onSelect,
   onStartDrag,
@@ -72,7 +76,13 @@ export const CanvasNode: React.FC<CanvasNodeProps> = ({
   let borderClass = 'border-[#262c37] hover:border-[#384152]';
   let bgClass = 'bg-[#14171d]';
 
-  if (isConnectionTarget) {
+  if (isFocusedTarget) {
+    borderClass = 'border-[#58a6ff] ring-4 ring-[#58a6ff]/70 shadow-[0_0_20px_rgba(88,166,255,0.5)]';
+    bgClass = 'bg-[#182638]';
+  } else if (isHoveredFromFinding) {
+    borderClass = 'border-[#f0883e] ring-2 ring-[#f0883e]/80 shadow-[0_0_12px_rgba(240,136,62,0.4)]';
+    bgClass = 'bg-[#201815]';
+  } else if (isConnectionTarget) {
     borderClass = 'border-[#388bfd] ring-2 ring-[#388bfd]/60';
     bgClass = 'bg-[#152336]';
   } else if (isCritical) {

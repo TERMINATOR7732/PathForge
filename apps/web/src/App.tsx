@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { deserializeEnvironment, serializeEnvironment, Environment } from '@pathforge/core';
-import { createDefaultRuleRegistry, ValidatorEngine } from '@pathforge/validator';
-import { NodeType, ValidationResult } from '@pathforge/shared';
+import { createDefaultRuleRegistry, ValidatorEngine, RemediationAction } from '@pathforge/validator';
+import { NodeType, ValidationResult, Finding } from '@pathforge/shared';
 
 import standardEnvJson from '../../../environments/demo/standard-web-app.json';
 import chaosEnvJson from '../../../environments/demo/compromised-direct-db.json';
@@ -17,6 +17,15 @@ export const App: React.FC = () => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [isValidationStale, setIsValidationStale] = useState<boolean>(false);
+
+  // Investigation & Focus state
+  const [hoveredFinding, setHoveredFinding] = useState<Finding | null>(null);
+  const [focusedElement, setFocusedElement] = useState<{
+    id: string;
+    type: 'node' | 'edge';
+    timestamp: number;
+  } | null>(null);
+  const [resolvedFindings, setResolvedFindings] = useState<Finding[]>([]);
 
   // graphVersion integer counter to trigger reactive UI re-renders on domain graph mutation
   const [, setGraphVersion] = useState<number>(0);
@@ -39,15 +48,28 @@ export const App: React.FC = () => {
   });
 
   const handleValidate = useCallback(() => {
+    const previousFindings = validationResult?.findings ?? [];
     const result = validatorEngine.evaluate(environment);
+
+    // Compute resolved findings (findings present previously that are now resolved)
+    const newFindingIds = new Set(result.findings.map((f) => f.id));
+    const newlyResolved = previousFindings.filter((prev) => !newFindingIds.has(prev.id));
+
+    if (newlyResolved.length > 0) {
+      setResolvedFindings(newlyResolved);
+    }
+
     setValidationResult(result);
     setIsValidationStale(false);
-  }, [validatorEngine, environment]);
+  }, [validatorEngine, environment, validationResult]);
 
   const handleSelectEnv = (envId: string) => {
     setActiveEnvType(envId);
     setSelectedNodeId(null);
     setSelectedEdgeId(null);
+    setFocusedElement(null);
+    setHoveredFinding(null);
+    setResolvedFindings([]);
     const newEnv = deserializeEnvironment(
       envId === 'standard-web' ? standardEnvJson : chaosEnvJson
     );
@@ -150,6 +172,33 @@ export const App: React.FC = () => {
     [environment, bumpGraphVersion]
   );
 
+  const handleLocateElement = useCallback(
+    (target: { id: string; type: 'node' | 'edge' }) => {
+      if (target.type === 'node') {
+        setSelectedNodeId(target.id);
+        setSelectedEdgeId(null);
+      } else {
+        setSelectedEdgeId(target.id);
+        setSelectedNodeId(null);
+      }
+      setFocusedElement({ id: target.id, type: target.type, timestamp: Date.now() });
+    },
+    []
+  );
+
+  const handleApplyRemediation = useCallback(
+    (action: RemediationAction) => {
+      if (action.apply) {
+        const success = action.apply(environment);
+        if (success) {
+          setIsValidationStale(true);
+          bumpGraphVersion();
+        }
+      }
+    },
+    [environment, bumpGraphVersion]
+  );
+
   const handleExport = () => {
     const jsonStr = serializeEnvironment(environment, true);
     const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -192,6 +241,8 @@ export const App: React.FC = () => {
           onDeleteNode={handleDeleteNode}
           onDeleteEdge={handleDeleteEdge}
           activeFindings={validationResult?.findings ?? []}
+          hoveredFinding={hoveredFinding}
+          focusedElement={focusedElement}
         />
         <InspectorPanel
           environment={environment}
@@ -208,10 +259,17 @@ export const App: React.FC = () => {
       {/* Security Findings Explanatory Drawer */}
       <FindingsDrawer
         findings={validationResult?.findings ?? []}
+        environment={environment}
+        isValidationStale={isValidationStale}
+        resolvedFindings={resolvedFindings}
         onSelectNode={(nodeId) => {
           setSelectedNodeId(nodeId);
           setSelectedEdgeId(null);
         }}
+        onLocateElement={handleLocateElement}
+        onHoverFinding={setHoveredFinding}
+        onApplyRemediation={handleApplyRemediation}
+        onClearResolved={() => setResolvedFindings([])}
       />
     </div>
   );

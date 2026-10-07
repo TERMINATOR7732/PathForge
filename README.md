@@ -154,16 +154,24 @@ PathForge's deterministic validator consumes rich semantic configuration:
 
 ---
 
-## Finding Explanatory Architecture
+## Finding Explanation & Safe Remediation UX (Phase 1.5)
 
-Every security violation detected in PathForge answers six explicit questions:
+PathForge transforms raw validator findings into deep, actionable security engineering investigations:
 
-1. **What is wrong?** — Concise diagnostic title and description of the specific node/edge anomaly.
-2. **Why is it wrong?** — The architectural and security rationale behind the rule.
-3. **Why does it matter?** — The risk context for the infrastructure operator.
-4. **What could happen?** — The concrete threat scenario and adversarial exploitation path.
-5. **What would a better design look like?** — Architectural reference pattern for defense-in-depth.
-6. **What should the user change?** — Exact actionable remediation steps on the graph.
+- **6-Dimensional Deep Dive**: Every finding provides comprehensive diagnostic intelligence covering:
+  1. *What is Wrong & Why It Matters* — Clear risk context.
+  2. *Threat Impact & Exploitation Scenario* — Attacker capabilities, lateral movement vectors, and data exfiltration scenarios.
+  3. *Recommended Architecture* — Visual contrast of the flawed topology flow against the recommended defense-in-depth pattern.
+  4. *Concrete Fix Guidance* — Exact topological and configuration steps required.
+  5. *Structured Machine Evidence* — Specific protocols, ports, access policies, encryption states, zones, and criticality involved.
+  6. *Safe Remediation Actions* — Deterministic domain actions ready for execution.
+- **Locate on Canvas**: Instantly center and zoom to any affected node or edge on the canvas via the "Locate on Canvas" action. Hovering over any finding in the drawer dynamically highlights affected elements on the canvas with an animated target pulse.
+- **Architectural Pattern Comparison**: Visual schematics contrasting current insecure communication paths with multi-tier isolation, DMZ reverse proxies, VPN/bastion jump hosts, and least-privilege policies.
+- **Safe Deterministic Remediation**: One-click safe graph remediations (`deny-edge`, `remove-edge`, `enable-encryption`, `restrict-port`, `align-port`) backed by `@pathforge/validator/remediation`.
+- **Safety Confirmation Modal**: Remediation requires explicit confirmation detailing graph domain impacts and policy changes before modifying authoritative domain models.
+- **State Discipline**: Applying a remediation updates the domain model and immediately transitions validation to **STALE** state (`Topology Modified — Validation Stale`). Findings are only considered resolved once the user clicks **Validate Topology**.
+- **Resolution Tracking & Feedback**: Revalidation compares prior findings with current findings to compute resolved issues, displaying celebratory resolution notifications (`🎉 1 Finding Resolved! (PF-001)`).
+- **Finding Filters & Empty States**: Filter findings by Severity (Critical, High, Medium, Low), Category (Exposure, Boundary, Access Control, Trust Boundary, Topology), or affected Asset, with professional empty states for clean topologies and filtered subsets.
 
 ---
 
@@ -186,7 +194,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (94 unit & integration tests):
+Execute the full Vitest suite (110 unit & integration tests):
 
 ```bash
 npm run test

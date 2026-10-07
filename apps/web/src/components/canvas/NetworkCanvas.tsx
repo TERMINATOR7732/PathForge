@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Environment, InfrastructureEdge, InfrastructureNode } from '@pathforge/core';
 import { Finding, NodeType } from '@pathforge/shared';
 import { CanvasNode } from './CanvasNode.js';
@@ -20,6 +20,8 @@ interface NetworkCanvasProps {
   onDeleteNode: (nodeId: string) => void;
   onDeleteEdge: (edgeId: string) => void;
   activeFindings: Finding[];
+  hoveredFinding?: Finding | null;
+  focusedElement?: { id: string; type: 'node' | 'edge'; timestamp: number } | null;
 }
 
 export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
@@ -34,6 +36,8 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   onDeleteNode,
   onDeleteEdge,
   activeFindings,
+  hoveredFinding,
+  focusedElement,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -92,6 +96,41 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   );
 
   const affectedEdges = new Set(activeFindings.flatMap((f) => f.affectedEdges));
+
+  const hoveredFindingNodes = useMemo(() => {
+    return new Set(hoveredFinding?.affectedNodes ?? []);
+  }, [hoveredFinding]);
+
+  const hoveredFindingEdges = useMemo(() => {
+    return new Set(hoveredFinding?.affectedEdges ?? []);
+  }, [hoveredFinding]);
+
+  // Center on focused element when requested (e.g. from "Locate on Canvas")
+  useEffect(() => {
+    if (!focusedElement) return;
+
+    if (focusedElement.type === 'node') {
+      const node = environment.getNode(focusedElement.id);
+      if (node) {
+        const targetPanX = dimensions.width / 2 - (node.position.x + 100) * zoom;
+        const targetPanY = dimensions.height / 2 - (node.position.y + 45) * zoom;
+        setPan({ x: targetPanX, y: targetPanY });
+      }
+    } else if (focusedElement.type === 'edge') {
+      const edge = environment.getEdge(focusedElement.id);
+      if (edge) {
+        const s = environment.getNode(edge.source);
+        const t = environment.getNode(edge.target);
+        if (s && t) {
+          const midX = (s.position.x + 200 + t.position.x) / 2;
+          const midY = (s.position.y + 45 + t.position.y + 45) / 2;
+          const targetPanX = dimensions.width / 2 - midX * zoom;
+          const targetPanY = dimensions.height / 2 - midY * zoom;
+          setPan({ x: targetPanX, y: targetPanY });
+        }
+      }
+    }
+  }, [focusedElement, environment, dimensions.width, dimensions.height, zoom]);
 
   // Convert client viewport coordinates to canvas space
   const screenToCanvas = useCallback(
@@ -376,6 +415,10 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
                 targetNode={targetNode}
                 isSelected={selectedEdgeId === edge.id}
                 isVulnerable={affectedEdges.has(edge.id)}
+                isHoveredFromFinding={hoveredFindingEdges.has(edge.id)}
+                isFocusedTarget={
+                  focusedElement?.type === 'edge' && focusedElement.id === edge.id
+                }
                 onSelect={(edgeId) => {
                   onSelectEdge(edgeId);
                   onSelectNode(null);
@@ -408,6 +451,10 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
                 isCritical={isCritical}
                 isHigh={isHigh}
                 isConnectionTarget={isConnectionTarget}
+                isHoveredFromFinding={hoveredFindingNodes.has(node.id)}
+                isFocusedTarget={
+                  focusedElement?.type === 'node' && focusedElement.id === node.id
+                }
                 degree={degree}
                 onSelect={(nId) => {
                   onSelectNode(nId);

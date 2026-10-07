@@ -80,17 +80,20 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
 - [x] FindingsDrawer & InspectorPanel rendering rich structured evidence badges and semantic descriptions
 - [x] Test suite expanded to 94 unit and integration tests passing across 11 test files (including 24 new tests for Phase 1.4)
 
-### Phase 1.5 — Finding Explanation + Remediation UX *(NEXT RECOMMENDED STEP)*
-- [ ] Interactive canvas highlighting of finding paths when hovering over finding cards
-- [ ] Rich finding drawer with filtering by severity, category, and affected node
+### Phase 1.5 — Finding Explanation + Remediation UX *(STATUS: COMPLETE)*
+- [x] 6-Dimensional Finding Deep Dive (What is wrong, why it matters, threat impact/exploitation scenario, recommended architecture, concrete fix steps, structured evidence, remediation actions)
+- [x] Interactive "Locate on Canvas": Pan and center canvas to affected elements with visual ring/pulse animation and node/edge selection
+- [x] Dynamic hover highlight: Hovering over finding cards in the drawer highlights affected nodes and edges on the canvas
+- [x] Architectural Pattern Comparison: Side-by-side visual flow contrasting current flawed path against recommended secure defense architecture
+- [x] Deterministic Remediation Engine (`@pathforge/validator/remediation`): Auto-generates safe actions (`deny-edge`, `remove-edge`, `enable-encryption`, `restrict-port`, `align-port`, `manual`)
+- [x] Remediation Confirmation Modal: Explains exact policy changes and domain impacts before executing mutations
+- [x] State Discipline: Remediation marks validation as STALE (`Topology Modified — Validation Stale`) without auto-resolving until user explicitly revalidates
+- [x] Revalidation Resolution Tracking: Automatically detects eliminated findings upon revalidation and displays celebratory feedback (`🎉 1 Finding Resolved!`)
+- [x] Multi-dimensional Finding Filters: Severity filters with count badges, Category selector, Asset selector, and professional empty states
+- [x] Comprehensive test suite: 110 unit and integration tests passing across 12 test files (including 16 new tests for Phase 1.5)
+
+### Phase 1.6 — Pre-packaged Scenario Lab & Exportable Audit Report *(NEXT RECOMMENDED STEP)*
 - [ ] Exportable audit report (Markdown / PDF / JSON summary)
-
-### Phase 1.6 — Fix & Revalidation Workflow
-- [ ] "Apply Remediation" one-click action for standard findings (e.g., auto-disconnect bad edge, auto-insert firewall)
-- [ ] Re-evaluation indicator showing finding elimination in real time
-- [ ] History log of applied fixes and security score delta
-
-### Phase 1.7 — Pre-packaged Scenario Lab
 - [ ] Library of archetypal infrastructure topologies:
   - Microservices on Kubernetes with Service Mesh
   - Multi-region Cloud Enterprise VPC
