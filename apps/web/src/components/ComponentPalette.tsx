@@ -11,6 +11,7 @@ import {
   KeyRound,
   Network,
   Share2,
+  Plus,
 } from 'lucide-react';
 import { CoreNodeType } from '@pathforge/shared';
 
@@ -35,7 +36,11 @@ const PALETTE_ITEMS: PaletteItem[] = [
   { type: 'external_network', label: 'External Net', zone: 'untrusted', icon: Share2 },
 ];
 
-export const ComponentPalette: React.FC = () => {
+interface ComponentPaletteProps {
+  onAddNodeType?: (type: CoreNodeType) => void;
+}
+
+export const ComponentPalette: React.FC<ComponentPaletteProps> = ({ onAddNodeType }) => {
   return (
     <aside className="w-56 border-r border-[#222630] bg-[#111318] flex flex-col h-full select-none">
       <div className="px-3 py-2.5 border-b border-[#222630] flex items-center justify-between">
@@ -54,16 +59,25 @@ export const ComponentPalette: React.FC = () => {
           return (
             <div
               key={item.type}
-              className="group flex items-center justify-between px-2.5 py-1.5 rounded border border-transparent hover:border-[#2a303c] hover:bg-[#181c24] text-xs text-[#c9d1d9] transition-all cursor-grab active:cursor-grabbing"
-              title={`Drag or add ${item.label} to topology`}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('application/pathforge-node-type', item.type);
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              onClick={() => onAddNodeType?.(item.type)}
+              className="group flex items-center justify-between px-2.5 py-1.5 rounded border border-transparent hover:border-[#2a303c] hover:bg-[#181c24] text-xs text-[#c9d1d9] transition-all cursor-grab active:cursor-grabbing hover:shadow-sm"
+              title={`Drag onto canvas or click to add ${item.label}`}
             >
               <div className="flex items-center space-x-2">
                 <Icon className="w-3.5 h-3.5 text-[#8b949e] group-hover:text-[#58a6ff] transition-colors" />
                 <span className="font-mono text-xs">{item.label}</span>
               </div>
-              <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-[#1f242e] text-[#8b949e] border border-[#2b323f]">
-                {item.zone}
-              </span>
+              <div className="flex items-center space-x-1">
+                <span className="text-[9px] font-mono px-1 py-0.5 rounded bg-[#1f242e] text-[#8b949e] border border-[#2b323f]">
+                  {item.zone}
+                </span>
+                <Plus className="w-2.5 h-2.5 text-[#5c6370] opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
             </div>
           );
         })}
@@ -73,7 +87,11 @@ export const ComponentPalette: React.FC = () => {
         <div className="text-[10px] font-mono text-[#5c6370] leading-relaxed">
           <span className="text-[#8b949e] font-medium">Interactive Canvas</span>
           <br />
-          Click nodes or edges in the workspace to inspect properties & security status.
+          • Drag items from palette onto canvas
+          <br />
+          • Drag green port to connect nodes
+          <br />
+          • Press Delete / Backspace to remove
         </div>
       </div>
     </aside>

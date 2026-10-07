@@ -1,13 +1,15 @@
 import React from 'react';
 import { Environment } from '@pathforge/core';
 import { Finding } from '@pathforge/shared';
-import { Info, ArrowRight, ShieldAlert } from 'lucide-react';
+import { Info, ArrowRight, ShieldAlert, Trash2 } from 'lucide-react';
 
 interface InspectorPanelProps {
   environment: Environment;
   selectedNodeId: string | null;
   selectedEdgeId: string | null;
   findings: Finding[];
+  onDeleteNode?: (nodeId: string) => void;
+  onDeleteEdge?: (edgeId: string) => void;
 }
 
 export const InspectorPanel: React.FC<InspectorPanelProps> = ({
@@ -15,6 +17,8 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   selectedNodeId,
   selectedEdgeId,
   findings,
+  onDeleteNode,
+  onDeleteEdge,
 }) => {
   const selectedNode = selectedNodeId ? environment.getNode(selectedNodeId) : null;
   const selectedEdge = selectedEdgeId ? environment.getEdge(selectedEdgeId) : null;
@@ -28,6 +32,13 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   const edgeFindings = selectedEdge
     ? findings.filter((f) => f.affectedEdges.includes(selectedEdge.id))
     : [];
+
+  const inDegree = selectedNode
+    ? environment.graph.getIncomingEdges(selectedNode.id).length
+    : 0;
+  const outDegree = selectedNode
+    ? environment.graph.getOutgoingEdges(selectedNode.id).length
+    : 0;
 
   return (
     <aside className="w-80 border-l border-[#222630] bg-[#111318] flex flex-col h-full select-none">
@@ -66,15 +77,25 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   {selectedNode.metadata.zone ?? 'default'}
                 </div>
               </div>
+              <div className="bg-[#161a22] p-2 rounded border border-[#262c37]">
+                <div className="text-[9px] uppercase text-[#5c6370]">Position</div>
+                <div className="text-[#8b949e] font-medium mt-0.5">
+                  {selectedNode.position.x} / {selectedNode.position.y}
+                </div>
+              </div>
+              <div className="bg-[#161a22] p-2 rounded border border-[#262c37]">
+                <div className="text-[9px] uppercase text-[#5c6370]">Connections</div>
+                <div className="text-[#c9d1d9] font-medium mt-0.5">
+                  In: {inDegree} / Out: {outDegree}
+                </div>
+              </div>
             </div>
 
             {/* Ingress / Egress Connections */}
             <div>
               <div className="text-[10px] font-mono uppercase text-[#5c6370] mb-1.5 flex items-center justify-between">
                 <span>Inbound Links</span>
-                <span className="text-[#8b949e]">
-                  {environment.graph.getIncomingEdges(selectedNode.id).length}
-                </span>
+                <span className="text-[#8b949e]">{inDegree}</span>
               </div>
               <div className="space-y-1">
                 {environment.graph.getIncomingEdges(selectedNode.id).map((e) => {
@@ -90,7 +111,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     </div>
                   );
                 })}
-                {environment.graph.getIncomingEdges(selectedNode.id).length === 0 && (
+                {inDegree === 0 && (
                   <div className="text-[10px] font-mono text-[#5c6370] italic">
                     No inbound ingress links
                   </div>
@@ -101,9 +122,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
             <div>
               <div className="text-[10px] font-mono uppercase text-[#5c6370] mb-1.5 flex items-center justify-between">
                 <span>Outbound Links</span>
-                <span className="text-[#8b949e]">
-                  {environment.graph.getOutgoingEdges(selectedNode.id).length}
-                </span>
+                <span className="text-[#8b949e]">{outDegree}</span>
               </div>
               <div className="space-y-1">
                 {environment.graph.getOutgoingEdges(selectedNode.id).map((e) => {
@@ -121,7 +140,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     </div>
                   );
                 })}
-                {environment.graph.getOutgoingEdges(selectedNode.id).length === 0 && (
+                {outDegree === 0 && (
                   <div className="text-[10px] font-mono text-[#5c6370] italic">
                     No outbound egress links
                   </div>
@@ -151,6 +170,19 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </div>
               </div>
             )}
+
+            {/* Node Action: Delete Component */}
+            {onDeleteNode && (
+              <div className="pt-2">
+                <button
+                  onClick={() => onDeleteNode(selectedNode.id)}
+                  className="w-full flex items-center justify-center space-x-1.5 py-1.5 px-3 rounded bg-[#2b181a] hover:bg-[#3b1d20] border border-[#da3633]/50 text-xs font-mono text-[#f85149] transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Component</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -159,14 +191,24 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
           <div className="space-y-4">
             <div>
               <div className="text-[10px] font-mono uppercase text-[#5c6370] mb-1">
-                Edge ID
+                Connection
               </div>
-              <div className="text-xs font-mono font-medium text-white bg-[#161a22] p-2 rounded border border-[#262c37]">
-                {selectedEdge.id}
+              <div className="text-xs font-mono font-medium text-white bg-[#161a22] p-2 rounded border border-[#262c37] flex items-center justify-between">
+                <span className="truncate">
+                  {environment.getNode(selectedEdge.source)?.name ?? selectedEdge.source}
+                </span>
+                <ArrowRight className="w-3.5 h-3.5 text-[#58a6ff] mx-1 shrink-0" />
+                <span className="truncate">
+                  {environment.getNode(selectedEdge.target)?.name ?? selectedEdge.target}
+                </span>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+              <div className="bg-[#161a22] p-2 rounded border border-[#262c37]">
+                <div className="text-[9px] uppercase text-[#5c6370]">Relationship</div>
+                <div className="text-[#c9d1d9] font-medium mt-0.5">Reachability</div>
+              </div>
               <div className="bg-[#161a22] p-2 rounded border border-[#262c37]">
                 <div className="text-[9px] uppercase text-[#5c6370]">Protocol</div>
                 <div className="text-[#58a6ff] font-medium mt-0.5 uppercase">
@@ -195,22 +237,11 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                   {selectedEdge.metadata.encrypted ? 'YES (TLS)' : 'NO (Cleartext)'}
                 </div>
               </div>
-            </div>
-
-            {/* Source & Target */}
-            <div className="bg-[#161a22] p-2.5 rounded border border-[#262c37] space-y-2 text-xs font-mono">
-              <div>
-                <span className="text-[9px] uppercase text-[#5c6370] block">Source</span>
-                <span className="text-[#e6edf3]">
-                  {environment.getNode(selectedEdge.source)?.name ?? selectedEdge.source}
-                </span>
-              </div>
-              <div className="h-px bg-[#262c37]" />
-              <div>
-                <span className="text-[9px] uppercase text-[#5c6370] block">Destination</span>
-                <span className="text-[#e6edf3]">
-                  {environment.getNode(selectedEdge.target)?.name ?? selectedEdge.target}
-                </span>
+              <div className="bg-[#161a22] p-2 rounded border border-[#262c37]">
+                <div className="text-[9px] uppercase text-[#5c6370]">Access</div>
+                <div className="text-[#3fb950] font-medium mt-0.5 uppercase">
+                  {selectedEdge.metadata.access ?? 'allow'}
+                </div>
               </div>
             </div>
 
@@ -234,6 +265,19 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Edge Action: Delete Connection */}
+            {onDeleteEdge && (
+              <div className="pt-2">
+                <button
+                  onClick={() => onDeleteEdge(selectedEdge.id)}
+                  className="w-full flex items-center justify-center space-x-1.5 py-1.5 px-3 rounded bg-[#2b181a] hover:bg-[#3b1d20] border border-[#da3633]/50 text-xs font-mono text-[#f85149] transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Connection</span>
+                </button>
               </div>
             )}
           </div>

@@ -124,4 +124,61 @@ describe('Environment Domain Model & Serialization', () => {
       })
     ).toThrow('references non-existent target node "non-existent"');
   });
+
+  it('supports createNode with sensible default naming and unique IDs', () => {
+    const env = new Environment({ id: 'env-test', name: 'Test' });
+
+    const db1 = env.createNode('database', { x: 100, y: 150 });
+    expect(db1.id).toBe('node-database-1');
+    expect(db1.name).toBe('Database');
+    expect(db1.metadata.zone).toBe('restricted');
+    expect(db1.position).toEqual({ x: 100, y: 150 });
+
+    const db2 = env.createNode('database', { x: 300, y: 250 });
+    expect(db2.id).toBe('node-database-2');
+    expect(db2.name).toBe('Database 2');
+    expect(db2.position).toEqual({ x: 300, y: 250 });
+
+    const web1 = env.createNode('web_server');
+    expect(web1.id).toBe('node-web-server-1');
+    expect(web1.name).toBe('Web Server');
+    expect(web1.metadata.zone).toBe('dmz');
+  });
+
+  it('persists updated node coordinates across serialization round-trip', () => {
+    const env = new Environment({ id: 'env-coords', name: 'Coordinates Test' });
+    const node = env.createNode('database', { x: 400, y: 250 });
+
+    // Update position
+    const updated = env.updateNodePosition(node.id, 650, 320);
+    expect(updated).toBe(true);
+    expect(node.position).toEqual({ x: 650, y: 320 });
+
+    // Serialize and deserialize
+    const json = serializeEnvironment(env);
+    const restored = deserializeEnvironment(json);
+    const restoredNode = restored.getNode(node.id);
+
+    expect(restoredNode).toBeDefined();
+    expect(restoredNode?.position).toEqual({ x: 650, y: 320 });
+  });
+
+  it('creates directional edges and validates endpoints in environment', () => {
+    const env = new Environment({ id: 'env-edges', name: 'Edges Test' });
+    const web = env.createNode('web_server');
+    const db = env.createNode('database');
+
+    const edge = env.createEdge(web.id, db.id, { protocol: 'tcp', ports: '5432' });
+    expect(edge.source).toBe(web.id);
+    expect(edge.target).toBe(db.id);
+    expect(edge.metadata.ports).toBe('5432');
+    expect(env.hasEdgeBetween(web.id, db.id)).toBe(true);
+
+    // Deleting node removes connected edge
+    env.removeNode(web.id);
+    expect(env.getNode(web.id)).toBeUndefined();
+    expect(env.getEdge(edge.id)).toBeUndefined();
+    expect(env.hasEdgeBetween(web.id, db.id)).toBe(false);
+  });
 });
+

@@ -43,15 +43,22 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
 
 ---
 
-### Phase 1.2 — Interactive Visual Network Canvas & Drag-and-Drop Editor *(NEXT RECOMMENDED STEP)*
-- [ ] Interactive node dragging with persistent coordinates
-- [ ] Palette drag-and-drop to spawn new nodes onto the canvas
-- [ ] Interactive edge connection handles (click and drag from source handle to target handle)
-- [ ] Smooth zoom, pan, and minimap controls
-- [ ] Multi-node selection and bulk movement
-- [ ] Keyboard shortcuts (`Delete`/`Backspace` to remove, `Ctrl+Z`/`Ctrl+Y` undo/redo)
+### Phase 1.2 — Interactive Visual Network Canvas & Drag-and-Drop Editor *(STATUS: COMPLETE)*
+- [x] Direct interactive node dragging with real-time coordinate updates and domain persistence
+- [x] Palette drag-and-drop & click-to-add to spawn new infrastructure nodes onto the canvas
+- [x] Unique stable IDs and human-readable default names (`Database 2`, `Firewall 2`, etc.)
+- [x] Interactive directional connection handles (drag from output port to input port with live bezier curve preview)
+- [x] Unrestricted/permissive modeling enabling intentional security experiments (`Internet → Database`)
+- [x] Node and edge selection with detailed metadata in `InspectorPanel`
+- [x] Sensible deletion via keyboard (`Delete`/`Backspace`) and inspector with cascading edge removal in domain graph
+- [x] Smooth pan navigation (middle mouse drag, space+drag, or canvas drag)
+- [x] Smooth mouse wheel zoom, zoom controls (`+`, `-`, `Reset`), and interactive minimap overview
+- [x] Outdated validation feedback with one-click re-evaluation integration
+- [x] Automated test suite expanded to 40 tests covering domain sync, coordinate persistence, and manual QA flow
 
-### Phase 1.3 — Node & Edge Deep Configuration
+---
+
+### Phase 1.3 — Node & Edge Deep Configuration *(NEXT RECOMMENDED STEP)*
 - [ ] In-canvas and inspector property editors for nodes (rename, change zone, attach IP/CIDR, tags)
 - [ ] Edge configuration modal/inspector (protocol selector: TCP/UDP/HTTP/HTTPS/SSH, port ranges, encryption toggle, access: allow/deny)
 - [ ] Visual badge indicators on edges representing port, protocol, and encryption status

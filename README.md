@@ -62,7 +62,8 @@ PathForge/
 ├── apps/
 │   └── web/                     # Vite + React 19 workspace UI shell
 │       ├── src/
-│       │   ├── components/      # TopNav, Palette, NetworkCanvas, Inspector, FindingsDrawer
+│       │   ├── components/      # TopNav, Palette, Inspector, FindingsDrawer
+│       │   │   └── canvas/      # NetworkCanvas, CanvasNode, CanvasEdge, ConnectionPreview, CanvasControls, CanvasMinimap
 │       │   ├── App.tsx          # Workspace coordinator
 │       │   └── index.css        # Technical dark canvas theme
 │       ├── vite.config.ts
@@ -85,20 +86,37 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest)
+├── tests/                       # Automated test suite (Vitest — 40 tests passing)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
-│   ├── environment.test.ts      # Environment delegation & JSON serialization
+│   ├── environment.test.ts      # Environment delegation, creation helpers & JSON serialization
 │   ├── rules.test.ts            # PF-001 through PF-007 deterministic evaluation
 │   ├── demo-environment.test.ts # Verification of standard baseline JSON
-│   └── chaos-loop.test.ts       # Full Build-Break-Defend-Fix lifecycle test
+│   ├── chaos-loop.test.ts       # Full Build-Break-Defend-Fix lifecycle test
+│   ├── editor-integration.test.ts # Phase 1.2 interactive canvas & domain sync tests
+│   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
 ├── tsconfig.base.json           # Shared strict TypeScript configuration
 ├── package.json                 # Monorepo workspaces definition
 └── implementation_plan.md       # Multi-phase roadmap and delivery milestones
 ```
+
+---
+
+## Interactive Visual Canvas (Phase 1.2)
+
+PathForge features an interactive, high-density modeling canvas where the `@pathforge/core` domain graph remains the single source of truth:
+
+- **Direct Node Manipulation**: Drag components across the grid workspace; coordinates persist directly into the domain model and survive serialization.
+- **Palette Drag & Drop**: Drag infrastructure components (Internet, Firewalls, Load Balancers, Web/API clusters, Databases, Redis, Admin consoles, VPNs, Networks) from the sidebar palette onto the canvas with automatic stable ID and human-readable name generation (`Web Server 2`, `Database 3`).
+- **Interactive Connection Handles**: Obvious connection ports on each node. Drag from the green output port to any input port to establish directional infrastructure edges (`InfrastructureEdge`) with protocol and port metadata.
+- **Permissive Modeling (Chaos UX Principle)**: The editor allows users to intentionally build dangerous connections (e.g., `Internet → Database` or `Internet → Admin`) to learn through experimentation.
+- **Property Inspector**: Inspect selected nodes (type, zone, coordinates, inbound/outbound links, delete action) or edges (endpoints, reachability direction, protocol, ports, access, encryption, delete action).
+- **Sensible Deletion**: Select any node or edge and press `Delete` / `Backspace` or click delete in the inspector. Node deletion automatically executes cascading edge removals in the graph.
+- **Canvas Navigation**: Pan around the workspace via middle-click or space+drag; zoom smoothly via mouse wheel or floating controls (`+`, `-`, `Reset`); and monitor the topology via the interactive minimap.
+- **Revalidation Integration**: Graph modifications flag validation state as outdated with real-time feedback. Click **Validate Topology** to re-evaluate the graph deterministically.
 
 ---
 

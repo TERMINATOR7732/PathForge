@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldAlert, ShieldCheck, Play, Download, Terminal } from 'lucide-react';
+import { ShieldAlert, ShieldCheck, Play, Download, Terminal, RefreshCw } from 'lucide-react';
 import { ValidationResult } from '@pathforge/shared';
 
 interface TopNavProps {
@@ -8,6 +8,7 @@ interface TopNavProps {
   onValidate: () => void;
   onExport: () => void;
   validationResult: ValidationResult | null;
+  isValidationStale?: boolean;
 }
 
 export const TopNav: React.FC<TopNavProps> = ({
@@ -16,9 +17,10 @@ export const TopNav: React.FC<TopNavProps> = ({
   onValidate,
   onExport,
   validationResult,
+  isValidationStale = false,
 }) => {
   return (
-    <header className="h-12 border-b border-[#222630] bg-[#111318] flex items-center justify-between px-4 select-none">
+    <header className="h-12 border-b border-[#222630] bg-[#111318] flex items-center justify-between px-4 select-none z-30">
       <div className="flex items-center space-x-4">
         {/* Brand */}
         <div className="flex items-center space-x-2">
@@ -30,7 +32,7 @@ export const TopNav: React.FC<TopNavProps> = ({
               PathForge
             </span>
             <span className="text-[10px] text-[#5c6370] uppercase font-mono tracking-wider">
-              v0.1.0 · Phase 1.1
+              v0.2.0 · Phase 1.2
             </span>
           </div>
         </div>
@@ -53,7 +55,12 @@ export const TopNav: React.FC<TopNavProps> = ({
 
       {/* Middle Status Indicator */}
       <div className="flex items-center space-x-3">
-        {validationResult ? (
+        {isValidationStale ? (
+          <div className="flex items-center space-x-2 px-2.5 py-0.5 rounded bg-[#d29922]/15 border border-[#d29922]/40 text-[#d29922] text-xs font-mono">
+            <RefreshCw className="w-3 h-3 animate-spin" />
+            <span>TOPOLOGY MODIFIED · VALIDATION OUTDATED</span>
+          </div>
+        ) : validationResult ? (
           <div className="flex items-center space-x-2">
             {validationResult.summary.passed ? (
               <div className="flex items-center space-x-1.5 px-2.5 py-0.5 rounded bg-[#238636]/10 border border-[#238636]/30 text-[#3fb950] text-xs font-mono">
@@ -90,10 +97,15 @@ export const TopNav: React.FC<TopNavProps> = ({
 
         <button
           onClick={onValidate}
-          className="flex items-center space-x-1.5 px-3 py-1 rounded bg-[#238636] hover:bg-[#2ea043] text-xs text-white font-medium transition-colors font-mono shadow-sm"
+          className={`flex items-center space-x-1.5 px-3 py-1 rounded text-xs text-white font-medium transition-all font-mono shadow-sm ${
+            isValidationStale
+              ? 'bg-[#1f6feb] hover:bg-[#388bfd] ring-2 ring-[#388bfd]/50'
+              : 'bg-[#238636] hover:bg-[#2ea043]'
+          }`}
+          title="Run deterministic validation engine"
         >
           <Play className="w-3 h-3 fill-current" />
-          <span>Validate Topology</span>
+          <span>{isValidationStale ? 'Re-Validate Topology' : 'Validate Topology'}</span>
         </button>
       </div>
     </header>
