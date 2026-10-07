@@ -122,6 +122,20 @@ export class Environment {
     return true;
   }
 
+  /**
+   * Updates semantic configuration properties of an existing node.
+   */
+  updateNodeConfig(
+    nodeId: string,
+    patch: Parameters<InfrastructureNode['updateConfig']>[0]
+  ): boolean {
+    const node = this.getNode(nodeId);
+    if (!node) return false;
+    node.updateConfig(patch);
+    this.touch();
+    return true;
+  }
+
   removeNode(nodeId: string): boolean {
     const removed = this.graph.removeNode(nodeId);
     if (removed) {
@@ -184,6 +198,20 @@ export class Environment {
 
   hasEdgeBetween(sourceId: string, targetId: string): boolean {
     return this.graph.hasDirectEdge(sourceId, targetId);
+  }
+
+  /**
+   * Updates semantic configuration properties of an existing edge.
+   */
+  updateEdgeConfig(
+    edgeId: string,
+    patch: Parameters<InfrastructureEdge['updateConfig']>[0]
+  ): boolean {
+    const edge = this.getEdge(edgeId);
+    if (!edge) return false;
+    edge.updateConfig(patch);
+    this.touch();
+    return true;
   }
 
   removeEdge(edgeId: string): boolean {

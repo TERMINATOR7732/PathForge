@@ -122,6 +122,34 @@ export const App: React.FC = () => {
     [environment, selectedEdgeId, bumpGraphVersion]
   );
 
+  const handleUpdateNodeConfig = useCallback(
+    (
+      nodeId: string,
+      patch: Parameters<Environment['updateNodeConfig']>[1]
+    ) => {
+      const updated = environment.updateNodeConfig(nodeId, patch);
+      if (updated) {
+        setIsValidationStale(true);
+        bumpGraphVersion();
+      }
+    },
+    [environment, bumpGraphVersion]
+  );
+
+  const handleUpdateEdgeConfig = useCallback(
+    (
+      edgeId: string,
+      patch: Parameters<Environment['updateEdgeConfig']>[1]
+    ) => {
+      const updated = environment.updateEdgeConfig(edgeId, patch);
+      if (updated) {
+        setIsValidationStale(true);
+        bumpGraphVersion();
+      }
+    },
+    [environment, bumpGraphVersion]
+  );
+
   const handleExport = () => {
     const jsonStr = serializeEnvironment(environment, true);
     const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -170,6 +198,8 @@ export const App: React.FC = () => {
           selectedNodeId={selectedNodeId}
           selectedEdgeId={selectedEdgeId}
           findings={validationResult?.findings ?? []}
+          onUpdateNodeConfig={handleUpdateNodeConfig}
+          onUpdateEdgeConfig={handleUpdateEdgeConfig}
           onDeleteNode={handleDeleteNode}
           onDeleteEdge={handleDeleteEdge}
         />

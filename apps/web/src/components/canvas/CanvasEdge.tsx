@@ -1,5 +1,6 @@
 import React from 'react';
 import { InfrastructureEdge, InfrastructureNode } from '@pathforge/core';
+import { Lock } from 'lucide-react';
 
 interface CanvasEdgeProps {
   edge: InfrastructureEdge;
@@ -33,6 +34,9 @@ export const CanvasEdge: React.FC<CanvasEdgeProps> = ({
   const midX = (sx + tx) / 2;
   const midY = (sy + ty) / 2;
 
+  const isDenied = edge.access === 'deny';
+  const isEncrypted = edge.encrypted;
+
   let strokeColor = '#3e4657';
   let markerId = 'arrowhead-normal';
 
@@ -42,11 +46,23 @@ export const CanvasEdge: React.FC<CanvasEdgeProps> = ({
   } else if (isSelected) {
     strokeColor = '#388bfd';
     markerId = 'arrowhead-active';
+  } else if (isDenied) {
+    strokeColor = '#484f58';
   }
 
-  const label = edge.metadata?.ports
-    ? `${edge.metadata.protocol ?? 'tcp'}:${edge.metadata.ports}`
-    : edge.metadata?.protocol ?? 'tcp';
+  let strokeDasharray: string | undefined = undefined;
+  if (isVulnerable) {
+    strokeDasharray = '4 3';
+  } else if (isDenied) {
+    strokeDasharray = '3 3';
+  }
+
+  const portDisplay = edge.ports;
+  const protoDisplay = edge.protocol;
+  const label =
+    portDisplay && portDisplay !== 'ANY'
+      ? `${protoDisplay}:${portDisplay}`
+      : protoDisplay;
 
   return (
     <g
@@ -71,30 +87,34 @@ export const CanvasEdge: React.FC<CanvasEdgeProps> = ({
         fill="none"
         stroke={strokeColor}
         strokeWidth={isSelected || isVulnerable ? 2.5 : 1.75}
-        strokeDasharray={isVulnerable ? '4 3' : undefined}
+        strokeDasharray={strokeDasharray}
         markerEnd={`url(#${markerId})`}
         className="transition-colors group-hover:stroke-[#58a6ff]"
       />
 
       {/* Edge Label Pill */}
       <foreignObject
-        x={midX - 45}
+        x={midX - 55}
         y={midY - 12}
-        width={90}
+        width={110}
         height={24}
         className="overflow-visible pointer-events-auto"
       >
         <div
-          className={`text-[9px] font-mono px-1.5 py-0.5 rounded border text-center transition-all select-none truncate ${
+          className={`text-[9px] font-mono px-1.5 py-0.5 rounded border text-center transition-all select-none truncate flex items-center justify-center space-x-1 ${
             isVulnerable
               ? 'bg-[#2b1617] border-[#da3633] text-[#f85149]'
               : isSelected
               ? 'bg-[#122438] border-[#388bfd] text-[#58a6ff] ring-1 ring-[#388bfd]/50'
+              : isDenied
+              ? 'bg-[#1c1416] border-[#482325] text-[#f85149]/80 group-hover:border-[#6e2c30]'
               : 'bg-[#14171d] border-[#262c37] text-[#8b949e] group-hover:border-[#384152] group-hover:text-[#c9d1d9]'
           }`}
-          title={`${edge.source} → ${edge.target} (${label})`}
+          title={`${edge.source} → ${edge.target} (${isDenied ? 'DENY ' : ''}${label}${isEncrypted ? ' [Encrypted]' : ''})`}
         >
-          {label}
+          {isEncrypted && <Lock className="w-2.5 h-2.5 shrink-0 text-[#3fb950]" />}
+          {isDenied && <span className="text-[#f85149] font-bold shrink-0">[DENY]</span>}
+          <span className="truncate">{label}</span>
         </div>
       </foreignObject>
     </g>

@@ -28,25 +28,84 @@ export type CoreNodeType =
 
 export type NodeType = CoreNodeType | (string & {});
 
+export type NodeZone =
+  | 'public'
+  | 'dmz'
+  | 'internal'
+  | 'restricted'
+  | 'management'
+  | 'private' // backward compatibility with earlier baseline JSONs
+  | (string & {});
+
+export type AssetCriticality = 'low' | 'medium' | 'high' | 'critical';
+
+export interface NodeServiceInfo {
+  name?: string;
+  port?: number;
+  protocol?: string;
+}
+
 export interface NodePosition {
   x: number;
   y: number;
 }
 
 export interface NodeMetadata {
-  zone?: 'public' | 'dmz' | 'private' | 'restricted' | string;
+  zone?: NodeZone;
+  cidr?: string; // e.g. "10.0.1.10/32" or "10.0.1.0/24"
+  criticality?: AssetCriticality;
+  service?: NodeServiceInfo;
+  tags?: string[];
   os?: string;
   version?: string;
-  tags?: string[];
   description?: string;
   [key: string]: unknown;
 }
 
+export type EdgeProtocol =
+  | 'TCP'
+  | 'UDP'
+  | 'HTTP'
+  | 'HTTPS'
+  | 'SSH'
+  | 'TLS'
+  | 'ICMP'
+  | 'ANY'
+  | (string & {});
+
+export type EdgeAccess = 'allow' | 'deny';
+
+export type EdgeRelationship =
+  | 'network'
+  | 'management'
+  | 'trust'
+  | 'dependency'
+  | (string & {});
+
+export interface SinglePortConfig {
+  type: 'single';
+  value: number;
+}
+
+export interface RangePortConfig {
+  type: 'range';
+  start: number;
+  end: number;
+}
+
+export interface AnyPortConfig {
+  type: 'any';
+}
+
+export type PortConfig = SinglePortConfig | RangePortConfig | AnyPortConfig;
+
 export interface EdgeMetadata {
-  protocol?: 'tcp' | 'udp' | 'icmp' | 'http' | 'https' | 'ssh' | 'all' | string;
-  ports?: string;
+  protocol?: EdgeProtocol;
+  ports?: string; // Human-readable/string representation (e.g. "443", "8000-8080", "ANY")
+  portConfig?: PortConfig; // Structured port representation
   direction?: 'unidirectional' | 'bidirectional';
-  access?: 'allow' | 'deny';
+  access?: EdgeAccess;
+  relationship?: EdgeRelationship;
   trust?: 'untrusted' | 'semi-trusted' | 'trusted';
   encrypted?: boolean;
   description?: string;

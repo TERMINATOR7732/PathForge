@@ -58,12 +58,17 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
 
 ---
 
-### Phase 1.3 — Node & Edge Deep Configuration *(NEXT RECOMMENDED STEP)*
-- [ ] In-canvas and inspector property editors for nodes (rename, change zone, attach IP/CIDR, tags)
-- [ ] Edge configuration modal/inspector (protocol selector: TCP/UDP/HTTP/HTTPS/SSH, port ranges, encryption toggle, access: allow/deny)
-- [ ] Visual badge indicators on edges representing port, protocol, and encryption status
+### Phase 1.3 — Node & Edge Deep Configuration *(STATUS: COMPLETE)*
+- [x] Authoritative domain configuration models: `NodeZone`, `AssetCriticality`, `NodeServiceInfo`, `EdgeProtocol`, `EdgeAccess`, `EdgeRelationship`, `PortConfig`
+- [x] Pure deterministic validation utilities: `validateCidrOrIp` (IPv4 & CIDR /0-/32), `parsePortInput` (single, range `8000-8080`, wildcard `ANY`), `isPortAllowed` (deterministic port reachability checker)
+- [x] Node domain deep configuration: `updateConfig` with name, zone, CIDR validation, criticality, service port/proto, tags, and description
+- [x] Edge domain deep configuration: `updateConfig` with protocol, ports, structured `portConfig`, access policy (`allow`/`deny`), encryption toggle, relationship, and `allowsPort(port)` evaluation
+- [x] Full JSON serialization/deserialization fidelity preserving all semantic configuration fields
+- [x] Interactive `InspectorPanel` forms with real-time validation error alerts and domain persistence
+- [x] Enhanced visual canvas: `CanvasEdge` rendering protocol/port label, `[DENY]` badge, and encryption lock icon; `CanvasNode` rendering CIDR and service port badge
+- [x] Comprehensive test suite: 70 unit and integration tests passing across 10 test files including QA workflows A-F
 
-### Phase 1.4 — Validation Engine Expansion & Custom Rules
+### Phase 1.4 — Validation Engine Expansion & Custom Rules *(NEXT RECOMMENDED STEP)*
 - [ ] Live continuous validation mode (runs on graph mutation with debounce)
 - [ ] Zone isolation rules (e.g. DMZ isolation from Restricted data zone)
 - [ ] Egress rule filtering (blocking unexpected outbound connections)

@@ -152,14 +152,19 @@ export const CanvasNode: React.FC<CanvasNodeProps> = ({
         <div className="text-xs font-medium text-[#e6edf3] font-mono truncate" title={node.name}>
           {node.name}
         </div>
-        <div className="text-[9px] text-[#5c6370] font-mono mt-0.5 truncate">
-          {node.id}
+        <div className="text-[9px] text-[#5c6370] font-mono mt-0.5 truncate flex items-center justify-between">
+          <span className="truncate">{node.metadata.cidr || node.id}</span>
+          {node.metadata.service?.port && (
+            <span className="ml-1 text-[9px] text-[#58a6ff] bg-[#161b22] px-1 rounded border border-[#30363d] shrink-0 font-mono">
+              :{node.metadata.service.port}
+            </span>
+          )}
         </div>
       </div>
 
       {/* Card Footer */}
       <div className="flex items-center justify-between px-2.5 py-1 border-t border-[#222630]/60 text-[9px] font-mono text-[#5c6370] bg-[#0c0d10]/40">
-        <span>zone: {node.metadata.zone ?? 'default'}</span>
+        <span>zone: {node.metadata.zone ?? 'internal'}</span>
         <span>in:{degree.inDegree} / out:{degree.outDegree}</span>
       </div>
     </div>
