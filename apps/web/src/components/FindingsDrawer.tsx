@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Finding, RuleCategory, Severity } from '@pathforge/shared';
-import { Environment } from '@pathforge/core';
+import { Environment, FixVerificationResult } from '@pathforge/core';
 import { getRemediationActions, RemediationAction } from '@pathforge/validator';
 import {
   ChevronUp,
@@ -16,20 +16,24 @@ import {
   RotateCcw,
   Sparkles,
   Layers,
+  History,
 } from 'lucide-react';
 import { RecommendedArchitectureView } from './RecommendedArchitectureView.js';
 import { RemediationModal } from './RemediationModal.js';
+import { VerificationPanel } from './VerificationPanel.js';
 
 interface FindingsDrawerProps {
   findings: Finding[];
   environment: Environment;
   isValidationStale: boolean;
   resolvedFindings?: Finding[];
+  latestVerification?: FixVerificationResult | null;
   onSelectNode: (nodeId: string) => void;
   onLocateElement: (target: { id: string; type: 'node' | 'edge' }) => void;
   onHoverFinding: (finding: Finding | null) => void;
   onApplyRemediation: (action: RemediationAction, finding: Finding) => void;
   onClearResolved?: () => void;
+  onRequestValidate?: () => void;
 }
 
 const getSeverityBadge = (sev: Severity) => {
@@ -62,16 +66,30 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   environment,
   isValidationStale,
   resolvedFindings = [],
+  latestVerification,
   onSelectNode,
   onLocateElement,
   onHoverFinding,
   onApplyRemediation,
   onClearResolved,
+  onRequestValidate,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState<'findings' | 'verification'>('findings');
   const [expandedFindingId, setExpandedFindingId] = useState<string | null>(
     findings[0]?.id ?? null
   );
+
+  // Auto-switch to verification tab if new verification with changes arrives
+  React.useEffect(() => {
+    if (
+      latestVerification &&
+      (latestVerification.resolvedFindings.length > 0 ||
+        latestVerification.newFindings.length > 0)
+    ) {
+      setActiveTab('verification');
+    }
+  }, [latestVerification]);
 
   // Filter States
   const [severityFilter, setSeverityFilter] = useState<'all' | Severity>('all');
@@ -160,28 +178,79 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
       >
         {/* Drawer Header Bar */}
         <div className="h-9 px-4 flex items-center justify-between border-b border-[#222630] bg-[#0e1015]">
-          <div className="flex items-center space-x-3 text-xs font-mono">
-            <span
-              onClick={() => setIsOpen(!isOpen)}
-              className="font-semibold text-[#e6edf3] cursor-pointer hover:text-white flex items-center space-x-1.5"
+          <div className="flex items-center space-x-2 text-xs font-mono">
+            {/* Tab 1: Findings */}
+            <button
+              onClick={() => {
+                setActiveTab('findings');
+                setIsOpen(true);
+              }}
+              className={`flex items-center space-x-1.5 px-2 py-1 rounded text-xs font-mono transition-colors ${
+                activeTab === 'findings'
+                  ? 'bg-[#181d26] text-[#e6edf3] font-semibold border border-[#388bfd]'
+                  : 'text-[#8b949e] hover:text-[#c9d1d9] border border-transparent'
+              }`}
             >
               <ShieldCheck className="w-3.5 h-3.5 text-[#58a6ff]" />
-              <span>SECURITY FINDINGS & REASONING</span>
-            </span>
+              <span>ACTIVE FINDINGS ({findings.length})</span>
+            </button>
 
-            <span className="px-1.5 py-0.2 rounded bg-[#1f242e] text-[#8b949e] border border-[#2b323f] text-[10px]">
-              {findings.length} Finding{findings.length === 1 ? '' : 's'}
-            </span>
+            {/* Tab 2: Fix Verification */}
+            <button
+              onClick={() => {
+                setActiveTab('verification');
+                setIsOpen(true);
+              }}
+              className={`flex items-center space-x-1.5 px-2 py-1 rounded text-xs font-mono transition-colors ${
+                activeTab === 'verification'
+                  ? 'bg-[#181d26] text-[#e6edf3] font-semibold border border-[#238636]'
+                  : 'text-[#8b949e] hover:text-[#c9d1d9] border border-transparent'
+              }`}
+            >
+              <History className="w-3.5 h-3.5 text-[#3fb950]" />
+              <span>
+                FIX VERIFICATION
+                {latestVerification?.resolvedFindings && latestVerification.resolvedFindings.length > 0
+                  ? ` (${latestVerification.resolvedFindings.length} Resolved)`
+                  : ''}
+              </span>
+            </button>
 
             {/* Stale Validation Warning */}
             {isValidationStale && (
-              <span className="px-2 py-0.5 rounded bg-[#2b1f14] text-[#f0883e] border border-[#f0883e]/40 text-[10px] font-semibold animate-pulse">
+              <span className="px-2 py-0.5 rounded bg-[#2b1f14] text-[#f0883e] border border-[#f0883e]/40 text-[10px] font-semibold animate-pulse ml-1">
                 Topology Modified — Validation Stale
               </span>
             )}
 
-            {/* Resolved Notification Badge */}
-            {resolvedFindings.length > 0 && (
+            {/* Verification Status Pill */}
+            {latestVerification && (
+              <button
+                onClick={() => {
+                  setActiveTab('verification');
+                  setIsOpen(true);
+                }}
+                className={`ml-1 flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-semibold border transition-all cursor-pointer ${
+                  latestVerification.status === 'verified'
+                    ? 'bg-[#14261b] text-[#3fb950] border-[#238636]/60 hover:bg-[#1a3824]'
+                    : latestVerification.status === 'requires-attention'
+                    ? 'bg-[#291b15] text-[#f0883e] border-[#f0883e]/60 hover:bg-[#38231a]'
+                    : 'bg-[#161a22] text-[#8b949e] border-[#2d333b]'
+                }`}
+                title="View verification and before/after comparison"
+              >
+                <span>
+                  {latestVerification.status === 'verified'
+                    ? `✓ VERIFIED (${latestVerification.resolvedFindings.length} RESOLVED)`
+                    : latestVerification.status === 'requires-attention'
+                    ? `⚠ ATTENTION (${latestVerification.newFindings.length} NEW)`
+                    : 'VERIFICATION UNCHANGED'}
+                </span>
+              </button>
+            )}
+
+            {/* Resolved Notification Badge (legacy Phase 1.5 feedback) */}
+            {!latestVerification && resolvedFindings.length > 0 && (
               <div className="flex items-center space-x-1.5 px-2 py-0.5 rounded bg-[#14261b] text-[#3fb950] border border-[#238636]/60 text-[10px]">
                 <Sparkles className="w-3 h-3 text-[#3fb950]" />
                 <span className="font-semibold">
@@ -212,7 +281,14 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
         {/* Drawer Content */}
         {isOpen && (
           <div className="flex-1 flex overflow-hidden">
-            {findings.length === 0 ? (
+            {activeTab === 'verification' ? (
+              <VerificationPanel
+                verification={latestVerification ?? null}
+                onLocateElement={onLocateElement}
+                onSelectNode={onSelectNode}
+                onRequestValidate={onRequestValidate ?? (() => {})}
+              />
+            ) : findings.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center font-mono space-y-2">
                 <CheckCircle2 className="w-8 h-8 text-[#3fb950]" />
                 <div className="text-sm font-semibold text-[#e6edf3]">

@@ -92,7 +92,19 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
 - [x] Multi-dimensional Finding Filters: Severity filters with count badges, Category selector, Asset selector, and professional empty states
 - [x] Comprehensive test suite: 110 unit and integration tests passing across 12 test files (including 16 new tests for Phase 1.5)
 
-### Phase 1.6 — Pre-packaged Scenario Lab & Exportable Audit Report *(NEXT RECOMMENDED STEP)*
+### Phase 1.6 — Fix Verification & Before/After Comparison *(STATUS: COMPLETE)*
+- [x] Validated Baseline Snapshot Module (`@pathforge/core/comparison`): Immutable, frozen deep-cloned captures of environment state and validation findings (`createEnvironmentSnapshot`).
+- [x] Deterministic Infrastructure Diff Engine (`diffEnvironments`): Detects node additions, node removals, node config updates, edge additions, edge removals, and edge policy updates (`allow` ↔ `deny`, unencrypted ↔ encrypted, port restrictions).
+- [x] Position Independence Principle: Presentation layout coordinates $(x, y)$ explicitly ignored in security diffs (moving nodes yields 0 security diffs).
+- [x] Fix Verification Engine (`verifyFix`): Categorizes findings into Resolved ($\text{Before} - \text{After}$), Still Present ($\text{Before} \cap \text{After}$), and Newly Introduced ($\text{After} - \text{Before}$).
+- [x] Deterministic Resolution Classification: Classifies fixes into `policy-change`, `encryption-change`, `port-restriction`, `edge-removal`, `node-reconfiguration`, or `topological-isolation`.
+- [x] Regression & Integrity Defense: Flags regressions as `requires-attention` whenever fixes introduce new security violations.
+- [x] Production Gate & Summary Deltas: Computes metric deltas (Critical, High, Medium, Low) and compliance gate transitions (`BLOCKED` → `PASSED`).
+- [x] Verification UX (`VerificationPanel`): Status banner, metric cards, severity breakdown, Before vs After flow comparison for resolved findings, new finding regression alerts, and infrastructure delta audit log.
+- [x] Findings Drawer Integration: Dual-mode header tabs (`ACTIVE FINDINGS` vs `FIX VERIFICATION`) with real-time status pill.
+- [x] Comprehensive test suite: 121 unit and integration tests passing across 13 test files (11 new tests in `tests/fix-verification.test.ts`).
+
+### Phase 1.7 — Pre-packaged Scenario Lab & Exportable Audit Report *(NEXT RECOMMENDED STEP)*
 - [ ] Exportable audit report (Markdown / PDF / JSON summary)
 - [ ] Library of archetypal infrastructure topologies:
   - Microservices on Kubernetes with Service Mesh

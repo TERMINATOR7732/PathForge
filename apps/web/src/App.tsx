@@ -1,5 +1,13 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { deserializeEnvironment, serializeEnvironment, Environment } from '@pathforge/core';
+import {
+  deserializeEnvironment,
+  serializeEnvironment,
+  Environment,
+  createEnvironmentSnapshot,
+  verifyFix,
+  EnvironmentSnapshot,
+  FixVerificationResult,
+} from '@pathforge/core';
 import { createDefaultRuleRegistry, ValidatorEngine, RemediationAction } from '@pathforge/validator';
 import { NodeType, ValidationResult, Finding } from '@pathforge/shared';
 
@@ -27,6 +35,14 @@ export const App: React.FC = () => {
   } | null>(null);
   const [resolvedFindings, setResolvedFindings] = useState<Finding[]>([]);
 
+  // Fix Verification & Baseline Lifecycle state (Phase 1.6)
+  const [lastAppliedRemediation, setLastAppliedRemediation] = useState<{
+    actionId: string;
+    type: string;
+    title: string;
+  } | null>(null);
+  const [latestVerification, setLatestVerification] = useState<FixVerificationResult | null>(null);
+
   // graphVersion integer counter to trigger reactive UI re-renders on domain graph mutation
   const [, setGraphVersion] = useState<number>(0);
   const bumpGraphVersion = useCallback(() => setGraphVersion((v) => v + 1), []);
@@ -47,21 +63,50 @@ export const App: React.FC = () => {
     return validatorEngine.evaluate(environment);
   });
 
+  // Validated Baseline Snapshot: immutable capture of the last validated environment
+  const [baselineSnapshot, setBaselineSnapshot] = useState<EnvironmentSnapshot | null>(() => {
+    const initialResult = validatorEngine.evaluate(environment);
+    return createEnvironmentSnapshot(environment, initialResult);
+  });
+
   const handleValidate = useCallback(() => {
     const previousFindings = validationResult?.findings ?? [];
     const result = validatorEngine.evaluate(environment);
 
-    // Compute resolved findings (findings present previously that are now resolved)
-    const newFindingIds = new Set(result.findings.map((f) => f.id));
-    const newlyResolved = previousFindings.filter((prev) => !newFindingIds.has(prev.id));
+    // Phase 1.6: Execute deterministic fix verification against the validated baseline
+    if (baselineSnapshot) {
+      const verification = verifyFix(
+        baselineSnapshot,
+        environment,
+        result,
+        lastAppliedRemediation ?? undefined
+      );
+      setLatestVerification(verification);
 
-    if (newlyResolved.length > 0) {
-      setResolvedFindings(newlyResolved);
+      if (verification.resolvedFindings.length > 0) {
+        setResolvedFindings(verification.resolvedFindings.map((r) => r.finding));
+      }
+    } else {
+      // Fallback for environment without prior baseline
+      const newFindingIds = new Set(result.findings.map((f) => f.id));
+      const newlyResolved = previousFindings.filter((prev) => !newFindingIds.has(prev.id));
+      if (newlyResolved.length > 0) {
+        setResolvedFindings(newlyResolved);
+      }
     }
 
+    // BASELINE IMMUTABILITY RULE: After completed validation, newly validated state becomes latest baseline
+    setBaselineSnapshot(createEnvironmentSnapshot(environment, result));
+    setLastAppliedRemediation(null);
     setValidationResult(result);
     setIsValidationStale(false);
-  }, [validatorEngine, environment, validationResult]);
+  }, [
+    validatorEngine,
+    environment,
+    validationResult,
+    baselineSnapshot,
+    lastAppliedRemediation,
+  ]);
 
   const handleSelectEnv = (envId: string) => {
     setActiveEnvType(envId);
@@ -70,11 +115,15 @@ export const App: React.FC = () => {
     setFocusedElement(null);
     setHoveredFinding(null);
     setResolvedFindings([]);
+    setLastAppliedRemediation(null);
     const newEnv = deserializeEnvironment(
       envId === 'standard-web' ? standardEnvJson : chaosEnvJson
     );
+    const newResult = validatorEngine.evaluate(newEnv);
     setEnvironment(newEnv);
-    setValidationResult(validatorEngine.evaluate(newEnv));
+    setValidationResult(newResult);
+    setBaselineSnapshot(createEnvironmentSnapshot(newEnv, newResult));
+    setLatestVerification(null);
     setIsValidationStale(false);
     bumpGraphVersion();
   };
@@ -191,6 +240,11 @@ export const App: React.FC = () => {
       if (action.apply) {
         const success = action.apply(environment);
         if (success) {
+          setLastAppliedRemediation({
+            actionId: action.id,
+            type: action.type,
+            title: action.title,
+          });
           setIsValidationStale(true);
           bumpGraphVersion();
         }
@@ -256,12 +310,13 @@ export const App: React.FC = () => {
         />
       </div>
 
-      {/* Security Findings Explanatory Drawer */}
+      {/* Security Findings & Fix Verification Drawer */}
       <FindingsDrawer
         findings={validationResult?.findings ?? []}
         environment={environment}
         isValidationStale={isValidationStale}
         resolvedFindings={resolvedFindings}
+        latestVerification={latestVerification}
         onSelectNode={(nodeId) => {
           setSelectedNodeId(nodeId);
           setSelectedEdgeId(null);
@@ -270,6 +325,7 @@ export const App: React.FC = () => {
         onHoverFinding={setHoveredFinding}
         onApplyRemediation={handleApplyRemediation}
         onClearResolved={() => setResolvedFindings([])}
+        onRequestValidate={handleValidate}
       />
     </div>
   );

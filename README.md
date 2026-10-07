@@ -86,7 +86,7 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 94 tests passing)
+├── tests/                       # Automated test suite (Vitest — 121 tests passing)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
@@ -97,6 +97,8 @@ PathForge/
 │   ├── editor-integration.test.ts # Phase 1.2 interactive canvas & domain sync tests
 │   ├── deep-configuration.test.ts # Phase 1.3 node & edge deep config, CIDR/port validation, QA A-F
 │   ├── semantic-validation.test.ts # Phase 1.4 semantic security validation, positive/negative/DENY tests
+│   ├── remediation-ux.test.ts   # Phase 1.5 finding explanation & safe remediation tests
+│   ├── fix-verification.test.ts # Phase 1.6 baseline snapshot, diff & fix verification tests
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -175,6 +177,39 @@ PathForge transforms raw validator findings into deep, actionable security engin
 
 ---
 
+## Fix Verification & Before/After Comparison (Phase 1.6)
+
+PathForge enforces the core product principle: **"A fix is not proven until the environment is revalidated."**
+
+- **Immutable Validated Baseline Snapshots**:
+  Every completed validation captures an immutable baseline snapshot (`createEnvironmentSnapshot`). The baseline is deep-cloned and frozen (`Object.freeze`), guaranteeing that ongoing workspace edits or live domain mutations never alter the verified baseline.
+- **Deterministic Infrastructure Diff Engine**:
+  `diffEnvironments` deterministically compares the baseline snapshot with the current environment to identify:
+  - Added, removed, and reconfigured nodes (zone, criticality, CIDR, service port/protocol).
+  - Added, removed, and reconfigured edges (access policy `allow` ↔ `deny`, unencrypted ↔ encrypted TLS, port restrictions).
+  - **Position Independence**: Node layout coordinates $(x, y)$ are purely presentational and explicitly excluded from configuration diffs, generating zero security changes.
+- **Fix Verification Engine**:
+  `verifyFix` partitions security findings between baseline and current validation:
+  - **Resolved Findings** ($\text{Before} - \text{After}$): Verified eliminated issues.
+  - **Still Present Findings** ($\text{Before} \cap \text{After}$): Unresolved violations.
+  - **New Findings** ($\text{After} - \text{Before}$): Regressions or issues introduced by the fix.
+- **Deterministic Resolution Classification**:
+  Classifies resolutions into precise engineering actions:
+  - `policy-change`: Access policy switched from `ALLOW` to `DENY`.
+  - `encryption-change`: Unencrypted transport upgraded to TLS/SSH encryption.
+  - `port-restriction`: Wildcard (`ANY`) restricted to specific service port.
+  - `edge-removal`: Direct insecure connection severed from graph.
+  - `node-reconfiguration`: Zone/criticality hardened to satisfy boundary rules.
+  - `topological-isolation`: Path reachability broken via upstream mediation.
+- **Regression Detection & Integrity Defense**:
+  If a remediation resolves one vulnerability but introduces a new violation (e.g., resolving `PF-001` while exposing `PF-002`), PathForge marks verification status as `requires-attention` (`VERIFICATION REQUIRES ATTENTION`) and keeps the production gate `BLOCKED`.
+- **Production Gate & Summary Deltas**:
+  Computes metric deltas for Critical, High, Medium, and Low severities and models compliance gate transitions (`BLOCKED` → `PASSED`).
+- **Interactive Verification UX**:
+  The Findings Drawer features dual-mode header tabs (`ACTIVE FINDINGS` vs `FIX VERIFICATION`) with real-time status badges, summary delta cards, Before vs After flow comparisons, regression alerts, and an infrastructure delta log.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -194,7 +229,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (110 unit & integration tests):
+Execute the full Vitest suite (121 unit & integration tests):
 
 ```bash
 npm run test
