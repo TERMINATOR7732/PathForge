@@ -7,3 +7,4 @@ export * from './serialization/serializer.js';
 export * from './comparison/index.js';
 export * from './scenarios/index.js';
 export * from './reports/index.js';
+export * from './attack-path/index.js';

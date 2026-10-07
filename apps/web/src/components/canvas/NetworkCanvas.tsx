@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Environment, InfrastructureEdge, InfrastructureNode } from '@pathforge/core';
+import { Environment, InfrastructureEdge, InfrastructureNode, AttackPath } from '@pathforge/core';
 import { Finding, NodeType } from '@pathforge/shared';
 import { Flame } from 'lucide-react';
 import { CanvasNode } from './CanvasNode.js';
@@ -13,6 +13,7 @@ interface NetworkCanvasProps {
   environment: Environment;
   selectedNodeId: string | null;
   selectedEdgeId: string | null;
+  selectedAttackPath?: AttackPath | null;
   onSelectNode: (nodeId: string | null) => void;
   onSelectEdge: (edgeId: string | null) => void;
   onUpdateNodePosition: (nodeId: string, x: number, y: number) => void;
@@ -32,6 +33,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   environment,
   selectedNodeId,
   selectedEdgeId,
+  selectedAttackPath,
   onSelectNode,
   onSelectEdge,
   onUpdateNodePosition,
@@ -111,6 +113,14 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   const hoveredFindingEdges = useMemo(() => {
     return new Set(hoveredFinding?.affectedEdges ?? []);
   }, [hoveredFinding]);
+
+  const attackPathNodeIds = useMemo(() => {
+    return new Set(selectedAttackPath?.nodes.map((n) => n.id) ?? []);
+  }, [selectedAttackPath]);
+
+  const attackPathEdgeIds = useMemo(() => {
+    return new Set(selectedAttackPath?.edges.map((e) => e.id) ?? []);
+  }, [selectedAttackPath]);
 
   // Center on focused element when requested (e.g. from "Locate on Canvas")
   useEffect(() => {
@@ -426,6 +436,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
                 isFocusedTarget={
                   focusedElement?.type === 'edge' && focusedElement.id === edge.id
                 }
+                isOnAttackPath={attackPathEdgeIds.has(edge.id)}
                 onSelect={(edgeId) => {
                   onSelectEdge(edgeId);
                   onSelectNode(null);
@@ -462,6 +473,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
                 isFocusedTarget={
                   focusedElement?.type === 'node' && focusedElement.id === node.id
                 }
+                isOnAttackPath={attackPathNodeIds.has(node.id)}
                 degree={degree}
                 onSelect={(nId) => {
                   onSelectNode(nId);

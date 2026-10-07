@@ -9,6 +9,7 @@ import {
   instantiateScenario,
   getScenarioById,
   getDefaultScenario,
+  analyzeAttackPaths,
 } from '@pathforge/core';
 import { createDefaultRuleRegistry, ValidatorEngine, RemediationAction } from '@pathforge/validator';
 import { NodeType, ValidationResult, Finding } from '@pathforge/shared';
@@ -28,6 +29,7 @@ export const App: React.FC = () => {
 
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [selectedAttackPathId, setSelectedAttackPathId] = useState<string | null>(null);
   const [isValidationStale, setIsValidationStale] = useState<boolean>(false);
 
   // Investigation & Focus state
@@ -48,7 +50,7 @@ export const App: React.FC = () => {
   const [latestVerification, setLatestVerification] = useState<FixVerificationResult | null>(null);
 
   // graphVersion integer counter to trigger reactive UI re-renders on domain graph mutation
-  const [, setGraphVersion] = useState<number>(0);
+  const [graphVersion, setGraphVersion] = useState<number>(0);
   const bumpGraphVersion = useCallback(() => setGraphVersion((v) => v + 1), []);
 
   // Initialize rule engine
@@ -72,6 +74,16 @@ export const App: React.FC = () => {
     const initialResult = validatorEngine.evaluate(environment);
     return createEnvironmentSnapshot(environment, initialResult);
   });
+
+  // Attack Path Analysis (Phase 2.1)
+  const attackPathAnalysis = useMemo(() => {
+    return analyzeAttackPaths(environment);
+  }, [environment, graphVersion]);
+
+  const selectedAttackPath = useMemo(() => {
+    if (!selectedAttackPathId) return null;
+    return attackPathAnalysis.attackPaths.find((p) => p.id === selectedAttackPathId) ?? null;
+  }, [attackPathAnalysis, selectedAttackPathId]);
 
   const handleValidate = useCallback(() => {
     const previousFindings = validationResult?.findings ?? [];
@@ -117,6 +129,7 @@ export const App: React.FC = () => {
       setActiveScenarioId(scenarioId);
       setSelectedNodeId(null);
       setSelectedEdgeId(null);
+      setSelectedAttackPathId(null);
       setFocusedElement(null);
       setHoveredFinding(null);
       setResolvedFindings([]);
@@ -324,6 +337,7 @@ export const App: React.FC = () => {
           environment={environment}
           selectedNodeId={selectedNodeId}
           selectedEdgeId={selectedEdgeId}
+          selectedAttackPath={selectedAttackPath}
           onSelectNode={setSelectedNodeId}
           onSelectEdge={setSelectedEdgeId}
           onUpdateNodePosition={handleUpdateNodePosition}
@@ -358,6 +372,9 @@ export const App: React.FC = () => {
         isValidationStale={isValidationStale}
         resolvedFindings={resolvedFindings}
         latestVerification={latestVerification}
+        attackPathAnalysis={attackPathAnalysis}
+        selectedAttackPathId={selectedAttackPathId}
+        onSelectAttackPath={setSelectedAttackPathId}
         onSelectNode={(nodeId) => {
           setSelectedNodeId(nodeId);
           setSelectedEdgeId(null);

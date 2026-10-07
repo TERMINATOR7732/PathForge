@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Finding, RuleCategory, Severity, ValidationResult } from '@pathforge/shared';
-import { Environment, FixVerificationResult } from '@pathforge/core';
+import { Environment, FixVerificationResult, AttackPathAnalysisResult } from '@pathforge/core';
 import { getRemediationActions, RemediationAction } from '@pathforge/validator';
 import {
   ChevronUp,
@@ -17,10 +17,12 @@ import {
   Sparkles,
   Layers,
   History,
+  Flame,
 } from 'lucide-react';
 import { RecommendedArchitectureView } from './RecommendedArchitectureView.js';
 import { RemediationModal } from './RemediationModal.js';
 import { VerificationPanel } from './VerificationPanel.js';
+import { AttackPathsPanel } from './AttackPathsPanel.js';
 
 interface FindingsDrawerProps {
   findings: Finding[];
@@ -29,6 +31,9 @@ interface FindingsDrawerProps {
   resolvedFindings?: Finding[];
   latestVerification?: FixVerificationResult | null;
   validationResult?: ValidationResult | null;
+  attackPathAnalysis?: AttackPathAnalysisResult | null;
+  selectedAttackPathId?: string | null;
+  onSelectAttackPath?: (pathId: string | null) => void;
   onSelectNode: (nodeId: string) => void;
   onLocateElement: (target: { id: string; type: 'node' | 'edge' }) => void;
   onHoverFinding: (finding: Finding | null) => void;
@@ -69,6 +74,9 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   resolvedFindings = [],
   latestVerification,
   validationResult,
+  attackPathAnalysis,
+  selectedAttackPathId,
+  onSelectAttackPath,
   onSelectNode,
   onLocateElement,
   onHoverFinding,
@@ -77,7 +85,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   onRequestValidate,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<'findings' | 'verification'>('findings');
+  const [activeTab, setActiveTab] = useState<'findings' | 'attack-paths' | 'verification'>('findings');
   const [expandedFindingId, setExpandedFindingId] = useState<string | null>(
     findings[0]?.id ?? null
   );
@@ -197,7 +205,25 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
               <span>ACTIVE FINDINGS ({findings.length})</span>
             </button>
 
-            {/* Tab 2: Fix Verification */}
+            {/* Tab 2: Attack Paths */}
+            <button
+              onClick={() => {
+                setActiveTab('attack-paths');
+                setIsOpen(true);
+              }}
+              className={`flex items-center space-x-1.5 px-2 py-1 rounded text-xs font-mono transition-colors ${
+                activeTab === 'attack-paths'
+                  ? 'bg-[#181d26] text-[#e6edf3] font-semibold border border-[#f85149]'
+                  : 'text-[#8b949e] hover:text-[#c9d1d9] border border-transparent'
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5 text-[#f85149]" />
+              <span>
+                ATTACK PATHS ({attackPathAnalysis?.attackPaths.length ?? 0})
+              </span>
+            </button>
+
+            {/* Tab 3: Fix Verification */}
             <button
               onClick={() => {
                 setActiveTab('verification');
@@ -291,6 +317,31 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
                 onLocateElement={onLocateElement}
                 onSelectNode={onSelectNode}
                 onRequestValidate={onRequestValidate ?? (() => {})}
+              />
+            ) : activeTab === 'attack-paths' ? (
+              <AttackPathsPanel
+                analysisResult={
+                  attackPathAnalysis ?? {
+                    environmentId: environment.id,
+                    analyzedAt: new Date().toISOString(),
+                    entryPoints: [],
+                    attackPaths: [],
+                    reachableAssets: [],
+                    summary: {
+                      entryPointCount: 0,
+                      reachableAssetCount: 0,
+                      sensitiveAssetsReached: 0,
+                      criticalAssetsReached: 0,
+                      attackPathCount: 0,
+                      highestRisk: 'none',
+                    },
+                  }
+                }
+                selectedPathId={selectedAttackPathId ?? null}
+                onSelectPath={onSelectAttackPath ?? (() => {})}
+                onLocateElement={onLocateElement}
+                onAnalyze={onRequestValidate}
+                isStale={isValidationStale}
               />
             ) : findings.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center font-mono space-y-2">

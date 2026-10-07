@@ -10,6 +10,7 @@ interface CanvasEdgeProps {
   isVulnerable: boolean;
   isHoveredFromFinding?: boolean;
   isFocusedTarget?: boolean;
+  isOnAttackPath?: boolean;
   onSelect: (edgeId: string) => void;
 }
 
@@ -21,6 +22,7 @@ export const CanvasEdge: React.FC<CanvasEdgeProps> = ({
   isVulnerable,
   isHoveredFromFinding,
   isFocusedTarget,
+  isOnAttackPath = false,
   onSelect,
 }) => {
   // Source connects from right handle (x + 200, y + 45)
@@ -44,7 +46,10 @@ export const CanvasEdge: React.FC<CanvasEdgeProps> = ({
   let strokeColor = '#3e4657';
   let markerId = 'arrowhead-normal';
 
-  if (isFocusedTarget) {
+  if (isOnAttackPath) {
+    strokeColor = '#f85149';
+    markerId = 'arrowhead-critical';
+  } else if (isFocusedTarget) {
     strokeColor = '#58a6ff';
     markerId = 'arrowhead-active';
   } else if (isHoveredFromFinding) {
@@ -61,9 +66,12 @@ export const CanvasEdge: React.FC<CanvasEdgeProps> = ({
   }
 
   let strokeDasharray: string | undefined = undefined;
-  if (isVulnerable || isHoveredFromFinding) {
+  if (isOnAttackPath) {
+    strokeDasharray = '5 3';
+  } else if (isVulnerable || isHoveredFromFinding) {
     strokeDasharray = '4 3';
-  } else if (isDenied) {
+  }
+ else if (isDenied) {
     strokeDasharray = '3 3';
   }
 

@@ -143,24 +143,27 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
 
 ## Phase 2 — Attack Simulation (Deterministic Graph Traversal)
 
-### Phase 2.1 — Attack Entry Point Identification
-- Identifying untrusted ingress nodes (`internet`, `external_network`, compromised branch)
-- Identifying high-value targets (crown jewels: `database`, `admin`, secret stores)
+### Phase 2.1 — Attack Path Analysis Foundation *(STATUS: COMPLETE)*
+- [x] Authoritative Domain Attack Path Engine (`packages/core/src/attack-path/`):
+  - Data contracts: `AttackPath`, `AttackPathRisk` (`critical` | `high` | `medium` | `low`), `AttackPathNodeSummary`, `AttackPathEdgeSummary`, `TraversalStepFact`, `AttackPathSummary`, `AttackPathAnalysisResult`.
+  - Deterministic entry point detection: discovers untrusted ingress (`zone === 'public'`, `type === 'internet'` / `'external_network'`).
+  - Sensitive target identification: discovers crown jewels (`criticality === 'critical'` | `'high'`, `zone === 'restricted'`, `database`, `redis`, `admin`, `vpn`, `internal_network`).
+  - Trust boundary transition tracking: zone normalization (aliasing `'private'` to `'internal'`) and boundary crossing detection.
+  - Deterministic BFS reachability traversal: explores shortest directed attack paths over `ALLOW` edges, terminating at `DENY` barriers, cycle detection, and stable edge ordering.
+  - Multi-hop traversal explanations: detailed `TraversalStepFact` records for each hop with step numbers, zones, protocols, ports, and human-readable transition rationale.
+  - Deterministic risk scoring & factor attribution: assesses hop depth, target criticality, and trust boundaries crossed.
+- [x] Automated Test Suite:
+  - 162 unit and integration tests passing across 17 test files (15 new tests in `tests/attack-path.test.ts` covering entry points, sensitive targets, direct paths, multi-hop paths, reverse direction blocks, DENY barriers, cycle handling, deterministic IDs, visual layout coordinate isolation, and catalog scenarios `public-db-exposure`, `secure-web-app`, `chaos-lab`).
+- [x] Attack Path Visualization & UX Integration:
+  - `AttackPathsPanel`: Summary metric counters, multi-dimensional risk/criticality/entry-point filters, path list cards, step-by-step traversal breakdowns, deterministic "Why This Path Exists" facts, "Risk Factors", and "Locate Target" canvas action.
+  - Interactive Canvas Highlighting: Selected attack paths highlighted in crimson dashed lines (`#f85149`, stroke-width: 2.5) on `CanvasEdge` and glowing crimson borders with `PATH` badges on `CanvasNode`.
+  - Drawer Integration: Dedicated `ATTACK PATHS (${count})` tab in `FindingsDrawer` with Flame badge, full path selection synchronization, and stale status alerts.
 
-### Phase 2.2 — Reachability & Path Finding Algorithms
-- Deterministic graph search (BFS / Dijkstra / All Paths)
-- Port & protocol constraint evaluation along candidate paths
-- Firewall & security boundary traversal evaluation
-
-### Phase 2.3 — Attack Path Graph Generation & Visualization
-- Visualizing animated packet flows along identified attack paths on the canvas
-- Step-by-step traversal breakdown showing each hop and trust boundary crossed
-
-### Phase 2.4 — Lateral Movement & Vulnerability Chaining
+### Phase 2.2 — Lateral Movement & Vulnerability Chaining
 - Chaining multi-hop pivot points (e.g., `Internet → Public Web → API Server → Database`)
 - Exploitation prerequisites modeling per node type
 
-### Phase 2.5 — Risk Scoring & Blast Radius
+### Phase 2.3 — Risk Scoring & Blast Radius
 - Deterministic severity scoring formula (path length, asset value, boundary absence)
 - Blast radius calculation (how many downstream nodes can be reached from a compromised node)
 

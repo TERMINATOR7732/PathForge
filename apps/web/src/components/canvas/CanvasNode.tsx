@@ -13,6 +13,7 @@ import {
   Network,
   Share2,
   AlertTriangle,
+  Flame,
 } from 'lucide-react';
 
 interface CanvasNodeProps {
@@ -23,6 +24,7 @@ interface CanvasNodeProps {
   isConnectionTarget: boolean;
   isHoveredFromFinding?: boolean;
   isFocusedTarget?: boolean;
+  isOnAttackPath?: boolean;
   degree: { inDegree: number; outDegree: number; total: number };
   onSelect: (nodeId: string) => void;
   onStartDrag: (nodeId: string, clientX: number, clientY: number) => void;
@@ -65,6 +67,7 @@ export const CanvasNode: React.FC<CanvasNodeProps> = ({
   isConnectionTarget,
   isHoveredFromFinding,
   isFocusedTarget,
+  isOnAttackPath = false,
   degree,
   onSelect,
   onStartDrag,
@@ -79,6 +82,9 @@ export const CanvasNode: React.FC<CanvasNodeProps> = ({
   if (isFocusedTarget) {
     borderClass = 'border-[#58a6ff] ring-4 ring-[#58a6ff]/70 shadow-[0_0_20px_rgba(88,166,255,0.5)]';
     bgClass = 'bg-[#182638]';
+  } else if (isOnAttackPath) {
+    borderClass = 'border-[#f85149] ring-2 ring-[#f85149]/70 shadow-[0_0_15px_rgba(248,81,73,0.35)]';
+    bgClass = 'bg-[#221316]';
   } else if (isHoveredFromFinding) {
     borderClass = 'border-[#f0883e] ring-2 ring-[#f0883e]/80 shadow-[0_0_12px_rgba(240,136,62,0.4)]';
     bgClass = 'bg-[#201815]';
@@ -145,7 +151,12 @@ export const CanvasNode: React.FC<CanvasNodeProps> = ({
             {node.type.replace('_', ' ')}
           </span>
         </div>
-        {isCritical ? (
+        {isOnAttackPath ? (
+          <span className="flex items-center text-[9px] font-mono text-[#f85149] font-semibold shrink-0">
+            <Flame className="w-3 h-3 mr-0.5 fill-current" />
+            PATH
+          </span>
+        ) : isCritical ? (
           <span className="flex items-center text-[9px] font-mono text-[#f85149] font-semibold shrink-0">
             <AlertTriangle className="w-3 h-3 mr-0.5 fill-current" />
             RISK

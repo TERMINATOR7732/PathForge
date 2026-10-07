@@ -86,7 +86,7 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 147 tests passing)
+├── tests/                       # Automated test suite (Vitest — 162 tests passing)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
@@ -102,6 +102,7 @@ PathForge/
 │   ├── scenario-lab.test.ts     # Phase 1.7 scenario library & chaos workflow tests
 │   ├── phase17-manual-qa.test.ts # Phase 1.7 automated 5-step manual QA test suite
 │   ├── verification-reports.test.ts # Phase 1.8 verification report model & export tests
+│   ├── attack-path.test.ts      # Phase 2.1 deterministic attack path analysis tests
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -251,6 +252,29 @@ PathForge makes verification results portable outside the application, enabling 
 
 ---
 
+## Attack Path Analysis Foundation (Phase 2.1)
+
+PathForge provides deterministic graph-based attack path analysis answering:
+> *"Starting from an attacker-controlled entry point, what sensitive assets can actually be reached through the modeled infrastructure?"*
+
+- **Authoritative Domain Engine (`@pathforge/core/attack-path`)**:
+  - **Entry Point Detection**: Discovers untrusted ingress (`zone === 'public'` or component types `internet` / `external_network`).
+  - **Sensitive Target Discovery**: Identifies critical crown jewels (`criticality === 'critical'` | `'high'`, `zone === 'restricted'`, or database/cache/admin/vpn systems).
+  - **Deterministic Directed BFS**: Explores shortest attack routes strictly over directed `ALLOW` edges, terminating at configured `DENY` barriers and cycle loops.
+  - **Trust Boundary Transitions**: Monitors and records every zone transition (e.g., `public` $\to$ `internal` $\to$ `restricted`).
+  - **Multi-Hop Traversal Facts**: Every path produces structured `TraversalStepFact` records describing step index, source/target nodes, protocols, ports, access policies, and zone boundary explanations.
+  - **Explainable Risk Scoring**: Deterministically categorizes paths as `CRITICAL`, `HIGH`, `MEDIUM`, or `LOW` based on target sensitivity, hop depth, and trust boundaries crossed.
+- **Dedicated Attack Paths Panel (`AttackPathsPanel`)**:
+  - Path inventory cards with risk badges (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`).
+  - Multi-dimensional filters (Risk level, Entry point origin, Target criticality).
+  - Full step-by-step traversal breakdown showing each hop, protocol, and trust boundary crossed.
+  - "Why This Path Exists" deterministic facts and "Risk Factors" explanation.
+  - "Locate Target" canvas action to instantly center and inspect the exposed crown jewel.
+- **Interactive Canvas Highlighting**:
+  - Selecting an attack path highlights the entire adversarial flow in crimson: dashed crimson edges (`#f85149`, stroke-width: 2.5) and glowing crimson node borders with `[PATH]` badges.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -270,7 +294,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (147 unit & integration tests across 16 test files):
+Execute the full Vitest suite (162 unit & integration tests across 17 test files):
 
 ```bash
 npm run test
