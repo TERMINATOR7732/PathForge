@@ -10,6 +10,7 @@ import {
   getScenarioById,
   getDefaultScenario,
   analyzeAttackPaths,
+  analyzeBlastRadius,
 } from '@pathforge/core';
 import { createDefaultRuleRegistry, ValidatorEngine, RemediationAction } from '@pathforge/validator';
 import { NodeType, ValidationResult, Finding } from '@pathforge/shared';
@@ -30,6 +31,7 @@ export const App: React.FC = () => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
   const [selectedAttackPathId, setSelectedAttackPathId] = useState<string | null>(null);
+  const [selectedCompromisedNodeId, setSelectedCompromisedNodeId] = useState<string | null>(null);
   const [isValidationStale, setIsValidationStale] = useState<boolean>(false);
 
   // Investigation & Focus state
@@ -85,6 +87,22 @@ export const App: React.FC = () => {
     return attackPathAnalysis.attackPaths.find((p) => p.id === selectedAttackPathId) ?? null;
   }, [attackPathAnalysis, selectedAttackPathId]);
 
+  // Blast Radius Analysis (Phase 2.2)
+  const blastRadiusResult = useMemo(() => {
+    if (!selectedCompromisedNodeId) return null;
+    try {
+      return analyzeBlastRadius(environment, selectedCompromisedNodeId);
+    } catch {
+      return null;
+    }
+  }, [environment, selectedCompromisedNodeId, graphVersion]);
+
+  const handleAnalyzeBlastRadius = useCallback((nodeId: string) => {
+    setSelectedCompromisedNodeId(nodeId);
+    setSelectedNodeId(nodeId);
+    setSelectedEdgeId(null);
+  }, []);
+
   const handleValidate = useCallback(() => {
     const previousFindings = validationResult?.findings ?? [];
     const result = validatorEngine.evaluate(environment);
@@ -130,6 +148,7 @@ export const App: React.FC = () => {
       setSelectedNodeId(null);
       setSelectedEdgeId(null);
       setSelectedAttackPathId(null);
+      setSelectedCompromisedNodeId(null);
       setFocusedElement(null);
       setHoveredFinding(null);
       setResolvedFindings([]);
@@ -196,11 +215,12 @@ export const App: React.FC = () => {
       const deleted = environment.removeNode(nodeId);
       if (deleted) {
         if (selectedNodeId === nodeId) setSelectedNodeId(null);
+        if (selectedCompromisedNodeId === nodeId) setSelectedCompromisedNodeId(null);
         setIsValidationStale(true);
         bumpGraphVersion();
       }
     },
-    [environment, selectedNodeId, bumpGraphVersion]
+    [environment, selectedNodeId, selectedCompromisedNodeId, bumpGraphVersion]
   );
 
   const handleDeleteEdge = useCallback(
@@ -338,6 +358,7 @@ export const App: React.FC = () => {
           selectedNodeId={selectedNodeId}
           selectedEdgeId={selectedEdgeId}
           selectedAttackPath={selectedAttackPath}
+          blastRadiusResult={blastRadiusResult}
           onSelectNode={setSelectedNodeId}
           onSelectEdge={setSelectedEdgeId}
           onUpdateNodePosition={handleUpdateNodePosition}
@@ -357,6 +378,7 @@ export const App: React.FC = () => {
           selectedNodeId={selectedNodeId}
           selectedEdgeId={selectedEdgeId}
           findings={validationResult?.findings ?? []}
+          onAnalyzeBlastRadius={handleAnalyzeBlastRadius}
           onUpdateNodeConfig={handleUpdateNodeConfig}
           onUpdateEdgeConfig={handleUpdateEdgeConfig}
           onDeleteNode={handleDeleteNode}
@@ -375,6 +397,10 @@ export const App: React.FC = () => {
         attackPathAnalysis={attackPathAnalysis}
         selectedAttackPathId={selectedAttackPathId}
         onSelectAttackPath={setSelectedAttackPathId}
+        blastRadiusResult={blastRadiusResult}
+        selectedCompromisedNodeId={selectedCompromisedNodeId}
+        onSelectCompromisedNode={setSelectedCompromisedNodeId}
+        onClearBlastRadius={() => setSelectedCompromisedNodeId(null)}
         onSelectNode={(nodeId) => {
           setSelectedNodeId(nodeId);
           setSelectedEdgeId(null);

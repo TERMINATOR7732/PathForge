@@ -14,6 +14,8 @@ import {
   Share2,
   AlertTriangle,
   Flame,
+  Radio,
+  AlertOctagon,
 } from 'lucide-react';
 
 interface CanvasNodeProps {
@@ -25,6 +27,9 @@ interface CanvasNodeProps {
   isHoveredFromFinding?: boolean;
   isFocusedTarget?: boolean;
   isOnAttackPath?: boolean;
+  isCompromisedOrigin?: boolean;
+  lateralDepth?: number | null;
+  isLateralCritical?: boolean;
   degree: { inDegree: number; outDegree: number; total: number };
   onSelect: (nodeId: string) => void;
   onStartDrag: (nodeId: string, clientX: number, clientY: number) => void;
@@ -68,6 +73,9 @@ export const CanvasNode: React.FC<CanvasNodeProps> = ({
   isHoveredFromFinding,
   isFocusedTarget,
   isOnAttackPath = false,
+  isCompromisedOrigin = false,
+  lateralDepth = null,
+  isLateralCritical = false,
   degree,
   onSelect,
   onStartDrag,
@@ -82,9 +90,20 @@ export const CanvasNode: React.FC<CanvasNodeProps> = ({
   if (isFocusedTarget) {
     borderClass = 'border-[#58a6ff] ring-4 ring-[#58a6ff]/70 shadow-[0_0_20px_rgba(88,166,255,0.5)]';
     bgClass = 'bg-[#182638]';
+  } else if (isCompromisedOrigin) {
+    borderClass = 'border-[#f0883e] ring-2 ring-[#f0883e]/80 shadow-[0_0_15px_rgba(240,136,62,0.4)]';
+    bgClass = 'bg-[#221814]';
   } else if (isOnAttackPath) {
     borderClass = 'border-[#f85149] ring-2 ring-[#f85149]/70 shadow-[0_0_15px_rgba(248,81,73,0.35)]';
     bgClass = 'bg-[#221316]';
+  } else if (lateralDepth !== null && lateralDepth !== undefined) {
+    if (isLateralCritical) {
+      borderClass = 'border-[#f85149] ring-2 ring-[#f85149]/70 shadow-[0_0_15px_rgba(248,81,73,0.35)]';
+      bgClass = 'bg-[#221316]';
+    } else {
+      borderClass = 'border-[#a371f7] ring-2 ring-[#a371f7]/60 shadow-[0_0_12px_rgba(163,113,247,0.3)]';
+      bgClass = 'bg-[#1b1526]';
+    }
   } else if (isHoveredFromFinding) {
     borderClass = 'border-[#f0883e] ring-2 ring-[#f0883e]/80 shadow-[0_0_12px_rgba(240,136,62,0.4)]';
     bgClass = 'bg-[#201815]';
@@ -151,11 +170,28 @@ export const CanvasNode: React.FC<CanvasNodeProps> = ({
             {node.type.replace('_', ' ')}
           </span>
         </div>
-        {isOnAttackPath ? (
+        {isCompromisedOrigin ? (
+          <span className="flex items-center text-[9px] font-mono text-[#f0883e] font-semibold shrink-0">
+            <Radio className="w-3 h-3 mr-0.5 animate-pulse text-[#f0883e]" />
+            COMPROMISED
+          </span>
+        ) : isOnAttackPath ? (
           <span className="flex items-center text-[9px] font-mono text-[#f85149] font-semibold shrink-0">
             <Flame className="w-3 h-3 mr-0.5 fill-current" />
             PATH
           </span>
+        ) : lateralDepth !== null && lateralDepth !== undefined ? (
+          isLateralCritical ? (
+            <span className="flex items-center text-[9px] font-mono text-[#f85149] font-semibold shrink-0">
+              <AlertOctagon className="w-3 h-3 mr-0.5 fill-current" />
+              CRITICAL (+{lateralDepth})
+            </span>
+          ) : (
+            <span className="flex items-center text-[9px] font-mono text-[#d2a8ff] font-semibold shrink-0">
+              <Layers className="w-3 h-3 mr-0.5 text-[#d2a8ff]" />
+              +{lateralDepth} HOP{lateralDepth > 1 ? 'S' : ''}
+            </span>
+          )
         ) : isCritical ? (
           <span className="flex items-center text-[9px] font-mono text-[#f85149] font-semibold shrink-0">
             <AlertTriangle className="w-3 h-3 mr-0.5 fill-current" />

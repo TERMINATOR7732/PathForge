@@ -86,7 +86,7 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 162 tests passing)
+├── tests/                       # Automated test suite (Vitest — 179 tests passing)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
@@ -103,6 +103,7 @@ PathForge/
 │   ├── phase17-manual-qa.test.ts # Phase 1.7 automated 5-step manual QA test suite
 │   ├── verification-reports.test.ts # Phase 1.8 verification report model & export tests
 │   ├── attack-path.test.ts      # Phase 2.1 deterministic attack path analysis tests
+│   ├── blast-radius.test.ts     # Phase 2.2 blast radius & lateral movement tests
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -275,6 +276,32 @@ PathForge provides deterministic graph-based attack path analysis answering:
 
 ---
 
+## Blast Radius & Lateral Movement Analysis (Phase 2.2)
+
+PathForge provides deterministic lateral movement analysis answering:
+> *"If this asset is compromised, what else can an attacker reach from it?"*
+
+- **Authoritative Domain Engine (`@pathforge/core/blast-radius`)**:
+  - **Compromised Origin Definition**: Accepts any modeled infrastructure asset as an assumed post-compromise beachhead.
+  - **Directed Lateral Traversal**: Conducts directed BFS strictly over permitted `ALLOW` egress edges; `DENY` barriers block lateral progression completely.
+  - **Strict Directionality & Isolation**: Upstream nodes cannot be reached unless reverse edges exist; visual $(x, y)$ coordinates do not alter topology.
+  - **Shortest Lateral Depth**: Computes the minimal number of hops required to reach each downstream asset (`lateralDepth`).
+  - **Trust Boundary Transitions**: Tracks zone crossings (e.g., `DMZ` $\to$ `Internal` $\to$ `Restricted`), grouping identical transitions to avoid artificial metric inflation.
+  - **Deterministic Impact Assessment**: Classifies post-compromise blast radius into `CRITICAL`, `HIGH`, `MEDIUM`, or `LOW` based on reachable asset criticality, volume, and boundary crossings.
+  - **Structured Explanations**: Produces numbered deterministic explanation facts ("Why this blast radius exists") and concrete lateral risk factors.
+- **Dedicated Blast Radius Panel (`BlastRadiusPanel`)**:
+  - Interactive compromised asset selector with quick-select triggers.
+  - Summary metrics: Reachable Assets, Lateral Depth, Boundary Crossings, Critical Assets at Risk.
+  - Impact severity badge (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) with detailed explanation.
+  - Granular lateral movement steps table with per-hop protocol, port, and zone rationale.
+  - Cross-tool integration: "Analyze Blast Radius" triggers from `InspectorPanel` and `AttackPathsPanel`.
+- **Interactive Canvas Visualization**:
+  - Compromised origin asset highlighted with pulsating amber ring (`#f0883e`) and `[COMPROMISED]` badge.
+  - Downstream reachable assets ringed in purple (`#a371f7`) with depth pills (`LATERAL (+1)`, `LATERAL (+2)`), or crimson if high-value/critical (`CRITICAL (+1)`).
+  - Traversed lateral edges styled with purple dashed lines (`strokeDasharray: '4 2'`) and purple arrowheads (`#a371f7`).
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -294,7 +321,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (162 unit & integration tests across 17 test files):
+Execute the full Vitest suite (179 unit & integration tests across 18 test files):
 
 ```bash
 npm run test

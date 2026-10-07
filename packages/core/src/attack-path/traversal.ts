@@ -62,6 +62,18 @@ export function isSensitiveTarget(node: InfrastructureNode): boolean {
   return sensitiveTypes.has(type);
 }
 
+/**
+ * Deterministically checks whether a node represents a critical crown-jewel asset.
+ * Criteria:
+ * - Criticality: 'critical'
+ * - Zone: 'restricted'
+ */
+export function isCriticalAsset(node: InfrastructureNode): boolean {
+  const crit = (node.criticality ?? '').toLowerCase();
+  const zone = normalizeZone(node.zone);
+  return crit === 'critical' || zone === 'restricted';
+}
+
 export interface RawPathResult {
   entryPoint: InfrastructureNode;
   target: InfrastructureNode;

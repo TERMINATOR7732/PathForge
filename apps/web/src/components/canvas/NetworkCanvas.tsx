@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Environment, InfrastructureEdge, InfrastructureNode, AttackPath } from '@pathforge/core';
+import { Environment, InfrastructureEdge, InfrastructureNode, AttackPath, BlastRadiusAnalysisResult } from '@pathforge/core';
 import { Finding, NodeType } from '@pathforge/shared';
 import { Flame } from 'lucide-react';
 import { CanvasNode } from './CanvasNode.js';
@@ -14,6 +14,7 @@ interface NetworkCanvasProps {
   selectedNodeId: string | null;
   selectedEdgeId: string | null;
   selectedAttackPath?: AttackPath | null;
+  blastRadiusResult?: BlastRadiusAnalysisResult | null;
   onSelectNode: (nodeId: string | null) => void;
   onSelectEdge: (edgeId: string | null) => void;
   onUpdateNodePosition: (nodeId: string, x: number, y: number) => void;
@@ -34,6 +35,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   selectedNodeId,
   selectedEdgeId,
   selectedAttackPath,
+  blastRadiusResult,
   onSelectNode,
   onSelectEdge,
   onUpdateNodePosition,
@@ -121,6 +123,22 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   const attackPathEdgeIds = useMemo(() => {
     return new Set(selectedAttackPath?.edges.map((e) => e.id) ?? []);
   }, [selectedAttackPath]);
+
+  const lateralReachableNodesMap = useMemo(() => {
+    const map = new Map<string, { depth: number; isCritical: boolean }>();
+    if (!blastRadiusResult) return map;
+    for (const node of blastRadiusResult.blastRadius.reachableNodes) {
+      map.set(node.id, { depth: node.depth, isCritical: node.isCritical });
+    }
+    return map;
+  }, [blastRadiusResult]);
+
+  const lateralEdgeIds = useMemo(() => {
+    if (!blastRadiusResult) return new Set<string>();
+    return new Set(blastRadiusResult.blastRadius.reachableEdges.map((e) => e.id));
+  }, [blastRadiusResult]);
+
+  const compromisedNodeId = blastRadiusResult?.blastRadius.compromisedNode.id ?? null;
 
   // Center on focused element when requested (e.g. from "Locate on Canvas")
   useEffect(() => {
@@ -416,6 +434,16 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
             >
               <polygon points="0 0, 8 4, 0 8" fill="#58a6ff" />
             </marker>
+            <marker
+              id="arrowhead-lateral"
+              markerWidth="8"
+              markerHeight="8"
+              refX="7"
+              refY="4"
+              orient="auto"
+            >
+              <polygon points="0 0, 8 4, 0 8" fill="#a371f7" />
+            </marker>
           </defs>
 
           {/* Render Actual Graph Edges */}
@@ -437,6 +465,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
                   focusedElement?.type === 'edge' && focusedElement.id === edge.id
                 }
                 isOnAttackPath={attackPathEdgeIds.has(edge.id)}
+                isLateralMovement={lateralEdgeIds.has(edge.id)}
                 onSelect={(edgeId) => {
                   onSelectEdge(edgeId);
                   onSelectNode(null);
@@ -474,6 +503,9 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
                   focusedElement?.type === 'node' && focusedElement.id === node.id
                 }
                 isOnAttackPath={attackPathNodeIds.has(node.id)}
+                isCompromisedOrigin={node.id === compromisedNodeId}
+                lateralDepth={lateralReachableNodesMap.get(node.id)?.depth ?? null}
+                isLateralCritical={lateralReachableNodesMap.get(node.id)?.isCritical ?? false}
                 degree={degree}
                 onSelect={(nId) => {
                   onSelectNode(nId);

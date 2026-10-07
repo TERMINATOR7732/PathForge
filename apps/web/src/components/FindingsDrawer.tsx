@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Finding, RuleCategory, Severity, ValidationResult } from '@pathforge/shared';
-import { Environment, FixVerificationResult, AttackPathAnalysisResult } from '@pathforge/core';
+import { Environment, FixVerificationResult, AttackPathAnalysisResult, BlastRadiusAnalysisResult } from '@pathforge/core';
 import { getRemediationActions, RemediationAction } from '@pathforge/validator';
 import {
   ChevronUp,
@@ -18,11 +18,13 @@ import {
   Layers,
   History,
   Flame,
+  Radio,
 } from 'lucide-react';
 import { RecommendedArchitectureView } from './RecommendedArchitectureView.js';
 import { RemediationModal } from './RemediationModal.js';
 import { VerificationPanel } from './VerificationPanel.js';
 import { AttackPathsPanel } from './AttackPathsPanel.js';
+import { BlastRadiusPanel } from './BlastRadiusPanel.js';
 
 interface FindingsDrawerProps {
   findings: Finding[];
@@ -34,6 +36,10 @@ interface FindingsDrawerProps {
   attackPathAnalysis?: AttackPathAnalysisResult | null;
   selectedAttackPathId?: string | null;
   onSelectAttackPath?: (pathId: string | null) => void;
+  blastRadiusResult?: BlastRadiusAnalysisResult | null;
+  selectedCompromisedNodeId?: string | null;
+  onSelectCompromisedNode?: (nodeId: string) => void;
+  onClearBlastRadius?: () => void;
   onSelectNode: (nodeId: string) => void;
   onLocateElement: (target: { id: string; type: 'node' | 'edge' }) => void;
   onHoverFinding: (finding: Finding | null) => void;
@@ -77,6 +83,10 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   attackPathAnalysis,
   selectedAttackPathId,
   onSelectAttackPath,
+  blastRadiusResult,
+  selectedCompromisedNodeId,
+  onSelectCompromisedNode,
+  onClearBlastRadius,
   onSelectNode,
   onLocateElement,
   onHoverFinding,
@@ -85,13 +95,13 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   onRequestValidate,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<'findings' | 'attack-paths' | 'verification'>('findings');
+  const [activeTab, setActiveTab] = useState<'findings' | 'attack-paths' | 'blast-radius' | 'verification'>('findings');
   const [expandedFindingId, setExpandedFindingId] = useState<string | null>(
     findings[0]?.id ?? null
   );
 
   // Auto-switch to verification tab if new verification with changes arrives
-  React.useEffect(() => {
+  useEffect(() => {
     if (
       latestVerification &&
       (latestVerification.resolvedFindings.length > 0 ||
@@ -100,6 +110,14 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
       setActiveTab('verification');
     }
   }, [latestVerification]);
+
+  // Auto-switch to blast radius tab if compromised asset is selected
+  useEffect(() => {
+    if (selectedCompromisedNodeId) {
+      setActiveTab('blast-radius');
+      setIsOpen(true);
+    }
+  }, [selectedCompromisedNodeId]);
 
   // Filter States
   const [severityFilter, setSeverityFilter] = useState<'all' | Severity>('all');
@@ -223,7 +241,25 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
               </span>
             </button>
 
-            {/* Tab 3: Fix Verification */}
+            {/* Tab 3: Blast Radius */}
+            <button
+              onClick={() => {
+                setActiveTab('blast-radius');
+                setIsOpen(true);
+              }}
+              className={`flex items-center space-x-1.5 px-2 py-1 rounded text-xs font-mono transition-colors ${
+                activeTab === 'blast-radius'
+                  ? 'bg-[#181d26] text-[#e6edf3] font-semibold border border-[#f0883e]'
+                  : 'text-[#8b949e] hover:text-[#c9d1d9] border border-transparent'
+              }`}
+            >
+              <Radio className="w-3.5 h-3.5 text-[#f0883e]" />
+              <span>
+                BLAST RADIUS ({blastRadiusResult?.summary.totalReachableAssets ?? 0})
+              </span>
+            </button>
+
+            {/* Tab 4: Fix Verification */}
             <button
               onClick={() => {
                 setActiveTab('verification');
@@ -341,7 +377,21 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
                 onSelectPath={onSelectAttackPath ?? (() => {})}
                 onLocateElement={onLocateElement}
                 onAnalyze={onRequestValidate}
+                onAnalyzeBlastRadius={(nodeId) => {
+                  onSelectCompromisedNode?.(nodeId);
+                  setActiveTab('blast-radius');
+                  setIsOpen(true);
+                }}
                 isStale={isValidationStale}
+              />
+            ) : activeTab === 'blast-radius' ? (
+              <BlastRadiusPanel
+                environment={environment}
+                analysisResult={blastRadiusResult ?? null}
+                selectedCompromisedNodeId={selectedCompromisedNodeId ?? null}
+                onSelectCompromisedNode={onSelectCompromisedNode ?? (() => {})}
+                onLocateElement={onLocateElement}
+                onClearAnalysis={onClearBlastRadius}
               />
             ) : findings.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center font-mono space-y-2">

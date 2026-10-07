@@ -19,6 +19,7 @@ import {
   Check,
   AlertCircle,
   Lock,
+  Radio,
 } from 'lucide-react';
 
 interface InspectorPanelProps {
@@ -26,6 +27,7 @@ interface InspectorPanelProps {
   selectedNodeId: string | null;
   selectedEdgeId: string | null;
   findings: Finding[];
+  onAnalyzeBlastRadius?: (nodeId: string) => void;
   onUpdateNodeConfig?: (
     nodeId: string,
     patch: {
@@ -56,6 +58,7 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   selectedNodeId,
   selectedEdgeId,
   findings,
+  onAnalyzeBlastRadius,
   onUpdateNodeConfig,
   onUpdateEdgeConfig,
   onDeleteNode,
@@ -378,6 +381,17 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 </button>
               )}
             </div>
+
+            {onAnalyzeBlastRadius && (
+              <button
+                type="button"
+                onClick={() => onAnalyzeBlastRadius(selectedNode.id)}
+                className="w-full flex items-center justify-center space-x-1.5 py-1.5 px-3 rounded text-xs font-mono font-medium bg-[#271d17] hover:bg-[#38231a] text-[#f0883e] border border-[#f0883e]/50 transition-colors shadow-sm cursor-pointer"
+              >
+                <Radio className="w-3.5 h-3.5" />
+                <span>Analyze Blast Radius</span>
+              </button>
+            )}
 
             {/* Connection Summary */}
             <div className="pt-2 border-t border-[#222630]">

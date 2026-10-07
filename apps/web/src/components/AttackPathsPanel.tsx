@@ -15,6 +15,7 @@ import {
   Flame,
   CheckCircle2,
   Info,
+  Radio,
 } from 'lucide-react';
 
 interface AttackPathsPanelProps {
@@ -23,6 +24,7 @@ interface AttackPathsPanelProps {
   onSelectPath: (pathId: string | null) => void;
   onLocateElement: (target: { id: string; type: 'node' | 'edge' }) => void;
   onAnalyze?: () => void;
+  onAnalyzeBlastRadius?: (nodeId: string) => void;
   isStale?: boolean;
 }
 
@@ -61,6 +63,7 @@ export const AttackPathsPanel: React.FC<AttackPathsPanelProps> = ({
   onSelectPath,
   onLocateElement,
   onAnalyze,
+  onAnalyzeBlastRadius,
   isStale = false,
 }) => {
   const [riskFilter, setRiskFilter] = useState<'all' | AttackPathRisk>('all');
@@ -319,14 +322,26 @@ export const AttackPathsPanel: React.FC<AttackPathsPanelProps> = ({
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => onLocateElement({ id: activePath.target.id, type: 'node' })}
-                    className="flex items-center space-x-1 px-2.5 py-1 rounded bg-[#21262d] text-[#c9d1d9] hover:text-white hover:bg-[#30363d] transition-colors text-[11px]"
-                    title="Center canvas on target node"
-                  >
-                    <Crosshair className="w-3.5 h-3.5 text-[#58a6ff]" />
-                    <span>Locate Target</span>
-                  </button>
+                  <div className="flex items-center space-x-2 shrink-0">
+                    {onAnalyzeBlastRadius && (
+                      <button
+                        onClick={() => onAnalyzeBlastRadius(activePath.target.id)}
+                        className="flex items-center space-x-1 px-2.5 py-1 rounded bg-[#271d17] border border-[#f0883e]/50 text-[#f0883e] hover:bg-[#38231a] hover:text-white transition-colors text-[11px]"
+                        title="Analyze lateral movement from this compromised asset"
+                      >
+                        <Radio className="w-3.5 h-3.5" />
+                        <span>Analyze Blast Radius</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onLocateElement({ id: activePath.target.id, type: 'node' })}
+                      className="flex items-center space-x-1 px-2.5 py-1 rounded bg-[#21262d] text-[#c9d1d9] hover:text-white hover:bg-[#30363d] transition-colors text-[11px]"
+                      title="Center canvas on target node"
+                    >
+                      <Crosshair className="w-3.5 h-3.5 text-[#58a6ff]" />
+                      <span>Locate Target</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="pt-2 border-t border-[#222630] grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">

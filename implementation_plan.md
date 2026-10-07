@@ -159,13 +159,26 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
   - Interactive Canvas Highlighting: Selected attack paths highlighted in crimson dashed lines (`#f85149`, stroke-width: 2.5) on `CanvasEdge` and glowing crimson borders with `PATH` badges on `CanvasNode`.
   - Drawer Integration: Dedicated `ATTACK PATHS (${count})` tab in `FindingsDrawer` with Flame badge, full path selection synchronization, and stale status alerts.
 
-### Phase 2.2 — Lateral Movement & Vulnerability Chaining
-- Chaining multi-hop pivot points (e.g., `Internet → Public Web → API Server → Database`)
-- Exploitation prerequisites modeling per node type
-
-### Phase 2.3 — Risk Scoring & Blast Radius
-- Deterministic severity scoring formula (path length, asset value, boundary absence)
-- Blast radius calculation (how many downstream nodes can be reached from a compromised node)
+### Phase 2.2 — Blast Radius & Lateral Movement Analysis *(STATUS: COMPLETE)*
+- [x] Authoritative Domain Blast Radius Engine (`packages/core/src/blast-radius/`):
+  - Data contracts: `BlastRadius`, `BlastRadiusImpact` (`critical` | `high` | `medium` | `low`), `BlastRadiusNodeSummary`, `BlastRadiusEdgeSummary`, `LateralMovementStep`, `TrustBoundaryTransition`, `BlastRadiusSummary`, `BlastRadiusAnalysisResult`, `BlastRadiusOptions`.
+  - Directed BFS lateral movement traversal over `ALLOW` edges strictly starting from any compromised origin asset.
+  - Strict DENY barrier enforcement: configured `DENY` edges block lateral traversal completely.
+  - Strict edge directionality: upstream nodes remain unreachable without explicit reverse edges.
+  - Cycle and self-loop termination without counting origin node as lateral movement.
+  - Shortest lateral depth calculation (`lateralDepth`) per reachable node.
+  - Unique trust boundary transition tracking across normalized security zones.
+  - Reusable sensitivity and criticality classification (`isCriticalAsset`).
+  - Explainable risk scoring, risk factors attribution, and numbered deterministic explanation facts ("Why this blast radius exists").
+  - Batch analysis helper `analyzeAllBlastRadii(environment)` for complete environment assessment.
+- [x] Comprehensive Automated Test Suite:
+  - 179 unit and integration tests passing across 18 test files (17 tests in `tests/blast-radius.test.ts` covering basic reachability, depth, DENY barriers, directionality, cycles, trust boundaries, critical assets, branching, isolated nodes, coordinate isolation, determinism, and catalog scenarios).
+- [x] Interactive UI Integration:
+  - `BlastRadiusPanel`: Compromised origin selector, summary metric cards, impact badge, reachable assets table with criticality indicators, lateral movement flow steps with rationale, and explainability cards.
+  - `AttackPathsPanel` integration: "Analyze Blast Radius" button allowing direct transition from attack path targets to lateral analysis.
+  - `InspectorPanel` integration: "Analyze Blast Radius" button when inspecting any canvas node.
+  - `FindingsDrawer` integration: Dedicated `BLAST RADIUS (${count})` tab with Radio icon and automatic tab switching upon node selection.
+  - Canvas Visualization: Compromised origin pulsing amber ring (`#f0883e`) with `COMPROMISED` badge; reachable assets purple ring (`#a371f7`) with `LATERAL (+depth)` pills (or crimson `CRITICAL (+depth)`); lateral movement edges in dashed purple with purple arrowheads (`#a371f7`).
 
 ---
 
