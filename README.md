@@ -86,7 +86,7 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 210 tests passing)
+├── tests/                       # Automated test suite (Vitest — 231 tests passing)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
@@ -106,6 +106,7 @@ PathForge/
 │   ├── blast-radius.test.ts     # Phase 2.2 blast radius & lateral movement tests
 │   ├── attack-path-risk.test.ts # Phase 2.3 risk-weighted attack path intelligence tests
 │   ├── architecture-analysis.test.ts # Phase 2.4 architecture analysis intelligence tests
+│   ├── production-readiness.test.ts # Phase 2.5 production readiness assessment tests
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -361,7 +362,6 @@ While Phase 1 validation rules evaluate specific edges and listeners, Phase 2.4 
   - **ARCH-006** (`high`): Potential Single Point of Failure (un-replicated component whose loss severs vital services).
   - **ARCH-007** (`medium`): Weak Perimeter Segmentation (direct ingress to compute without perimeter inspection).
 - **Explainable 0–100 Architecture Score**:
-  - Starts at 100 with itemized deductions based on finding severities (Critical: -25, High: -15, Medium: -8, Low: -3).
   - Rating bands: `EXCELLENT` (90–100), `GOOD` (75–89), `FAIR` (50–74), `POOR` (25–49), `CRITICAL` (0–24).
 - **Interactive Architecture UI (`ArchitecturePanel`)**:
   - Health score banner with color-coded rating pill and itemized score deduction list.
@@ -369,6 +369,51 @@ While Phase 1 validation rules evaluate specific edges and listeners, Phase 2.4 
   - Category filters (`ALL`, `TIER_BYPASS`, `SEGMENTATION`, `DEPENDENCY`, `MANAGEMENT`).
   - Deep finding cards with "Why It Matters", observable graph facts, and actionable recommendations.
   - One-click "Locate" canvas action centering and highlighting affected components.
+
+---
+
+## Production Readiness Assessment (Phase 2.5)
+
+PathForge introduces a deterministic **Production Readiness Assessment** layer, answering Level 4 operational security intelligence:
+> *"Is this modeled environment actually ready to operate safely in production?"*
+
+Rather than a generic scorecard, PathForge composes all existing intelligence layers (validation rules, adversarial attack paths, lateral blast radius, tier separation, and structural resilience) into a gate-driven operational readiness evaluation:
+
+- **Authoritative Readiness Domain Engine (`@pathforge/core/production-readiness`)**:
+  - **Gate-Driven Status**:
+    - `READY`: All production gates satisfied.
+    - `READY_WITH_WARNINGS`: Non-blocking resilience or multi-tier internal warnings present.
+    - `NOT_READY`: One or more critical production gates are `BLOCKED`.
+    - `INSUFFICIENT_EVIDENCE`: Insufficient infrastructure components modeled to evaluate production posture.
+  - **Separation of Status & Rating**:
+    - Status is strictly gate-driven; score alone cannot override a blocked critical gate (e.g. an environment with an 85+ score remains `NOT_READY` if public database access exists).
+    - Qualitative rating is score-driven: `EXCELLENT` (90–100), `GOOD` (75–89), `NEEDS_ATTENTION` (50–74), `POOR` (25–49), `CRITICAL` (0–24).
+- **6 Deterministic Production Gates**:
+  1. **Gate 1 — Critical Security**: BLOCKS on unresolved critical validation findings, critical attack paths, or direct exposure of crown-jewel assets.
+  2. **Gate 2 — High-Risk Exposure**: BLOCKS on untrusted management exposure or shallow high-risk attack paths; WARNS on deep mediated multi-tier reachability.
+  3. **Gate 3 — Network Architecture**: BLOCKS on direct edge-to-data ingress (`ARCH-001`) or missing compute tiers (`ARCH-002`); WARNS on flat internal topologies (`ARCH-003`).
+  4. **Gate 4 — Resilience & Redundancy**: WARNS on potential single points of failure (`ARCH-006`) or high dependency concentration (`ARCH-005`). Never makes false HA claims.
+  5. **Gate 5 — Communication Security**: BLOCKS on cleartext sensitive communication (`PF-008`); verifies TLS/SSH encryption on database pathways.
+  6. **Gate 6 — Operational Evidence Sufficiency**: Truthfully classifies runtime operational controls as `LIMITED` evidence, acknowledging that backups, monitoring, and DR cannot be observed from a network topology model.
+- **7 Weighted Readiness Categories**:
+  - Security Posture (30%)
+  - Attack Exposure (20%)
+  - Network Architecture (20%)
+  - Access Control (10%)
+  - Communication Security (10%)
+  - Resilience & Fragility (5%)
+  - Operational Evidence Coverage (5%)
+- **Truthful Engineering Disclosure (10 Evidence Gaps)**:
+  - Backups & snapshots, disaster recovery & failover, monitoring telemetry, security alerting, OS patching, secret rotation, IAM/SSO authentication, incident response runbooks, deployment gates, and runtime daemon health are explicitly classified as `UNVERIFIED` evidence gaps, not fabricated failures.
+- **Interactive UI (`ProductionReadinessPanel`)**:
+  - Header banner with status badge (`PRODUCTION READY` vs `NOT PRODUCTION READY`), readiness score bar, rating pill, gate counters, and executive verdict.
+  - Section filters: `ALL`, `GATES`, `CATEGORIES`, `BLOCKING`, `STRENGTHS`, `GAPS`.
+  - Detailed Gate cards with compliance status, summaries, reasons, and evidence badges.
+  - Category breakdown bars with explainable deductions and observations.
+  - Blocking reasons with one-click "Locate Asset" canvas action and actionable remediation steps.
+  - Non-blocking resilience warnings with canvas locator.
+  - Modeled strengths checklist and operational evidence gap disclosures.
+  - Actionable Recommended Next Steps.
 
 ---
 
@@ -391,7 +436,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (210 unit & integration tests across 20 test files):
+Execute the full Vitest suite (231 unit & integration tests across 21 test files):
 
 ```bash
 npm run test

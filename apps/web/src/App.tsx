@@ -12,6 +12,7 @@ import {
   analyzeAttackPaths,
   analyzeBlastRadius,
   analyzeArchitecture,
+  assessProductionReadiness,
 } from '@pathforge/core';
 import { createDefaultRuleRegistry, ValidatorEngine, RemediationAction } from '@pathforge/validator';
 import { NodeType, ValidationResult, Finding } from '@pathforge/shared';
@@ -102,6 +103,25 @@ export const App: React.FC = () => {
   const architectureResult = useMemo(() => {
     return analyzeArchitecture(environment);
   }, [environment, graphVersion]);
+
+  // Production Readiness Assessment (Phase 2.5)
+  const productionReadiness = useMemo(() => {
+    return assessProductionReadiness(environment, {
+      validationResult,
+      attackPathAnalysis,
+      architectureAnalysis: architectureResult,
+      blastRadiusAnalysis: blastRadiusResult,
+      fixVerification: latestVerification,
+    });
+  }, [
+    environment,
+    graphVersion,
+    validationResult,
+    attackPathAnalysis,
+    architectureResult,
+    blastRadiusResult,
+    latestVerification,
+  ]);
 
   const handleAnalyzeBlastRadius = useCallback((nodeId: string) => {
     setSelectedCompromisedNodeId(nodeId);
@@ -408,6 +428,7 @@ export const App: React.FC = () => {
         onSelectCompromisedNode={setSelectedCompromisedNodeId}
         onClearBlastRadius={() => setSelectedCompromisedNodeId(null)}
         architectureResult={architectureResult}
+        productionReadiness={productionReadiness}
         onSelectNode={(nodeId) => {
           setSelectedNodeId(nodeId);
           setSelectedEdgeId(null);

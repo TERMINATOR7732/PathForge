@@ -6,6 +6,7 @@ import {
   AttackPathAnalysisResult,
   BlastRadiusAnalysisResult,
   ArchitectureAnalysisResult,
+  ProductionReadinessAssessment,
 } from '@pathforge/core';
 import { getRemediationActions, RemediationAction } from '@pathforge/validator';
 import {
@@ -25,6 +26,7 @@ import {
   History,
   Flame,
   Radio,
+  Gauge,
 } from 'lucide-react';
 import { RecommendedArchitectureView } from './RecommendedArchitectureView.js';
 import { RemediationModal } from './RemediationModal.js';
@@ -32,6 +34,7 @@ import { VerificationPanel } from './VerificationPanel.js';
 import { AttackPathsPanel } from './AttackPathsPanel.js';
 import { BlastRadiusPanel } from './BlastRadiusPanel.js';
 import { ArchitecturePanel } from './ArchitecturePanel.js';
+import { ProductionReadinessPanel } from './ProductionReadinessPanel.js';
 
 interface FindingsDrawerProps {
   findings: Finding[];
@@ -48,6 +51,7 @@ interface FindingsDrawerProps {
   onSelectCompromisedNode?: (nodeId: string) => void;
   onClearBlastRadius?: () => void;
   architectureResult?: ArchitectureAnalysisResult | null;
+  productionReadiness?: ProductionReadinessAssessment | null;
   onSelectNode: (nodeId: string) => void;
   onLocateElement: (target: { id: string; type: 'node' | 'edge' }) => void;
   onHoverFinding: (finding: Finding | null) => void;
@@ -96,6 +100,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   onSelectCompromisedNode,
   onClearBlastRadius,
   architectureResult,
+  productionReadiness,
   onSelectNode,
   onLocateElement,
   onHoverFinding,
@@ -104,7 +109,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   onRequestValidate,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<'findings' | 'attack-paths' | 'blast-radius' | 'verification' | 'architecture'>('findings');
+  const [activeTab, setActiveTab] = useState<'findings' | 'attack-paths' | 'blast-radius' | 'verification' | 'architecture' | 'readiness'>('findings');
   const [expandedFindingId, setExpandedFindingId] = useState<string | null>(
     findings[0]?.id ?? null
   );
@@ -307,6 +312,24 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
               </span>
             </button>
 
+            {/* Tab 6: Production Readiness */}
+            <button
+              onClick={() => {
+                setActiveTab('readiness');
+                setIsOpen(true);
+              }}
+              className={`flex items-center space-x-1.5 px-2 py-1 rounded text-xs font-mono transition-colors ${
+                activeTab === 'readiness'
+                  ? 'bg-[#181d26] text-[#e6edf3] font-semibold border border-[#3fb950]'
+                  : 'text-[#8b949e] hover:text-[#c9d1d9] border border-transparent'
+              }`}
+            >
+              <Gauge className="w-3.5 h-3.5 text-[#3fb950]" />
+              <span>
+                READINESS ({productionReadiness ? `${productionReadiness.score}/100` : '—'})
+              </span>
+            </button>
+
             {/* Stale Validation Warning */}
             {isValidationStale && (
               <span className="px-2 py-0.5 rounded bg-[#2b1f14] text-[#f0883e] border border-[#f0883e]/50 text-[10px] font-semibold animate-pulse ml-1">
@@ -435,6 +458,12 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
             ) : activeTab === 'architecture' && architectureResult ? (
               <ArchitecturePanel
                 analysisResult={architectureResult}
+                onLocateElement={onLocateElement}
+                onSelectTab={setActiveTab}
+              />
+            ) : activeTab === 'readiness' && productionReadiness ? (
+              <ProductionReadinessPanel
+                assessment={productionReadiness}
                 onLocateElement={onLocateElement}
                 onSelectTab={setActiveTab}
               />

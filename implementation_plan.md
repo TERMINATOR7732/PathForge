@@ -221,6 +221,26 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
   - Deep architectural cards with "Why It Matters", observable graph facts, and actionable recommendations.
   - One-click "Locate" canvas action to instantly center and highlight affected elements.
 
+### Phase 2.5 — Production Readiness Assessment *(STATUS: COMPLETE)*
+- [x] Authoritative Domain Production Readiness Engine (`packages/core/src/production-readiness/`):
+  - Data contracts: `ProductionReadinessStatus` (`READY`, `READY_WITH_WARNINGS`, `NOT_READY`, `INSUFFICIENT_EVIDENCE`), `ProductionReadinessRating` (`EXCELLENT`, `GOOD`, `NEEDS_ATTENTION`, `POOR`, `CRITICAL`), `ProductionGate`, `ProductionGateStatus`, `ReadinessCategoryId`, `ReadinessCategoryAssessment`, `BlockingReason`, `ReadinessWarning`, `UnverifiedControl`, `ReadinessEvidenceRecord`, `ProductionReadinessSummary`, and `ProductionReadinessAssessment`.
+  - 6 Deterministic Production Gates (`gates.ts`): Critical Security Gate, High-Risk Exposure Gate, Network Architecture Gate, Resilience & Redundancy Gate, Communication Security Gate, and Operational Evidence Sufficiency Gate.
+  - Explainable Scoring Model (`scoring.ts`): 7 weighted categories (Security 30%, Attack Exposure 20%, Architecture 20%, Access Control 10%, Communication Security 10%, Resilience 5%, Evidence Coverage 5%), itemized score deductions, and independent gate-driven status override.
+  - Assessment Details & Truthful Disclosures (`assessment.ts`): Structured blocking reasons, non-blocking resilience warnings, objectively verified strengths, 10 unverified operational controls (backups, DR, monitoring, alerting, patching, secrets, IAM, incident response, deployment gates, runtime health), and actionable next steps.
+  - Primary Analyzer (`analyzer.ts`): `assessProductionReadiness(environment, options)` composing existing validation, attack-path, blast-radius, and architecture results without algorithm duplication.
+- [x] Comprehensive Automated Test Suite:
+  - 231 unit and integration tests passing across 21 test files (21 new tests in `tests/production-readiness.test.ts` covering secure scenarios, public DB blocking, critical attack paths, management plane exposure, cleartext sensitive communication, flat network warnings, SPOF warnings, high dependency concentration, unmodeled operational controls as evidence gaps, determinism, coordinate independence, byte-for-byte serialization, structured blocking evidence, objective strengths verification, simultaneous chaos failures, high score awards, critical gate overrides, flaw fix transitions, DENY edge filtering, TLS communication verification, and single-node insufficient evidence).
+- [x] Interactive UI Intelligence (`ProductionReadinessPanel.tsx` & `FindingsDrawer.tsx`):
+  - Dedicated `READINESS (${score}/100)` tab in `FindingsDrawer` with Gauge icon.
+  - Executive Verdict callout with cautious engineering tone.
+  - 6 Production Gate cards with status pills, summaries, and reasons.
+  - 7 Category health bars with weights, scores, and observations.
+  - Blocking reasons cards with severity badges and one-click "Locate Asset" canvas action.
+  - Resilience warnings cards with canvas locator.
+  - Objectively verified strengths checklist.
+  - Operational evidence gap disclosures for the 10 unverified runtime controls.
+  - Recommended next steps for production.
+
 ---
 
 ## Phase 3 — Defense, Verification & Proof ("Prove")
