@@ -204,6 +204,23 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
   - Risk cards displaying color-coded risk levels and scores (`CRITICAL · 92`).
   - Deep Risk Assessment inspection card with score progress bar, dominant factors, contributing factors with weights, and verified mitigating defensive controls.
 
+### Phase 2.4 — Architecture Analysis Intelligence *(STATUS: COMPLETE)*
+- [x] Core Architecture Intelligence Engine (`packages/core/src/architecture/`):
+  - Data contracts: `ArchitectureTier`, `SegmentationQuality`, `TierSeparationQuality`, `DependencyConcentrationRating`, `ArchitectureRating`, `NodeTierAssignment`, `ZoneSummary`, `CrossZoneTransition`, `TopologyAnalysis`, `TierAnalysis`, `NodeDependencyProfile`, `SinglePointOfFailure`, `DependencyAnalysis`, `ArchitectureFinding`, `ArchitectureScore`, `ArchitectureProfile`, and `ArchitectureAnalysisResult`.
+  - Deterministic Tier Inference (`tiers.ts`): maps components to `edge`, `perimeter`, `application`, `data`, `management`, and `internal`. Assigns `tier: 'unknown'` with low confidence to unrecognized types without forced classification.
+  - Topology & Zone Analysis (`topology.ts`): zone summaries, cross-zone transitions, flat internal topology detection, and segmentation quality rating (`strong`, `moderate`, `weak`, `flat`).
+  - Dependency & Fragility Analysis (`dependencies.ts`): in-degree/out-degree analysis, high-connectivity bottleneck detection, single points of failure (SPOF) with cautious phrasing, and dependency concentration rating (`low`, `moderate`, `high`).
+  - Systemic Analyzer (`analyzer.ts`): architectural profile compilation, structured findings catalog (`ARCH-001` through `ARCH-007`), explainable 0–100 score calculation, and health rating (`EXCELLENT`, `GOOD`, `FAIR`, `POOR`, `CRITICAL`).
+- [x] Comprehensive Automated Test Suite:
+  - 210 unit and integration tests passing across 20 test files (16 new tests in `tests/architecture-analysis.test.ts` covering tier inference, unknown types, multi-tier layered architectures, direct edge-to-data detection, flat networks, multi-zone boundaries, privileged management exposure, dependency concentration, potential SPOF detection, explainable score deductions, canvas coordinate independence, byte-level determinism, and catalog scenarios `secure-web-app`, `public-db-exposure`, `flat-network`, and `chaos-lab`).
+- [x] Interactive UI Intelligence (`ArchitecturePanel.tsx` & `FindingsDrawer.tsx`):
+  - Dedicated `ARCHITECTURE (${count})` tab in `FindingsDrawer` with Layers icon.
+  - Health score banner with color-coded rating badge, score bar, and itemized deduction breakdown.
+  - Structural profile cards: Segmentation Quality, Tier Separation, SPOF Count, Dependency Concentration.
+  - Multi-category finding filters (`ALL`, `TIER_BYPASS`, `SEGMENTATION`, `DEPENDENCY`, `MANAGEMENT`).
+  - Deep architectural cards with "Why It Matters", observable graph facts, and actionable recommendations.
+  - One-click "Locate" canvas action to instantly center and highlight affected elements.
+
 ---
 
 ## Phase 3 — Defense, Verification & Proof ("Prove")

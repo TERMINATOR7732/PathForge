@@ -1,6 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Finding, RuleCategory, Severity, ValidationResult } from '@pathforge/shared';
-import { Environment, FixVerificationResult, AttackPathAnalysisResult, BlastRadiusAnalysisResult } from '@pathforge/core';
+import {
+  Environment,
+  FixVerificationResult,
+  AttackPathAnalysisResult,
+  BlastRadiusAnalysisResult,
+  ArchitectureAnalysisResult,
+} from '@pathforge/core';
 import { getRemediationActions, RemediationAction } from '@pathforge/validator';
 import {
   ChevronUp,
@@ -25,6 +31,7 @@ import { RemediationModal } from './RemediationModal.js';
 import { VerificationPanel } from './VerificationPanel.js';
 import { AttackPathsPanel } from './AttackPathsPanel.js';
 import { BlastRadiusPanel } from './BlastRadiusPanel.js';
+import { ArchitecturePanel } from './ArchitecturePanel.js';
 
 interface FindingsDrawerProps {
   findings: Finding[];
@@ -40,6 +47,7 @@ interface FindingsDrawerProps {
   selectedCompromisedNodeId?: string | null;
   onSelectCompromisedNode?: (nodeId: string) => void;
   onClearBlastRadius?: () => void;
+  architectureResult?: ArchitectureAnalysisResult | null;
   onSelectNode: (nodeId: string) => void;
   onLocateElement: (target: { id: string; type: 'node' | 'edge' }) => void;
   onHoverFinding: (finding: Finding | null) => void;
@@ -87,6 +95,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   selectedCompromisedNodeId,
   onSelectCompromisedNode,
   onClearBlastRadius,
+  architectureResult,
   onSelectNode,
   onLocateElement,
   onHoverFinding,
@@ -95,7 +104,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   onRequestValidate,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<'findings' | 'attack-paths' | 'blast-radius' | 'verification'>('findings');
+  const [activeTab, setActiveTab] = useState<'findings' | 'attack-paths' | 'blast-radius' | 'verification' | 'architecture'>('findings');
   const [expandedFindingId, setExpandedFindingId] = useState<string | null>(
     findings[0]?.id ?? null
   );
@@ -280,6 +289,24 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
               </span>
             </button>
 
+            {/* Tab 5: Architecture Analysis */}
+            <button
+              onClick={() => {
+                setActiveTab('architecture');
+                setIsOpen(true);
+              }}
+              className={`flex items-center space-x-1.5 px-2 py-1 rounded text-xs font-mono transition-colors ${
+                activeTab === 'architecture'
+                  ? 'bg-[#181d26] text-[#e6edf3] font-semibold border border-[#a371f7]'
+                  : 'text-[#8b949e] hover:text-[#c9d1d9] border border-transparent'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5 text-[#a371f7]" />
+              <span>
+                ARCHITECTURE ({architectureResult?.findings.length ?? 0})
+              </span>
+            </button>
+
             {/* Stale Validation Warning */}
             {isValidationStale && (
               <span className="px-2 py-0.5 rounded bg-[#2b1f14] text-[#f0883e] border border-[#f0883e]/50 text-[10px] font-semibold animate-pulse ml-1">
@@ -404,6 +431,12 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
                 onSelectCompromisedNode={onSelectCompromisedNode ?? (() => {})}
                 onLocateElement={onLocateElement}
                 onClearAnalysis={onClearBlastRadius}
+              />
+            ) : activeTab === 'architecture' && architectureResult ? (
+              <ArchitecturePanel
+                analysisResult={architectureResult}
+                onLocateElement={onLocateElement}
+                onSelectTab={setActiveTab}
               />
             ) : findings.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center font-mono space-y-2">

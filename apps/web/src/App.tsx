@@ -11,6 +11,7 @@ import {
   getDefaultScenario,
   analyzeAttackPaths,
   analyzeBlastRadius,
+  analyzeArchitecture,
 } from '@pathforge/core';
 import { createDefaultRuleRegistry, ValidatorEngine, RemediationAction } from '@pathforge/validator';
 import { NodeType, ValidationResult, Finding } from '@pathforge/shared';
@@ -96,6 +97,11 @@ export const App: React.FC = () => {
       return null;
     }
   }, [environment, selectedCompromisedNodeId, graphVersion]);
+
+  // Architecture Analysis (Phase 2.4)
+  const architectureResult = useMemo(() => {
+    return analyzeArchitecture(environment);
+  }, [environment, graphVersion]);
 
   const handleAnalyzeBlastRadius = useCallback((nodeId: string) => {
     setSelectedCompromisedNodeId(nodeId);
@@ -401,6 +407,7 @@ export const App: React.FC = () => {
         selectedCompromisedNodeId={selectedCompromisedNodeId}
         onSelectCompromisedNode={setSelectedCompromisedNodeId}
         onClearBlastRadius={() => setSelectedCompromisedNodeId(null)}
+        architectureResult={architectureResult}
         onSelectNode={(nodeId) => {
           setSelectedNodeId(nodeId);
           setSelectedEdgeId(null);

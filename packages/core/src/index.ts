@@ -9,3 +9,4 @@ export * from './scenarios/index.js';
 export * from './reports/index.js';
 export * from './attack-path/index.js';
 export * from './blast-radius/index.js';
+export * from './architecture/index.js';

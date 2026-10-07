@@ -86,7 +86,7 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 194 tests passing)
+├── tests/                       # Automated test suite (Vitest — 210 tests passing)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
@@ -105,6 +105,7 @@ PathForge/
 │   ├── attack-path.test.ts      # Phase 2.1 deterministic attack path analysis tests
 │   ├── blast-radius.test.ts     # Phase 2.2 blast radius & lateral movement tests
 │   ├── attack-path-risk.test.ts # Phase 2.3 risk-weighted attack path intelligence tests
+│   ├── architecture-analysis.test.ts # Phase 2.4 architecture analysis intelligence tests
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -332,6 +333,45 @@ PathForge introduces deterministic risk-weighted prioritization answering:
 
 ---
 
+## Architecture Analysis Intelligence (Phase 2.4)
+
+PathForge introduces deterministic architectural intelligence answering Level 3 security reasoning:
+> *"Why is this infrastructure structurally difficult to secure or operate?"*
+
+While Phase 1 validation rules evaluate specific edges and listeners, Phase 2.4 analyzes the systemic structural integrity of the entire topology:
+
+- **Tier Inference Engine (`@pathforge/core/architecture/tiers.ts`)**:
+  - Deterministically maps infrastructure components to architectural layers: `edge`, `perimeter`, `application`, `data`, `management`, and `internal`.
+  - Cautious classification: unrecognized or custom components receive `tier: 'unknown'` with low confidence without forced artificial labeling.
+  - Detects layered architecture patterns, tier bypasses, and direct edge-to-data ingress.
+- **Topology & Segmentation Analysis (`@pathforge/core/architecture/topology.ts`)**:
+  - Summarizes security zones and cross-zone transition boundaries.
+  - Evaluates segmentation quality (`strong`, `moderate`, `weak`, `flat`).
+  - Detects flat internal network topologies where disparate compute and data workloads are lumped into unsegmented subnets.
+- **Dependency & Structural Fragility (`@pathforge/core/architecture/dependencies.ts`)**:
+  - Computes in-degree, out-degree, and total degree connectivity for all nodes.
+  - Identifies single points of failure (SPOF) with cautious engineering language: *"Potential single point of failure: only 1 component modeled. If un-replicated in production, failure directly impacts downstream dependencies."*
+  - Evaluates dependency concentration rating (`low`, `moderate`, `high`) identifying centralized infrastructure bottlenecks.
+- **Architectural Findings Catalog (`ARCH-001` through `ARCH-007`)**:
+  - **ARCH-001** (`critical`): Direct Ingress to Data Tier (unmediated ingress bypassing application layer).
+  - **ARCH-002** (`high`): Missing Application Tier (perimeter connects directly to data tier).
+  - **ARCH-003** (`high`): Flat Internal Network Topology (heterogeneous compute/data co-located without boundaries).
+  - **ARCH-004** (`high`): Privileged Management Exposure (administrative planes reachable from untrusted zones).
+  - **ARCH-005** (`medium`): High Centralized Dependency Concentration (critical single component handling high fan-in/fan-out).
+  - **ARCH-006** (`high`): Potential Single Point of Failure (un-replicated component whose loss severs vital services).
+  - **ARCH-007** (`medium`): Weak Perimeter Segmentation (direct ingress to compute without perimeter inspection).
+- **Explainable 0–100 Architecture Score**:
+  - Starts at 100 with itemized deductions based on finding severities (Critical: -25, High: -15, Medium: -8, Low: -3).
+  - Rating bands: `EXCELLENT` (90–100), `GOOD` (75–89), `FAIR` (50–74), `POOR` (25–49), `CRITICAL` (0–24).
+- **Interactive Architecture UI (`ArchitecturePanel`)**:
+  - Health score banner with color-coded rating pill and itemized score deduction list.
+  - Structural profile metrics (Segmentation Quality, Tier Separation, SPOF Count, Dependency Concentration).
+  - Category filters (`ALL`, `TIER_BYPASS`, `SEGMENTATION`, `DEPENDENCY`, `MANAGEMENT`).
+  - Deep finding cards with "Why It Matters", observable graph facts, and actionable recommendations.
+  - One-click "Locate" canvas action centering and highlighting affected components.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -351,7 +391,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (194 unit & integration tests across 19 test files):
+Execute the full Vitest suite (210 unit & integration tests across 20 test files):
 
 ```bash
 npm run test
