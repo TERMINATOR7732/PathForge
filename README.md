@@ -86,16 +86,17 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 70 tests passing)
+├── tests/                       # Automated test suite (Vitest — 94 tests passing)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
 │   ├── environment.test.ts      # Environment delegation, creation helpers & JSON serialization
-│   ├── rules.test.ts            # PF-001 through PF-007 deterministic evaluation
+│   ├── rules.test.ts            # PF-001 through PF-009 deterministic evaluation
 │   ├── demo-environment.test.ts # Verification of standard baseline JSON
 │   ├── chaos-loop.test.ts       # Full Build-Break-Defend-Fix lifecycle test
 │   ├── editor-integration.test.ts # Phase 1.2 interactive canvas & domain sync tests
 │   ├── deep-configuration.test.ts # Phase 1.3 node & edge deep config, CIDR/port validation, QA A-F
+│   ├── semantic-validation.test.ts # Phase 1.4 semantic security validation, positive/negative/DENY tests
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -124,17 +125,32 @@ PathForge features an interactive, high-density modeling canvas where the `@path
 
 ---
 
-## Security Rule Catalog (Initial Foundation)
+## Security Validation Intelligence (Phase 1.4)
 
-| Rule ID | Rule Name | Severity | Category | Focus |
+PathForge's deterministic validator consumes rich semantic configuration:
+
+- **Configuration-Aware Exposure**: Distinguishes ports, protocols, and access policies. Recognizes standard database listeners (`5432`, `3306`, `27017`, `6379`, `1433`) and administrative listeners (SSH `22`, RDP `3389`).
+- **DENY Edge Reachability Filtering**: Configured `DENY` edges represent active defensive packet filters and are **never** treated as reachable exposure paths.
+- **Contextual Management Access**: Understands that `Management → Admin :22` is legitimate administrative workflow, while `Internet → Admin :22` represents critical public exposure.
+- **Contextual Broad Access**: Differentiates public wildcard ingress targeting sensitive internal tiers (High severity) from internal low-risk interconnects, while exempting `DENY ANY` firewall rules.
+- **Transport Security Enforcement**: Analyzes encryption toggles and protocol security across perimeter and database boundaries.
+- **Structured Finding Evidence**: Every finding packages structured machine-readable evidence (`sourceNode`, `sourceZone`, `targetNode`, `targetZone`, `targetCriticality`, `protocol`, `ports`, `access`, `encrypted`).
+
+---
+
+## Security Rule Catalog
+
+| Rule ID | Rule Name | Severity | Category | Semantic Security Focus |
 | :--- | :--- | :--- | :--- | :--- |
-| **PF-001** | Public Database Exposure | `critical` | `exposure` | Flags direct ingress from Internet to Database or Redis cache |
-| **PF-002** | Public Admin Exposure | `high` | `exposure` | Flags administrative consoles exposed to untrusted external networks |
-| **PF-003** | Missing Security Boundary | `high` | `network_boundary` | Flags compute nodes lacking perimeter firewall / WAF / load balancer |
-| **PF-004** | Untrusted → Internal Network | `critical` | `network_boundary` | Flags direct bridging of untrusted networks into private internal subnets |
-| **PF-005** | Excessive Trust / Tier Bypass | `medium` | `trust_boundary` | Flags multi-tier bypasses (e.g. presentation directly querying data store) |
-| **PF-006** | Invalid / Anomalous Topology | `medium` | `topology_anomaly` | Flags circular self-loops, orphaned components, and unexpected database egress |
-| **PF-007** | Overly Broad Access | `high` | `access_control` | Flags wildcard ports (`*`), wildcard protocols, or cleartext ingress |
+| **PF-001** | Public Database Exposure | `critical` | `exposure` | Flags direct allow ingress from untrusted networks to databases, caches, or standard DB ports (`5432`, `3306`, etc.) |
+| **PF-002** | Public Admin Exposure | `high` | `exposure` | Flags administrative consoles or SSH/RDP ports (`22`, `3389`) exposed to untrusted sources, exempting authorized Management zones |
+| **PF-003** | Missing Security Boundary | `high` | `network_boundary` | Flags compute workloads or restricted zones directly exposed without perimeter firewall / load balancer inspection |
+| **PF-004** | Untrusted → Internal Network | `critical` | `network_boundary` | Flags direct unmediated allow edges bridging public sources into internal subnets or zones |
+| **PF-005** | Excessive Trust / Tier Bypass | `medium` | `trust_boundary` | Flags presentation tiers directly querying databases when API tiers exist, or inappropriate `trust` relationships across boundaries |
+| **PF-006** | Invalid / Anomalous Topology | `medium` | `topology_anomaly` | Flags circular self-loops, orphaned isolated nodes, and reverse database egress targeting public internet |
+| **PF-007** | Overly Broad Access | `high` | `access_control` | Flags wildcard ports or protocols on allow edges reaching sensitive tiers, exempting default-deny filtering rules |
+| **PF-008** | Unencrypted Sensitive Communication | `high` | `access_control` | Flags cleartext unencrypted communication channels terminating at databases, restricted zones, or critical assets |
+| **PF-009** | Service / Connection Mismatch | `medium` | `topology_anomaly` | Detects unambiguous port or protocol conflicts where edge traffic targets a port different from the listening service definition |
 
 ---
 
@@ -170,7 +186,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (70 unit & integration tests):
+Execute the full Vitest suite (94 unit & integration tests):
 
 ```bash
 npm run test

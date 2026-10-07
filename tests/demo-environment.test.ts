@@ -41,7 +41,8 @@ describe('Demo Environment Verification', () => {
     const result = engine.evaluate(environment);
 
     expect(result.environmentId).toBe(environment.id);
-    expect(result.rulesEvaluated).toBe(7);
+    // Phase 1.4: 9 rules evaluated (PF-001 through PF-009)
+    expect(result.rulesEvaluated).toBe(9);
 
     // Standard baseline should have 0 critical findings and pass
     expect(result.summary.criticalCount).toBe(0);

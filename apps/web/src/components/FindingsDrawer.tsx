@@ -54,7 +54,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   return (
     <div
       className={`border-t border-[#222630] bg-[#111318] transition-all duration-200 select-none flex flex-col ${
-        isOpen ? 'h-64' : 'h-9'
+        isOpen ? 'h-72' : 'h-9'
       }`}
     >
       {/* Drawer Header Bar */}
@@ -141,6 +141,31 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
                           </span>
                         </div>
                       </div>
+
+                      {/* Structured Security Evidence */}
+                      {currentFinding.evidence && (
+                        <div className="p-2 rounded bg-[#161b22] border border-[#2d333b] flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[10px] text-[#8b949e]">
+                          <span className="text-[#58a6ff] font-semibold uppercase tracking-wider">EVIDENCE:</span>
+                          {currentFinding.evidence.protocol && (
+                            <span>Protocol: <strong className="text-[#c9d1d9]">{currentFinding.evidence.protocol}</strong></span>
+                          )}
+                          {currentFinding.evidence.ports && (
+                            <span>Port: <strong className="text-[#c9d1d9]">{currentFinding.evidence.ports}</strong></span>
+                          )}
+                          {currentFinding.evidence.access && (
+                            <span>Access: <strong className={currentFinding.evidence.access === 'deny' ? 'text-[#f85149]' : 'text-[#3fb950]'}>{currentFinding.evidence.access.toUpperCase()}</strong></span>
+                          )}
+                          {currentFinding.evidence.encrypted !== undefined && (
+                            <span>Channel: <strong className={currentFinding.evidence.encrypted ? 'text-[#3fb950]' : 'text-[#d29922]'}>{currentFinding.evidence.encrypted ? 'Encrypted' : 'Unencrypted'}</strong></span>
+                          )}
+                          {currentFinding.evidence.targetZone && (
+                            <span>Dest Zone: <strong className="text-[#c9d1d9]">{currentFinding.evidence.targetZone}</strong></span>
+                          )}
+                          {currentFinding.evidence.targetCriticality && (
+                            <span>Criticality: <strong className="text-[#c9d1d9]">{currentFinding.evidence.targetCriticality}</strong></span>
+                          )}
+                        </div>
+                      )}
 
                       {/* Explanation Grid */}
                       <div className="grid grid-cols-2 gap-3">

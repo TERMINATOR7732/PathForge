@@ -563,7 +563,10 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                       className="p-2 rounded bg-[#271415] border border-[#da3633]/40 text-xs font-mono"
                     >
                       <div className="text-[#f85149] font-medium text-[11px]">{f.title}</div>
-                      <div className="text-[10px] text-[#c9d1d9] mt-1 leading-snug">
+                      <div className="text-[10px] text-[#e6edf3] mt-1 leading-snug font-mono">
+                        {f.description}
+                      </div>
+                      <div className="text-[10px] text-[#8b949e] mt-1 leading-snug">
                         {f.whyItMatters}
                       </div>
                     </div>

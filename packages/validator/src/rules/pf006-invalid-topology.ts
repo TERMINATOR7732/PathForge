@@ -64,7 +64,7 @@ export class InvalidTopologyRule implements ValidationRule {
       }
     }
 
-    // 3. Database initiating outbound traffic to Internet
+    // 3. Database initiating outbound traffic to Internet on ALLOW edges
     const dataNodes = graph
       .getNodes()
       .filter((n) => n.type === 'database' || n.type === 'redis');
@@ -75,15 +75,17 @@ export class InvalidTopologyRule implements ValidationRule {
     for (const data of dataNodes) {
       for (const net of internetNodes) {
         const outbound = graph.getDirectEdges(data.id, net.id);
-        if (outbound.length > 0) {
-          const edgeIds = outbound.map((e) => e.id);
+        const allowOutbound = outbound.filter((e) => e.access !== 'deny');
+        if (allowOutbound.length > 0) {
+          const edgeIds = allowOutbound.map((e) => e.id);
+          const primaryEdge = allowOutbound[0];
           findings.push({
             id: `PF-006-data-egress-${data.id}-${net.id}`,
             ruleId: this.id,
             severity: 'high',
             category: this.category,
             title: `High: Data Store Egress Directly to Public Internet (${data.name} → ${net.name})`,
-            description: `Database node "${data.name}" initiates outbound connections directly to the Internet "${net.name}".`,
+            description: `Database node "${data.name}" initiates outbound connections directly to the Internet "${net.name}". Protocol: ${primaryEdge.protocol}, Port: ${primaryEdge.ports}.`,
             whyItMatters:
               'Databases have no legitimate operational reason to initiate outbound connections directly to public internet IP ranges. This is a classic indicator of automated data exfiltration or reverse-shell command-and-control.',
             impact:

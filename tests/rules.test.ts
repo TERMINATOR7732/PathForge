@@ -24,7 +24,8 @@ describe('Validation Engine & Security Rules Architecture', () => {
 
   it('registers all default rules correctly in registry', () => {
     const rules = registry.getAllRules();
-    expect(rules).toHaveLength(7);
+    // Phase 1.4: 9 default rules (PF-001 through PF-009)
+    expect(rules).toHaveLength(9);
 
     const ruleIds = rules.map((r) => r.id);
     expect(ruleIds).toContain('PF-001');
@@ -34,6 +35,8 @@ describe('Validation Engine & Security Rules Architecture', () => {
     expect(ruleIds).toContain('PF-005');
     expect(ruleIds).toContain('PF-006');
     expect(ruleIds).toContain('PF-007');
+    expect(ruleIds).toContain('PF-008');
+    expect(ruleIds).toContain('PF-009');
 
     expect(registry.hasRule('PF-001')).toBe(true);
     expect(registry.getRule('PF-001')?.name).toBe('Public Database Exposure');
@@ -43,7 +46,7 @@ describe('Validation Engine & Security Rules Architecture', () => {
     expect(registry.isRuleEnabled('PF-001')).toBe(true);
     registry.disableRule('PF-001');
     expect(registry.isRuleEnabled('PF-001')).toBe(false);
-    expect(registry.getActiveRules()).toHaveLength(6);
+    expect(registry.getActiveRules()).toHaveLength(8);
 
     registry.enableRule('PF-001');
     expect(registry.isRuleEnabled('PF-001')).toBe(true);

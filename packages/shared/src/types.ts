@@ -145,6 +145,23 @@ export interface EnvironmentDefinition {
   metadata: EnvironmentMetadata;
 }
 
+export interface FindingEvidence {
+  sourceNode?: string;
+  sourceName?: string;
+  sourceZone?: NodeZone;
+  targetNode?: string;
+  targetName?: string;
+  targetZone?: NodeZone;
+  targetCriticality?: AssetCriticality;
+  protocol?: EdgeProtocol;
+  ports?: string;
+  access?: EdgeAccess;
+  encrypted?: boolean;
+  relationship?: EdgeRelationship;
+  direction?: string;
+  [key: string]: unknown;
+}
+
 /**
  * Finding model.
  * PathForge core principle: Never simply say "this is wrong." Explain why.
@@ -162,6 +179,7 @@ export interface Finding {
   affectedEdges: string[];
   recommendation: string;
   remediation: string;
+  evidence?: FindingEvidence;
   metadata?: Record<string, unknown>;
 }
 

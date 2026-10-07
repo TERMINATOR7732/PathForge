@@ -68,13 +68,19 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
 - [x] Enhanced visual canvas: `CanvasEdge` rendering protocol/port label, `[DENY]` badge, and encryption lock icon; `CanvasNode` rendering CIDR and service port badge
 - [x] Comprehensive test suite: 70 unit and integration tests passing across 10 test files including QA workflows A-F
 
-### Phase 1.4 — Validation Engine Expansion & Custom Rules *(NEXT RECOMMENDED STEP)*
-- [ ] Live continuous validation mode (runs on graph mutation with debounce)
-- [ ] Zone isolation rules (e.g. DMZ isolation from Restricted data zone)
-- [ ] Egress rule filtering (blocking unexpected outbound connections)
-- [ ] Custom rule builder (JSON-based deterministic rule definitions)
+### Phase 1.4 — Security Validation Intelligence *(STATUS: COMPLETE)*
+- [x] Configuration-aware PF-001 (Public Database Exposure) identifying ports (5432, 3306, 27017, 6379, 1433), service metadata, zones, criticality, and unencrypted channels
+- [x] Configuration-aware PF-002 (Public Admin Exposure) identifying administrative ports (SSH 22, RDP 3389) on any host, with authorized Management zone exemption
+- [x] Universal DENY edge filtering across all rules: configured DENY edges are never reported as allowed reachability
+- [x] Contextual PF-007 (Overly Broad Access) evaluating source trust zones, target criticality, and exempting default-deny filtering rules
+- [x] Enhanced PF-003, PF-004, and PF-005 with zone awareness and explicit `relationship: 'trust'` evaluation across perimeter boundaries
+- [x] New deterministic rule PF-008: Unencrypted Sensitive Communication (flags cleartext traffic terminating at databases, restricted zones, or critical assets)
+- [x] New deterministic rule PF-009: Service / Connection Mismatch (conservative detection of port/protocol conflicts with defined listeners)
+- [x] Structured evidence model (`FindingEvidence`) capturing source, target, zones, criticality, protocol, ports, access policy, and encryption state
+- [x] FindingsDrawer & InspectorPanel rendering rich structured evidence badges and semantic descriptions
+- [x] Test suite expanded to 94 unit and integration tests passing across 11 test files (including 24 new tests for Phase 1.4)
 
-### Phase 1.5 — Finding Explanations & Threat Modeling Integration
+### Phase 1.5 — Finding Explanation + Remediation UX *(NEXT RECOMMENDED STEP)*
 - [ ] Interactive canvas highlighting of finding paths when hovering over finding cards
 - [ ] Rich finding drawer with filtering by severity, category, and affected node
 - [ ] Exportable audit report (Markdown / PDF / JSON summary)
