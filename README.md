@@ -86,7 +86,7 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 372 tests passing across 25 test files)
+├── tests/                       # Automated test suite (Vitest — 528 tests passing across 28 test files)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
@@ -113,6 +113,7 @@ PathForge/
 │   ├── change-ingestion.test.ts # Phase 3.2 repository change ingestion & normalization tests
 │   ├── local-git.test.ts        # Phase 3.3 local git repository change analysis tests
 │   ├── github-pr.test.ts        # Phase 3.4 read-only GitHub repository & pull request tests
+│   ├── engineering-history.test.ts # Phase 3.5 persistent engineering history & trends tests
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -775,6 +776,72 @@ Interactive Read-Only Pull Request UI Inspection
 
 ---
 
+## Phase 3.5 — Persistent Engineering History & Trends
+
+Phase 3.5 introduces a deterministic, local-first engineering history layer to PathForge. It captures longitudinal snapshots of modeled environments across all intelligence layers, stores them safely in a local workspace repository (`.pathforge/history/`), and deterministically answers:
+
+> **"How has this environment's engineering/security posture changed over time?"**
+
+```text
+Environment & Intelligence Layers
+               ↓
+Capture Engineering History Record (FNV-1a 64-bit deterministic hash identity)
+               ↓
+Atomic Local Filesystem / In-Memory Store (.pathforge/history/)
+               ↓
+Historical Record Comparison (Baseline vs Current)
+               ↓
+Longitudinal Trend Direction Evaluation (Scores, Findings, Exposure, Debt)
+```
+
+- **Deterministic Snapshot Capture & Identity**:
+  - Pure deterministic FNV-1a 64-bit hashing (`deterministicStringHash64()`).
+  - **Canvas Coordinates Invariant**: Node `(x, y)` visual layout coordinates are explicitly excluded from topology identity hashing, preventing cosmetic node movement from generating spurious semantic drift.
+  - Schema versioned (`HISTORY_SCHEMA_VERSION = 1`).
+  - Safe source path sanitization masking credentials and auth tokens (`ghp_`, `gho_`, `Bearer`, `sk-`, `AKIA`, passwords).
+  - Composes summaries across all 7 intelligence dimensions: Topology, Validation, Attack Paths, Architecture, Production Readiness, Testing Intelligence, Technical Debt, and Change Analysis.
+  - **Truthful Governance Invariant**: Missing intelligence layers are never fabricated as zeros or fake regressions. They are cleanly recorded as `undefined` with clear disclosure in `evidenceNotes`.
+
+- **Atomic Local Persistence (`FileSystemHistoryStore`)**:
+  - Zero external database dependencies: no PostgreSQL, MySQL, SQLite, MongoDB, or cloud databases.
+  - Atomic file writes using temporary staging files (`.tmp.<pid>.<time>`) and atomic file renames.
+  - Corrupted record resilience: invalid or unparseable JSON files are safely skipped without halting the system.
+  - Safe directory creation (`ensureHistoryDirectory()`).
+  - Semantic deduplication: recording identical snapshots returns `{ record, isDuplicate: true }` without bloating history.
+  - Complete data ownership: records stored as inspectable, human-readable JSON files in `.pathforge/history/`.
+
+- **Deterministic Historical Comparison (`compareHistoricalRecords()`)**:
+  - Compares any two historical records (Baseline vs Current) across security, attack paths, architecture, readiness, testing, debt, and topology.
+  - Evaluates deterministic verdicts:
+    - `ENGINEERING_POSTURE_IMPROVED`: Security findings/exposure reduced, readiness/testing improved, debt decreased.
+    - `ENGINEERING_POSTURE_DEGRADED`: Security findings increased, critical paths opened, or readiness dropped.
+    - `MIXED_ENGINEERING_IMPACT`: Simultaneous improvements in some dimensions and regressions in others.
+    - `NO_MEANINGFUL_CHANGE`: Zero semantic delta between snapshots.
+    - `INSUFFICIENT_EVIDENCE`: Missing core validation or topology data prevents rigorous comparison.
+
+- **Longitudinal Trend Direction (`calculateEngineeringTrends()`)**:
+  - Evaluates directional trajectories (`improving`, `degrading`, `stable`, `insufficient-data`) across:
+    - Validation Findings count (lower = better)
+    - Critical Findings count (lower = better)
+    - Attack Paths count (lower = better)
+    - Production Readiness score (higher = better)
+    - Testing Coverage percentage (higher = better)
+    - Technical Debt score (higher = better)
+  - Requires `>= 2` chronological records; cleanly reports `insufficient-data` when fewer records exist.
+
+- **Interactive UI Integration (`ChangeAnalysisPanel` · Sub-Tab `ENGINEERING HISTORY`)**:
+  - Header with Capture Action ("Capture Analysis Snapshot") and duplicate detection feedback.
+  - Longitudinal Trends strip with metric trend indicators (`improving`, `degrading`, `stable`).
+  - Baseline vs Current comparison selector with side-by-side delta grid and verdict badge.
+  - Chronological Timeline list with quick actions: "Set as Baseline", "Set as Current", and "Delete".
+  - Empty state guide and source indicators (`manual`, `local-git`, `github-pr`, `scenario`).
+
+- **Strict Scope Boundaries**:
+  - 100% local-first, ₹0 operating cost.
+  - Zero cloud infrastructure, hosted databases, telemetry, authentication, GitHub webhooks, PR comments, CI orchestration, or AI/LLMs.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -794,7 +861,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (481 unit & integration tests across 27 test files):
+Execute the full Vitest suite (528 unit & integration tests across 28 test files):
 
 ```bash
 npm run test

@@ -570,6 +570,13 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
                   onLocateElement={onLocateElement}
                   onSelectNode={onSelectNode}
                   onRequestValidate={onRequestValidate}
+                  environment={environment}
+                  validationResult={validationResult}
+                  attackPathAnalysis={attackPathAnalysis}
+                  architectureResult={architectureResult}
+                  productionReadiness={productionReadiness}
+                  testingIntelligence={testingIntelligence}
+                  technicalDebt={technicalDebt}
                 />
               </div>
             ) : findings.length === 0 ? (

@@ -9,7 +9,14 @@ import {
   GitRepository,
   PullRequestRiskStatus,
   partitionSignals,
+  Environment,
+  AttackPathAnalysisResult,
+  ArchitectureAnalysisResult,
+  ProductionReadinessAssessment,
+  TestingIntelligenceResult,
+  TechnicalDebtAssessment,
 } from '@pathforge/core';
+import { ValidationResult } from '@pathforge/shared';
 import {
   AlertOctagon,
   AlertTriangle,
@@ -34,7 +41,9 @@ import {
   GitPullRequest,
   Lock,
   Eye,
+  History,
 } from 'lucide-react';
+import { EngineeringHistoryView } from './EngineeringHistoryView.js';
 
 const SAMPLE_APP_DIFF = `diff --git a/src/api.ts b/src/api.ts
 --- a/src/api.ts
@@ -330,6 +339,13 @@ interface ChangeAnalysisPanelProps {
   onLocateElement: (target: { id: string; type: 'node' | 'edge' }) => void;
   onSelectNode: (nodeId: string) => void;
   onRequestValidate?: () => void;
+  environment?: Environment | null;
+  validationResult?: ValidationResult | null;
+  attackPathAnalysis?: AttackPathAnalysisResult | null;
+  architectureResult?: ArchitectureAnalysisResult | null;
+  productionReadiness?: ProductionReadinessAssessment | null;
+  testingIntelligence?: TestingIntelligenceResult | null;
+  technicalDebt?: TechnicalDebtAssessment | null;
 }
 
 export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
@@ -338,8 +354,15 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
   onCaptureBaseline,
   onLocateElement,
   onRequestValidate,
+  environment,
+  validationResult,
+  attackPathAnalysis,
+  architectureResult,
+  productionReadiness,
+  testingIntelligence,
+  technicalDebt,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'changes' | 'risks' | 'paths' | 'intelligence' | 'source'>('changes');
+  const [activeSubTab, setActiveSubTab] = useState<'changes' | 'risks' | 'paths' | 'intelligence' | 'source' | 'history'>('changes');
   const [significanceFilter, setSignificanceFilter] = useState<'all' | SecuritySignificance>('all');
   const [diffText, setDiffText] = useState<string>(SAMPLE_APP_DIFF);
   const [sourceMode, setSourceMode] = useState<'git' | 'github' | 'diff'>('git');
@@ -677,6 +700,17 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
         >
           <GitPullRequest className="w-3.5 h-3.5 text-[#58a6ff]" />
           <span>CHANGE SOURCE ({ingestedChangeSet.files.length})</span>
+        </button>
+        <button
+          onClick={() => setActiveSubTab('history')}
+          className={`px-3 py-1.5 rounded transition-colors flex items-center space-x-1.5 ${
+            activeSubTab === 'history'
+              ? 'bg-[#21262d] text-[#e6edf3] font-semibold border border-[#30363d]'
+              : 'text-[#8b949e] hover:text-[#c9d1d9]'
+          }`}
+        >
+          <History className="w-3.5 h-3.5 text-[#3fb950]" />
+          <span>ENGINEERING HISTORY</span>
         </button>
       </div>
 
@@ -1826,6 +1860,20 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
             </div>
           )}
         </div>
+      )}
+
+      {/* Sub-Tab F: Persistent Engineering History */}
+      {activeSubTab === 'history' && (
+        <EngineeringHistoryView
+          environment={environment ?? null}
+          validationResult={validationResult ?? null}
+          attackPathAnalysis={attackPathAnalysis}
+          architectureResult={architectureResult}
+          productionReadiness={productionReadiness}
+          testingIntelligence={testingIntelligence}
+          technicalDebt={technicalDebt}
+          changeAnalysis={changeAnalysis}
+        />
       )}
 
       {/* 6. Recommendations Strip */}

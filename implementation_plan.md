@@ -445,20 +445,39 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
 
 ---
 
-### Phase 3.5 — Engineering Change Rules & Policy Enforcement *(PLANNED)*
+### Phase 3.5 — Persistent Engineering History & Trends *(STATUS: COMPLETE)*
+- [x] Pure Deterministic Core History Domain (`packages/core/src/history/`):
+  - `types.ts`: `HISTORY_SCHEMA_VERSION = 1`, `HistoryRecordSource` (`manual`, `local-git`, `github-pr`, `scenario`), source identities, summaries across topology/validation/attack-path/architecture/readiness/testing/debt/change-analysis, `EngineeringHistoryRecord`, `HistoricalComparisonVerdict`, `HistoryComparisonResult`, `TrendDirection`, `HistoryTrendMetric`, `HistoryTrendsSummary`, `EngineeringHistoryStore`.
+  - `identity.ts`: Pure deterministic FNV-1a 64-bit hashing (`deterministicStringHash64()`). Topology hash (`computeCanonicalTopologyHash`) excludes visual canvas (x, y) coordinates so node repositioning never creates spurious semantic drift. Stable record IDs without timestamps or UUIDs. Safe credential redaction (`sanitizeHistorySourcePath`).
+  - `snapshot.ts`: `captureEngineeringHistoryRecord()` composing all derived intelligence layers. Truthful governance: missing layers are recorded as `undefined` with clear disclosure in `evidenceNotes`, never manufactured as fake zeros.
+  - `comparison.ts`: `compareHistoricalRecords()` evaluating deltas across Security, Attack Exposure, Architecture, Production Readiness, Testing, Debt, and Topology. Deterministic verdicts: `ENGINEERING_POSTURE_IMPROVED`, `ENGINEERING_POSTURE_DEGRADED`, `MIXED_ENGINEERING_IMPACT`, `NO_MEANINGFUL_CHANGE`, `INSUFFICIENT_EVIDENCE`.
+  - `trends.ts`: `calculateEngineeringTrends()` evaluating directional trajectories (`improving`, `degrading`, `stable`, `insufficient-data`) across scores, findings, exposure, and debt. Handles polarity (scores: higher=better; risks/findings: lower=better).
+  - `store.ts`: `InMemoryHistoryStore` and atomic `FileSystemHistoryStore` (with staging files, atomic renames, corrupted JSON resilience, safe directory creation, Node ESM runtime compatibility).
+  - `analyzer.ts`: High-level asynchronous orchestrators: `queryHistory`, `compareLatestHistory`, `getHistoryTrends`.
+  - `index.ts`: Module exports integrated into `@pathforge/core`.
+- [x] Comprehensive Automated Test Suite:
+  - 528 unit and integration tests passing across 28 test files (47 tests in `tests/engineering-history.test.ts` covering identity, persistence, deduplication, comparison, trends, privacy, high-level analyzer, and all 15 QA scenarios from Section 24).
+- [x] Interactive UI Integration (`ChangeAnalysisPanel.tsx` · Sub-Tab `ENGINEERING HISTORY`):
+  - Action Bar: "Capture Analysis Snapshot" button with duplicate detection feedback.
+  - Longitudinal Trends strip: 6 trend cards with polarity-aware direction indicators.
+  - Historical Comparison: Baseline vs Current selection, side-by-side delta grid, and verdict badge.
+  - Chronological Timeline: Record list with source badges, timestamps, evidence indicators, "Set as Baseline", "Set as Current", and "Delete" controls.
+  - Empty state guide and fallback instructions.
+- [x] Strict Scope Boundaries & Governance:
+  - 100% local-first, ₹0 operating cost.
+  - Zero cloud infrastructure, hosted databases, telemetry, authentication, GitHub webhooks, PR comments, CI orchestration, or AI/LLMs.
+
+---
+
+### Phase 3.6 — Engineering Change Rules & Policy Enforcement *(PLANNED)*
 - Guardrail rules preventing merges that introduce security regressions
 - Configurable failure criteria (e.g., fail if new critical risk or P0 debt introduced)
 - Deterministic change approval gates
 
-### Phase 3.6 — CI/CD & Headless Verification CLI *(PLANNED)*
+### Phase 3.7 — CI/CD & Headless Verification CLI *(PLANNED)*
 - Headless CLI runner for executing change analysis in local git hooks and CI pipelines
 - Output formats: JSON, JUnit XML, Markdown summaries
 - PR comment markdown generator for GitHub / GitLab diff reviews
-
-### Phase 3.7 — Continuous Engineering History & Multi-Snapshot Evolution *(PLANNED)*
-- Local timeline of engineering changes across editing sessions
-- Snapshot version tree and change history navigation
-- Time-series progression of readiness, debt, and risk scores
 
 ### Phase 3.8 — Infrastructure-as-Code (IaC) Continuous Drift Detection *(PLANNED)*
 - Import parser for Terraform / Docker Compose diffs
