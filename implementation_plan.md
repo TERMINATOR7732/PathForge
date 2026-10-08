@@ -340,10 +340,53 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
 
 ---
 
-### Phase 3.2 — Continuous Engineering History & Multi-Snapshot Evolution *(PLANNED)*
-- Local timeline of engineering changes across editing sessions
-- Snapshot version tree and change history navigation
-- Time-series progression of readiness, debt, and risk scores
+### Phase 3.2 — Repository Change Ingestion Foundation *(STATUS: COMPLETE)*
+- [x] Authoritative Domain Repository Ingestion Engine (`packages/core/src/change-ingestion/`):
+  - Data contracts (`types.ts`):
+    - `FileChangeType`: `ADDED`, `MODIFIED`, `DELETED`, `RENAMED`
+    - `FileCategory`: `infrastructure`, `cicd`, `application`, `security-config`, `documentation`, `tests`, `dependencies`, `unknown`
+    - `EngineeringSignalType`: 18 discrete deterministic signal types across security, infra, CI/CD, testing, and dependencies
+    - `EngineeringSignal`: id, type, category, file, description, hint, isSecuritySensitive
+    - `DiffHunkLine`, `DiffHunk`, `NormalizedFileChange`, `ChangeIngestionSummary`, `NormalizedChangeSet`
+    - Source abstractions: `UnifiedDiffSource`, `StructuredChangeSetSource`, `RepositorySnapshotSource`, `ChangeSource`
+  - Deterministic Unified Diff Parser (`parser.ts`):
+    - Supports added (`new file mode`), deleted (`deleted file mode`), modified, and renamed (`rename from/to`) files
+    - Multi-file and multi-hunk diff parsing with accurate line additions, deletions, and context tracking
+    - Binary file indicators (`Binary files ... differ` / `GIT binary patch`)
+    - Structured parse diagnostics with warnings/errors without crashing
+  - Deterministic Path Normalization & Secret Masking (`normalizer.ts`):
+    - Replaces backslashes, strips quotes, strips `./`, collapses duplicate slashes, strips `a/` and `b/` prefixes
+    - Preserves `/dev/null` special token
+    - Strictly rejects absolute paths (`/etc/passwd`, `C:/repo`) and directory traversals (`../`)
+    - Secret masking for private keys, AWS access keys, GitHub tokens, generic API keys (`sk-...`), JWT tokens, and key-value credential assignments with `[REDACTED_...]` tags
+    - Deterministic ID and signature generation (`FNV-1a` 32-bit hashing without UUIDs or timestamps)
+  - Deterministic File Classification (`classifier.ts`):
+    - Classifies files into 8 engineering categories
+    - Evaluates tests, dependencies, CI/CD, and security configs before generic patterns
+    - Unrecognized files remain explicitly classified as `unknown`
+  - Deterministic Engineering Signals (`signals.ts`):
+    - Extracts context hints for infrastructure, CI/CD, testing, dependencies, and security
+    - Truthful governance: Signals are observations, NOT vulnerability findings
+  - Phase 3.1 Bridge & Truthful Governance (`mapper.ts`):
+    - Explicitly separates observed repository changes from proven infrastructure security posture
+    - Bridges to `analyzeInfrastructureChanges` when modeled environments are supplied
+    - Zero topology fabrication from code diffs
+  - Primary Ingestion Orchestrator (`ingest.ts`):
+    - `ingestRepositoryChanges(source, options)` supporting unified diff text, structured changes, and repository snapshots
+    - Deterministic sorting by canonical path ensuring file ordering independence
+- [x] Comprehensive Automated Test Suite:
+  - 372 unit and integration tests passing across 25 test files (51 tests in `tests/change-ingestion.test.ts` covering empty diffs, single/multi-file diffs, additions, deletions, renames, multi-hunks, line metrics, malformed headers/hunks, path normalization, absolute path rejection, directory traversal rejection, file classification, engineering signals, determinism, file ordering independence, hunk stability, stable change IDs, secret masking, binary files, duplicate entries, unknown mapping, structured change sources, snapshot comparisons, truthful governance, and Phase 3.1 bridging).
+- [x] Interactive UI Integration (`ChangeAnalysisPanel.tsx`):
+  - Dedicated `CHANGE SOURCE (DIFF)` sub-tab in `ChangeAnalysisPanel`
+  - Live unified diff editor with preset quick-load buttons for QA examples A (App), B (Infra), C (CI), and D (Secret)
+  - Metric counters strip (Files, Lines +, Lines -, Signals, Sensitive, Masked)
+  - Category breakdown badges, parser diagnostics, signal cards with hints
+  - Truthful Governance disclosure banner contrasting observed repository changes against proven infrastructure impact.
+- [x] Strict Scope Boundaries & Governance:
+  - 100% local-first, zero telemetry, zero LLM dependencies, ₹0 operating cost.
+  - GitHub OAuth, GitHub API, GitHub webhooks, PR comments, and cloud scanning strictly deferred to future Phase 3 milestones.
+
+---
 
 ### Phase 3.3 — Engineering Change Rules & Policy Enforcement *(PLANNED)*
 - Guardrail rules preventing merges that introduce security regressions
@@ -355,6 +398,11 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
 - Output formats: JSON, JUnit XML, Markdown summaries
 - PR comment markdown generator for GitHub / GitLab diff reviews
 
-### Phase 3.5 — Infrastructure-as-Code (IaC) Continuous Drift Detection *(PLANNED)*
+### Phase 3.5 — Continuous Engineering History & Multi-Snapshot Evolution *(PLANNED)*
+- Local timeline of engineering changes across editing sessions
+- Snapshot version tree and change history navigation
+- Time-series progression of readiness, debt, and risk scores
+
+### Phase 3.6 — Infrastructure-as-Code (IaC) Continuous Drift Detection *(PLANNED)*
 - Import parser for Terraform / Docker Compose diffs
 - Compare modeled state against intended infrastructure code changes

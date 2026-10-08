@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ChangeAnalysisResult,
   EnvironmentSnapshot,
   SecuritySignificance,
+  ingestRepositoryChanges,
+  bridgeToChangeAnalysis,
 } from '@pathforge/core';
 import {
   AlertOctagon,
@@ -20,7 +22,41 @@ import {
   RefreshCw,
   Gauge,
   Coins,
+  FileCode,
+  ShieldAlert,
 } from 'lucide-react';
+
+const SAMPLE_APP_DIFF = `diff --git a/src/api.ts b/src/api.ts
+--- a/src/api.ts
++++ b/src/api.ts
+@@ -10,3 +10,4 @@
+ export function handleRequest(req: Request) {
++  logger.info("Received request", req.path);
+   return process(req);
+ }`;
+
+const SAMPLE_INFRA_DIFF = `diff --git a/k8s/network-policy.yaml b/k8s/network-policy.yaml
+--- a/k8s/network-policy.yaml
++++ b/k8s/network-policy.yaml
+@@ -5,3 +5,4 @@
+ spec:
+   ingress:
++    - ports: [{ port: 5432 }]`;
+
+const SAMPLE_CI_DIFF = `diff --git a/.github/workflows/deploy.yml b/.github/workflows/deploy.yml
+--- a/.github/workflows/deploy.yml
++++ b/.github/workflows/deploy.yml
+@@ -12,2 +12,4 @@
+     steps:
++      - name: Security Scan
++        run: snyk test`;
+
+const SAMPLE_SECRET_DIFF = `diff --git a/config.ts b/config.ts
+--- a/config.ts
++++ b/config.ts
+@@ -1,2 +1,3 @@
++const apiKey = "sk-live-9876543210abcdef0123456789";
+ export const endpoint = "https://api.internal";`;
 
 interface ChangeAnalysisPanelProps {
   changeAnalysis: ChangeAnalysisResult | null;
@@ -38,8 +74,12 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
   onLocateElement,
   onRequestValidate,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'changes' | 'risks' | 'paths' | 'intelligence'>('changes');
+  const [activeSubTab, setActiveSubTab] = useState<'changes' | 'risks' | 'paths' | 'intelligence' | 'source'>('changes');
   const [significanceFilter, setSignificanceFilter] = useState<'all' | SecuritySignificance>('all');
+  const [diffText, setDiffText] = useState<string>(SAMPLE_APP_DIFF);
+
+  const ingestedChangeSet = useMemo(() => ingestRepositoryChanges(diffText), [diffText]);
+  const ingestionBridge = useMemo(() => bridgeToChangeAnalysis(ingestedChangeSet), [ingestedChangeSet]);
 
   if (!baselineSnapshot) {
     return (
@@ -306,6 +346,17 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
           }`}
         >
           INTELLIGENCE DELTA
+        </button>
+        <button
+          onClick={() => setActiveSubTab('source')}
+          className={`px-3 py-1.5 rounded transition-colors flex items-center space-x-1.5 ${
+            activeSubTab === 'source'
+              ? 'bg-[#21262d] text-[#e6edf3] font-semibold border border-[#30363d]'
+              : 'text-[#8b949e] hover:text-[#c9d1d9]'
+          }`}
+        >
+          <FileCode className="w-3.5 h-3.5 text-[#58a6ff]" />
+          <span>CHANGE SOURCE ({ingestedChangeSet.files.length})</span>
         </button>
       </div>
 
@@ -671,6 +722,198 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Sub-Tab E: Change Source (Local Diff Ingestion) */}
+      {activeSubTab === 'source' && (
+        <div className="space-y-4">
+          {/* Description & Preset Buttons */}
+          <div className="p-3 rounded-lg bg-[#161b22] border border-[#30363d] space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-xs font-mono font-semibold text-[#e6edf3] flex items-center space-x-1.5">
+                <FileCode className="w-3.5 h-3.5 text-[#58a6ff]" />
+                <span>Local Unified Diff Ingestion (Phase 3.2)</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
+                <span className="text-[#8b949e]">Samples:</span>
+                <button
+                  onClick={() => setDiffText(SAMPLE_APP_DIFF)}
+                  className="px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] border border-[#30363d]"
+                >
+                  App (QA A)
+                </button>
+                <button
+                  onClick={() => setDiffText(SAMPLE_INFRA_DIFF)}
+                  className="px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#3fb950] border border-[#30363d]"
+                >
+                  Infra (QA B)
+                </button>
+                <button
+                  onClick={() => setDiffText(SAMPLE_CI_DIFF)}
+                  className="px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#f0883e] border border-[#30363d]"
+                >
+                  CI (QA C)
+                </button>
+                <button
+                  onClick={() => setDiffText(SAMPLE_SECRET_DIFF)}
+                  className="px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#f85149] border border-[#30363d]"
+                >
+                  Secret (QA D)
+                </button>
+                <button
+                  onClick={() => setDiffText('')}
+                  className="px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#8b949e] border border-[#30363d]"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+            <p className="text-xs text-[#8b949e]">
+              Paste unified diff output from local git or developer workspace. PathForge normalizes paths, classifies engineering files, extracts signals, and masks credentials.
+            </p>
+            <textarea
+              value={diffText}
+              onChange={(e) => setDiffText(e.target.value)}
+              placeholder="Paste unified diff here..."
+              rows={6}
+              className="w-full p-2.5 rounded bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] font-mono text-xs focus:outline-none focus:border-[#58a6ff] resize-y"
+            />
+          </div>
+
+          {/* Metric Counters Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+            <div className="p-2 rounded bg-[#0d1117] border border-[#21262d] text-center">
+              <div className="text-[10px] uppercase font-mono text-[#8b949e]">FILES</div>
+              <div className="text-sm font-bold font-mono text-[#e6edf3]">
+                {ingestedChangeSet.summary.filesChanged}
+              </div>
+            </div>
+            <div className="p-2 rounded bg-[#0d1117] border border-[#21262d] text-center">
+              <div className="text-[10px] uppercase font-mono text-[#3fb950]">LINES +</div>
+              <div className="text-sm font-bold font-mono text-[#3fb950]">
+                +{ingestedChangeSet.summary.linesAdded}
+              </div>
+            </div>
+            <div className="p-2 rounded bg-[#0d1117] border border-[#21262d] text-center">
+              <div className="text-[10px] uppercase font-mono text-[#f85149]">LINES -</div>
+              <div className="text-sm font-bold font-mono text-[#f85149]">
+                -{ingestedChangeSet.summary.linesDeleted}
+              </div>
+            </div>
+            <div className="p-2 rounded bg-[#0d1117] border border-[#21262d] text-center">
+              <div className="text-[10px] uppercase font-mono text-[#58a6ff]">SIGNALS</div>
+              <div className="text-sm font-bold font-mono text-[#58a6ff]">
+                {ingestedChangeSet.signals.length}
+              </div>
+            </div>
+            <div className="p-2 rounded bg-[#0d1117] border border-[#21262d] text-center">
+              <div className="text-[10px] uppercase font-mono text-[#f0883e]">SENSITIVE</div>
+              <div className="text-sm font-bold font-mono text-[#f0883e]">
+                {ingestedChangeSet.summary.securitySensitiveSignalCount}
+              </div>
+            </div>
+            <div className="p-2 rounded bg-[#0d1117] border border-[#21262d] text-center">
+              <div className="text-[10px] uppercase font-mono text-[#e6edf3]">MASKED</div>
+              <div className="text-sm font-bold font-mono text-[#3fb950]">
+                {ingestedChangeSet.summary.maskedSecretsCount}
+              </div>
+            </div>
+          </div>
+
+          {/* Parse Warnings / Errors */}
+          {(ingestedChangeSet.summary.parseWarnings.length > 0 || ingestedChangeSet.summary.parseErrors.length > 0) && (
+            <div className="p-3 rounded-lg bg-[#d29922]/10 border border-[#d29922]/30 space-y-1 text-xs font-mono">
+              <div className="text-[#d29922] font-bold">PARSER DIAGNOSTICS:</div>
+              {ingestedChangeSet.summary.parseErrors.map((err, i) => (
+                <div key={`err-${i}`} className="text-[#f85149]">⚠ Error: {err}</div>
+              ))}
+              {ingestedChangeSet.summary.parseWarnings.map((warn, i) => (
+                <div key={`warn-${i}`} className="text-[#d29922]">ℹ Warning: {warn}</div>
+              ))}
+            </div>
+          )}
+
+          {/* Engineering Categories Breakdown */}
+          <div className="p-3 rounded-lg bg-[#0d1117] border border-[#21262d] space-y-2">
+            <div className="text-xs font-mono font-semibold text-[#8b949e]">AFFECTED ENGINEERING CATEGORIES</div>
+            <div className="flex flex-wrap gap-1.5">
+              {Object.entries(ingestedChangeSet.summary.categories)
+                .filter(([_, count]) => count > 0)
+                .map(([cat, count]) => (
+                  <span
+                    key={cat}
+                    className="px-2 py-0.5 rounded text-xs font-mono bg-[#161b22] border border-[#30363d] text-[#c9d1d9]"
+                  >
+                    <span className="text-[#58a6ff] uppercase">{cat}</span>: {count}
+                  </span>
+                ))}
+              {ingestedChangeSet.summary.filesChanged === 0 && (
+                <span className="text-xs text-[#8b949e] font-mono">No files parsed</span>
+              )}
+            </div>
+          </div>
+
+          {/* Truthful Governance Contrast Banner */}
+          <div className="p-3 rounded-lg bg-[#161b22] border border-[#30363d] space-y-2 text-xs">
+            <div className="font-mono font-bold text-[#e6edf3] flex items-center space-x-1.5">
+              <ShieldAlert className="w-3.5 h-3.5 text-[#58a6ff]" />
+              <span>Truthful Governance: Repository Observation vs Proven Impact</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono pt-1">
+              <div className="p-2.5 rounded bg-[#0d1117] border border-[#21262d] space-y-1">
+                <div className="text-[#58a6ff] font-bold uppercase text-[10px]">1. Observed Repository Change</div>
+                <p className="text-[#8b949e] leading-relaxed">
+                  {ingestionBridge.engineeringObservation}
+                </p>
+              </div>
+              <div className="p-2.5 rounded bg-[#0d1117] border border-[#21262d] space-y-1">
+                <div className="text-[#3fb950] font-bold uppercase text-[10px]">2. Proven Infrastructure Impact</div>
+                <p className="text-[#c9d1d9] leading-relaxed">
+                  {ingestionBridge.securityImpactStatement}
+                </p>
+              </div>
+            </div>
+            <p className="text-[11px] text-[#8b949e] italic pt-1">
+              Principle: Code diffs indicate developer modifications. Security findings, attack paths, and architectural posture changes are never fabricated without modeled topology evaluation.
+            </p>
+          </div>
+
+          {/* Engineering Signals List */}
+          {ingestedChangeSet.signals.length > 0 && (
+            <div className="p-3 rounded-lg bg-[#0d1117] border border-[#21262d] space-y-2">
+              <div className="text-xs font-mono font-semibold text-[#e6edf3]">
+                EXTRACTED ENGINEERING SIGNALS ({ingestedChangeSet.signals.length})
+              </div>
+              <div className="space-y-2">
+                {ingestedChangeSet.signals.map((sig) => (
+                  <div
+                    key={sig.id}
+                    className={`p-2.5 rounded border text-xs font-mono space-y-1 ${
+                      sig.isSecuritySensitive
+                        ? 'bg-[#d29922]/5 border-[#d29922]/40 text-[#c9d1d9]'
+                        : 'bg-[#161b22] border-[#21262d] text-[#8b949e]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[#e6edf3] font-bold">{sig.file}</span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold ${
+                          sig.isSecuritySensitive
+                            ? 'bg-[#d29922]/20 text-[#d29922]'
+                            : 'bg-[#21262d] text-[#8b949e]'
+                        }`}
+                      >
+                        {sig.type}
+                      </span>
+                    </div>
+                    <div className="text-[#c9d1d9]">{sig.description}</div>
+                    <div className="text-[11px] text-[#58a6ff]">▸ {sig.hint}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

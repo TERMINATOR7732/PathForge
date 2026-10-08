@@ -86,7 +86,7 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 321 tests passing across 24 test files)
+├── tests/                       # Automated test suite (Vitest — 372 tests passing across 25 test files)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
@@ -110,6 +110,7 @@ PathForge/
 │   ├── testing-intelligence.test.ts # Phase 2.6 testing intelligence & verification coverage tests
 │   ├── technical-debt.test.ts   # Phase 2.7 technical debt & engineering risk tracking tests
 │   ├── change-analysis.test.ts  # Phase 3.1 continuous engineering & change analysis tests
+│   ├── change-ingestion.test.ts # Phase 3.2 repository change ingestion & normalization tests
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -592,6 +593,65 @@ PathForge provides a deterministic **Continuous Engineering & Change Analysis** 
 
 ---
 
+## Phase 3.2 — Repository Change Ingestion Foundation
+
+PathForge provides a deterministic local **Repository Change Ingestion Foundation** that parses repository and configuration modifications (unified diffs, structured change sets, or file snapshot comparisons) and normalizes them into structured changes and engineering signals.
+
+- **The Normalization Loop**:
+  ```text
+  Unified Diff / Source Change → Path Normalization & Secret Masking → File Classification → Engineering Signal Derivation → Phase 3.1 Ingestion Bridge
+  ```
+
+- **Supported Unified Diff Subset**:
+  - Handles added (`new file mode`), deleted (`deleted file mode`), modified, and renamed (`rename from/to`) files.
+  - Multi-file diffs and multi-hunk diffs with accurate added, deleted, and context line counting.
+  - Binary file markers (`Binary files ... differ` / `GIT binary patch`).
+  - Structured parse diagnostics: Malformed headers and hunks produce deterministic parse warnings/errors without crashing.
+
+- **Deterministic Path Normalization**:
+  - Converts all separators to forward slashes, strips bounding quotes, resolves `./`, collapses duplicate slashes `//`.
+  - Strips git `a/` and `b/` prefixes while preserving `/dev/null` indicators.
+  - Strictly rejects absolute paths (`/etc/passwd`, `C:/repo`) and directory traversals (`../`) to guarantee model portability.
+
+- **Deterministic Engineering File Classification**:
+  - `infrastructure`: Dockerfiles, compose files, Kubernetes manifests, Helm charts, Terraform (`*.tf`), Pulumi, CloudFormation, Ansible.
+  - `cicd`: GitHub Actions (`.github/workflows/`), GitLab CI, CircleCI, Jenkinsfile.
+  - `application`: TypeScript, JavaScript, Python, Go, Rust, Java, C#, etc.
+  - `security-config`: `.env.example`, OPA policy (`*.rego`), firewall rules (`iptables`, `pf.conf`), auth policies.
+  - `dependencies`: `package.json`, lockfiles (`package-lock.json`, `Cargo.lock`, `yarn.lock`), requirements manifests.
+  - `documentation`: Markdown, text, docs directory, project licenses.
+  - `tests`: Test/spec files (`*.test.ts`, `*.spec.js`, `test_*.py`).
+  - `unknown`: Unrecognized files remain explicitly classified as `unknown` without fabrication or guessing.
+
+- **Engineering Signal Derivation**:
+  - Detects operational context: `network-config-modified`, `encryption-modified`, `authentication-modified`, `authorization-modified`, `secret-handling-modified`, `infrastructure-manifest-modified`, `dockerfile-modified`, `cicd-security-step-modified`, `tests-added`, `tests-deleted`, `tests-modified`, `dependency-manifest-modified`, `lockfile-modified`.
+  - **Truthful Governance Principle**: Signals represent observed developer modifications and hints, **NEVER** vulnerability findings. Filename changes alone never trigger security findings.
+
+- **Security & Secret Masking**:
+  - Automatically identifies and masks private keys, AWS access keys (`AKIA...`), GitHub tokens (`ghp_...`), generic API keys (`sk-...`), JWT tokens, and credentials in key-value assignments.
+  - Replaces sensitive strings with fixed redaction tags (`[REDACTED_SECRET]`, `[REDACTED_AWS_KEY]`) across diff hunks, patches, and diagnostic logs.
+
+- **Phase 3.1 Bridge & Truthful Governance**:
+  - The ingestion layer strictly separates:
+    - **Observed repository change**: What files and lines were modified in the repository.
+    - **Proven infrastructure/security impact**: Security impact, attack paths, and architectural posture changes are only proven when correlated with modeled before/after infrastructure topologies.
+  - Zero topology fabrication: PathForge never invents nodes or edges from source code diffs alone.
+
+- **Interactive UI (`ChangeAnalysisPanel` · Sub-Tab: `CHANGE SOURCE`)**:
+  - Integrated directly into the existing `CHANGES` workflow as `CHANGE SOURCE (DIFF)`.
+  - Live unified diff editor/textarea with sample preset buttons for manual QA:
+    - `App (QA A)`: Application code change demonstrating zero false security impact.
+    - `Infra (QA B)`: Kubernetes network policy change triggering downstream evaluation hints.
+    - `CI (QA C)`: CI workflow modification detecting security scan step updates.
+    - `Secret (QA D)`: Token-bearing diff demonstrating automated credential masking.
+  - Live metric counters, category pill badges, parser diagnostics, signal cards, and truthful governance disclosure.
+
+- **Scope Disclosures & Phase 3 Boundaries**:
+  - Operates 100% locally with zero cloud dependencies, zero external database requirements, zero telemetry, and ₹0 operating cost.
+  - GitHub OAuth, GitHub API, GitHub webhooks, PR comments, and cloud infrastructure are strictly scheduled for future Phase 3 milestones.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -611,7 +671,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (321 unit & integration tests across 24 test files):
+Execute the full Vitest suite (372 unit & integration tests across 25 test files):
 
 ```bash
 npm run test
