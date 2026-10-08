@@ -6,6 +6,7 @@ declare module 'node:fs' {
 declare module 'node:path' {
   export function isAbsolute(p: string): boolean;
   export function resolve(...paths: string[]): string;
+  export function basename(p: string): string;
 }
 
 declare namespace NodeJS {

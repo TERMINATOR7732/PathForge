@@ -86,7 +86,7 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 560 tests passing across 29 test files)
+├── tests/                       # Automated test suite (Vitest — 573 tests passing across 30 test files)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
@@ -115,6 +115,7 @@ PathForge/
 │   ├── github-pr.test.ts        # Phase 3.4 read-only GitHub repository & pull request tests
 │   ├── engineering-history.test.ts # Phase 3.5 persistent engineering history & trends tests
 │   ├── ci-gate.test.ts          # Phase 3.6 CI/CD engineering gates & automated verification tests
+│   ├── continuous-workflow.test.ts # Phase 3.7 continuous engineering workflow & evidence matrix tests
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -907,6 +908,56 @@ Deterministic Exit Codes (0, 1, 2, 3) & JSON Schema v1 Output
 
 ---
 
+### Continuous Engineering Workflow & Release Hardening (Phase 3.7)
+
+PathForge Phase 3.7 delivers the **capstone integration for Phase 3: Continuous Engineering**, unifying all deterministic intelligence layers, change ingestion, and gate verification into a single cohesive engineering workflow.
+
+```text
+LOCAL GIT / GITHUB PR / RAW DIFF
+        ↓
+CHANGE INGESTION
+        ↓
+CHANGE ANALYSIS
+        ↓
+SECURITY / ARCHITECTURE / TESTING / DEBT
+        ↓
+HISTORICAL COMPARISON
+        ↓
+PRODUCTION READINESS
+        ↓
+CI ENGINEERING GATE (PASS / WARN / BLOCK / INSUFFICIENT_EVIDENCE)
+        ↓
+CAPTURE ENGINEERING HISTORY
+```
+
+- **Unified Domain Orchestrator (`packages/core/src/workflow/`)**:
+  - `executeEngineeringRun()`: Orchestrates all intelligence engines into an immutable `EngineeringRun` record conforming to Schema v1.
+  - `captureRunToHistory()`: Idempotently persists completed runs to `EngineeringHistoryStore` preserving source provenance and intelligence summaries.
+  - `buildEvidenceMatrix()`: Produces a 9-control deterministic compliance matrix across Critical Findings, High Findings, Attack Paths, Architecture Quality, Production Readiness, Testing Intelligence, Technical Debt, Continuous Regression, and CI Gate.
+  - `buildEvidenceLineage()`: Traces gate verdicts, blocking reasons, and warnings directly to concrete affected node/edge targets and configuration lines.
+  - Strict State Discipline: Automatically invalidates cached analyses to `STALE — RE-ANALYZE REQUIRED` when topology, baseline, or policy mutations occur.
+
+- **Unified CLI `inspect` Command (`@pathforge/cli`)**:
+  ```bash
+  # Run continuous engineering inspection with human-readable evidence matrix
+  npm run inspect -- environments/demo/standard-web-app.json
+
+  # Inspect with machine-readable JSON output
+  npm run inspect -- environments/demo/standard-web-app.json --format json
+
+  # Inspect with strict policy (elevates warnings to exit code 2)
+  npm run inspect -- environments/demo/standard-web-app.json --strict
+  ```
+
+- **Interactive UI Workflow Workspace (`ChangeAnalysisPanel` · Sub-Tab `WORKFLOW & EVIDENCE`)**:
+  - **Run Context Bar**: Displays source provenance badge (`Local Git`, `GitHub PR`, `Raw Diff`), base/head references, changes summary, gate decision pill, and staleness indicator (`CURRENT` vs `STALE — RE-ANALYZE REQUIRED`).
+  - **Executive Decision Verdict Card**: Prominently highlights the authoritative gate status, exit code, composite score, and primary decision drivers ("WHY?").
+  - **Comprehensive Evidence Matrix**: Displays all 9 deterministic controls with status badges (`PASS`, `WARN`, `BLOCK`, `UNVERIFIED`), metrics, and "Locate on Canvas" quick links for affected nodes/edges.
+  - **Audit Trail Lineage Cards**: Deep audit items mapping each blocking rule and warning to its concrete affected elements.
+  - **Actions**: Explicit "RUN ENGINEERING ANALYSIS" and "CAPTURE RUN TO HISTORY" buttons with real-time feedback.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -926,7 +977,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (560 unit & integration tests across 29 test files):
+Execute the full Vitest suite (573 unit & integration tests across 30 test files):
 
 ```bash
 npm run test

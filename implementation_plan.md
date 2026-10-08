@@ -496,10 +496,35 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
 
 ---
 
-### Phase 3.7 — CI/CD & Headless Verification CLI Enhancements *(PLANNED)*
-- Output formatters: JUnit XML and Markdown PR summaries
-- Multi-environment batch gating
+### Phase 3.7 — Continuous Engineering Workflow & Release Hardening *(STATUS: COMPLETE)*
+- [x] Pure Deterministic Workflow & Evidence Domain (`packages/core/src/workflow/`):
+  - `types.ts`: `EngineeringRun` (Schema v1), `EngineeringRunSource`, `EngineeringRunStatus` (`CURRENT`, `STALE`, `INSUFFICIENT_EVIDENCE`), `EvidenceLineageItem`, `EvidenceMatrixRow`, `RunIntelligenceSummary`, `RunChangesSummary`, `EngineeringRunSourceInfo`.
+  - `lineage.ts`: Deterministic `buildEvidenceMatrix()` constructing 9-control compliance matrix (Critical Findings, High Findings, Attack Paths, Architecture Quality, Production Readiness, Testing Intelligence, Technical Debt, Continuous Regression, and CI Gate). Deterministic `buildEvidenceLineage()` mapping gate verdicts, blocking reasons, warnings, and passed controls to concrete affected node/edge targets and lines.
+  - `orchestrator.ts`: Deterministic `executeEngineeringRun()` composing all intelligence layers, CI gate evaluation, and persistence to `EngineeringHistoryStore` with `captureRunToHistory()`.
+  - Strict State Discipline: Automatically detects and invalidates cached analysis to `STALE — RE-ANALYZE REQUIRED` when topology, baseline, or policy mutations occur.
+  - `index.ts`: Module exports re-exported from `@pathforge/core`.
+- [x] Unified CLI `inspect` Command (`apps/cli/`):
+  - Supports `pathforge inspect <target>` command in addition to `gate` and `analyze`.
+  - Options: `--format <text|json>`, `--policy <path>`, `--baseline <path>`, `--strict`, `--require-baseline`, `--require-testing`, `--min-readiness`, `--min-debt`.
+  - Terminal human-readable output featuring 9-control evidence matrix, "WHY? (Primary Factors)" table, and authoritative gate verdict.
+  - Machine-readable `--format json` emitting full `EngineeringRun` schema v1 with secret-scrubbed provenance.
+  - Deterministic exit codes `0` (PASS), `1` (WARN), `2` (BLOCK), `3` (INSUFFICIENT_EVIDENCE).
+- [x] Interactive UI Continuous Workflow Workspace (`apps/web/src/components/ChangeAnalysisPanel.tsx`):
+  - Sub-tab `WORKFLOW & EVIDENCE` added alongside `DIFF & CHANGES`, `LOCAL GIT`, `GITHUB PR`, `ENGINEERING HISTORY`, and `CI GATE`.
+  - Run Context Bar displaying source provenance badge (`Local Git`, `GitHub PR`, `Raw Diff`), base/head references, changes summary, gate decision pill, and staleness indicator (`CURRENT` vs `STALE — RE-ANALYZE REQUIRED`).
+  - Executive Decision Verdict Card highlighting authoritative gate verdict, exit code, composite score, and primary decision drivers ("WHY?").
+  - 9-Control Evidence Matrix displaying status badges (`PASS`, `WARN`, `BLOCK`, `UNVERIFIED`), metrics, and "Locate on Canvas" quick links for affected nodes/edges.
+  - Audit Trail Lineage cards detailing individual control evaluations and concrete affected elements.
+  - Explicit action buttons: "RUN ENGINEERING ANALYSIS" and "CAPTURE RUN TO HISTORY" with real-time toast confirmations.
+- [x] Comprehensive Automated Integration Test Suite:
+  - 573 unit and integration tests passing across 30 test files (13 tests in `tests/continuous-workflow.test.ts` covering Local Git workflow, persistent history capture, GitHub PR run, security regression gating, safe improvement gating, missing baseline exit code 3, evidence lineage, evidence matrix, state discipline invalidation, and CLI `inspect` terminal/json/strict/error commands).
+- [x] Strict Scope Boundaries & Governance:
+  - 100% local-first, ₹0 operating cost.
+  - Zero AI/LLMs, zero cloud dependencies, zero external database requirements, zero telemetry.
+
+---
 
 ### Phase 3.8 — Infrastructure-as-Code (IaC) Continuous Drift Detection *(PLANNED)*
 - Import parser for Terraform / Docker Compose diffs
 - Compare modeled state against intended infrastructure code changes
+

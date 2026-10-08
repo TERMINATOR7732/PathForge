@@ -15,6 +15,8 @@ import {
   formatCiGateJson,
   CiGatePolicy,
   CiGateTargetInfo,
+  executeEngineeringRun,
+  EngineeringRun,
 } from '@pathforge/core';
 import {
   createDefaultRuleRegistry,
@@ -22,7 +24,7 @@ import {
 } from '@pathforge/validator';
 
 interface ParsedCliArgs {
-  command: 'gate' | 'analyze' | 'help' | 'version';
+  command: 'gate' | 'analyze' | 'inspect' | 'help' | 'version';
   targetPath?: string;
   format: 'text' | 'json';
   policyPath?: string;
@@ -40,10 +42,12 @@ function printUsage(): void {
 USAGE:
   pathforge gate <environment.json> [options]
   pathforge analyze <environment.json> [options]
+  pathforge inspect <environment.json> [options]
 
 COMMANDS:
   gate       Evaluate engineering intelligence against policy and return CI exit code
   analyze    Run static intelligence analysis without policy gating (returns exit 0)
+  inspect    Run unified continuous engineering workflow with full evidence matrix
 
 OPTIONS:
   --format <text|json>       Output format (default: text)
@@ -63,6 +67,39 @@ EXIT CODES:
   2   BLOCK (Hard policy violation or critical risk detected)
   3   INSUFFICIENT_EVIDENCE (Missing target file or required baseline)
 `);
+}
+
+function formatInspectHuman(run: EngineeringRun): string {
+  const lines: string[] = [];
+  lines.push('PATHFORGE CONTINUOUS ENGINEERING INSPECTION');
+  lines.push('──────────────────────────────────────────────────────');
+  lines.push(`Target:          ${run.source.identifier}`);
+  lines.push(`Environment:     ${run.environmentName} (${run.environmentId})`);
+  lines.push(`Status:          ${run.status}`);
+  lines.push('');
+  lines.push(`ENGINEERING DECISION: ${run.gateStatus}`);
+  lines.push(`Composite Score:      ${run.compositeScore}/100`);
+  lines.push(`Exit Code:            ${run.exitCode}`);
+  lines.push('');
+  lines.push('EVIDENCE MATRIX');
+  lines.push('──────────────────────────────────────────────────────');
+  for (const row of run.evidenceMatrix) {
+    const padControl = row.control.padEnd(28, ' ');
+    const padResult = row.result.padEnd(12, ' ');
+    lines.push(`${padControl} ${padResult} ${row.evidence}`);
+  }
+  lines.push('');
+  if (run.topReasons.length > 0) {
+    lines.push('PRIMARY FACTORS (Why?)');
+    lines.push('──────────────────────────────────────────────────────');
+    for (const r of run.topReasons) {
+      lines.push(`• ${r}`);
+    }
+    lines.push('');
+  }
+  lines.push('──────────────────────────────────────────────────────');
+  lines.push(`Engineering Decision: ${run.gateStatus} (Exit code: ${run.exitCode})`);
+  return lines.join('\n');
 }
 
 function parseArgs(args: string[]): ParsedCliArgs {
@@ -112,6 +149,8 @@ function parseArgs(args: string[]): ParsedCliArgs {
       result.command = 'gate';
     } else if (arg === 'analyze') {
       result.command = 'analyze';
+    } else if (arg === 'inspect') {
+      result.command = 'inspect';
     } else if (!arg.startsWith('-')) {
       positional.push(arg);
     }
@@ -133,7 +172,7 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
   }
 
   if (parsed.command === 'version') {
-    console.log('PathForge v0.1.0 (Phase 3.6)');
+    console.log('PathForge v0.1.0 (Phase 3.7)');
     return 0;
   }
 
@@ -357,6 +396,37 @@ export async function runCli(argv: string[] = process.argv.slice(2)): Promise<nu
     },
     policy
   );
+
+  if (parsed.command === 'inspect') {
+    const run = executeEngineeringRun({
+      environment,
+      source: {
+        type: 'local-git',
+        identifier: targetPath,
+        displayName: path.basename(targetPath),
+      },
+      validationResult,
+      attackPathAnalysis,
+      architectureAnalysis,
+      productionReadiness,
+      testingIntelligence,
+      technicalDebt,
+      changeAnalysis,
+      policy,
+    });
+
+    if (parsed.format === 'json') {
+      console.log(JSON.stringify(run, null, 2));
+    } else {
+      if (policyWarnings.length > 0) {
+        for (const pw of policyWarnings) {
+          console.warn(`[Policy Warning] ${pw}`);
+        }
+      }
+      console.log(formatInspectHuman(run));
+    }
+    return run.exitCode;
+  }
 
   // Output formatting
   if (parsed.format === 'json') {

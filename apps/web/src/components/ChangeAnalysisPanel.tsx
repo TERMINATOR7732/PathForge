@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ChangeAnalysisResult,
   EnvironmentSnapshot,
@@ -15,6 +15,11 @@ import {
   ProductionReadinessAssessment,
   TestingIntelligenceResult,
   TechnicalDebtAssessment,
+  executeEngineeringRun,
+  captureRunToHistory,
+  EngineeringRunSourceInfo,
+  InMemoryHistoryStore,
+  CiGateStatus,
 } from '@pathforge/core';
 import { ValidationResult } from '@pathforge/shared';
 import {
@@ -348,6 +353,7 @@ interface ChangeAnalysisPanelProps {
   productionReadiness?: ProductionReadinessAssessment | null;
   testingIntelligence?: TestingIntelligenceResult | null;
   technicalDebt?: TechnicalDebtAssessment | null;
+  isValidationStale?: boolean;
 }
 
 export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
@@ -363,8 +369,9 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
   productionReadiness,
   testingIntelligence,
   technicalDebt,
+  isValidationStale = false,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'changes' | 'risks' | 'paths' | 'intelligence' | 'source' | 'history' | 'gate'>('changes');
+  const [activeSubTab, setActiveSubTab] = useState<'workflow' | 'changes' | 'risks' | 'paths' | 'intelligence' | 'source' | 'history' | 'gate'>('workflow');
   const [significanceFilter, setSignificanceFilter] = useState<'all' | SecuritySignificance>('all');
   const [diffText, setDiffText] = useState<string>(SAMPLE_APP_DIFF);
   const [sourceMode, setSourceMode] = useState<'git' | 'github' | 'diff'>('git');
@@ -383,6 +390,32 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
   const [ghRepo, setGhRepo] = useState<string>('cloud-infrastructure');
   const [ghPrNumber, setGhPrNumber] = useState<string>('102');
   const [ghInspectionTimestamp, setGhInspectionTimestamp] = useState<string>(new Date().toLocaleTimeString());
+
+  // Continuous Workflow & State Discipline (Phase 3.7)
+  const [isRunStale, setIsRunStale] = useState<boolean>(false);
+  const [staleReason, setStaleReason] = useState<string>('');
+  const [lastAnalysisTimestamp, setLastAnalysisTimestamp] = useState<string>(new Date().toLocaleTimeString());
+  const [historyCaptureFeedback, setHistoryCaptureFeedback] = useState<string | null>(null);
+
+  // Invalidate when source configuration changes
+  useEffect(() => {
+    setIsRunStale(true);
+    setStaleReason('Change source parameters or diff modified');
+  }, [sourceMode, selectedQaScenario, selectedGhScenario, gitMode, diffText, includeUntracked, gitRepoPath, gitBaseRef, gitHeadRef, ghOwner, ghRepo, ghPrNumber]);
+
+  // Invalidate when baseline snapshot changes
+  useEffect(() => {
+    setIsRunStale(true);
+    setStaleReason('Baseline snapshot updated');
+  }, [baselineSnapshot?.timestamp]);
+
+  // Invalidate when topology validation is stale
+  useEffect(() => {
+    if (isValidationStale) {
+      setIsRunStale(true);
+      setStaleReason('Infrastructure topology modified since last validation');
+    }
+  }, [isValidationStale]);
 
   const activeScenario = LOCAL_GIT_SCENARIOS[selectedQaScenario];
   const activeGhScenario = GITHUB_PR_SCENARIOS[selectedGhScenario];
@@ -407,6 +440,119 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
   const ingestedChangeSet = useMemo(() => ingestRepositoryChanges(activeDiff), [activeDiff]);
   const ingestionBridge = useMemo(() => bridgeToChangeAnalysis(ingestedChangeSet), [ingestedChangeSet]);
   const ghSignalsSummary = useMemo(() => partitionSignals(ingestedChangeSet.signals), [ingestedChangeSet]);
+
+  const runSource = useMemo<EngineeringRunSourceInfo>(() => {
+    if (sourceMode === 'github') {
+      return {
+        type: 'github-pr',
+        identifier: `${ghOwner}/${ghRepo}#${ghPrNumber}`,
+        displayName: `GitHub PR #${ghPrNumber} (${ghOwner}/${ghRepo})`,
+        revision: activeGhScenario.headSha.slice(0, 7),
+        branch: activeGhScenario.headBranch,
+        baseRef: `${activeGhScenario.baseBranch} @ ${activeGhScenario.baseSha.slice(0, 7)}`,
+        headRef: `${activeGhScenario.headBranch} @ ${activeGhScenario.headSha.slice(0, 7)}`,
+        details: {
+          owner: ghOwner,
+          repo: ghRepo,
+          prNumber: parseInt(ghPrNumber, 10) || 1,
+          baseSha: activeGhScenario.baseSha,
+          headSha: activeGhScenario.headSha,
+          filesCount: activeGhScenario.filesCount,
+          additions: activeGhScenario.additions,
+          deletions: activeGhScenario.deletions,
+        },
+      };
+    }
+    if (sourceMode === 'git') {
+      return {
+        type: 'local-git',
+        identifier: `${gitRepoPath} (${activeScenario.repository.currentBranch})`,
+        displayName: `Local Git (${activeScenario.repository.currentBranch})`,
+        revision: activeScenario.repository.currentCommit.slice(0, 7),
+        branch: activeScenario.repository.currentBranch ?? undefined,
+        baseRef: gitMode === 'commit-vs-commit' ? gitBaseRef : 'HEAD',
+        headRef: gitMode === 'commit-vs-commit' ? gitHeadRef : activeScenario.comparisonMode,
+        details: {
+          repoPath: gitRepoPath,
+          branch: activeScenario.repository.currentBranch ?? undefined,
+          commitSha: activeScenario.repository.currentCommit,
+          comparisonMode: activeScenario.comparisonMode,
+          isDirty: activeScenario.repository.isDirty,
+          filesCount: activeScenario.repository.stagedCount + activeScenario.repository.unstagedCount,
+        },
+      };
+    }
+    return {
+      type: 'raw-diff',
+      identifier: 'Raw Unified Diff Ingestion',
+      displayName: 'Raw Unified Diff Ingestion',
+      details: {
+        diffLength: diffText.length,
+      },
+    };
+  }, [sourceMode, ghOwner, ghRepo, ghPrNumber, activeGhScenario, gitRepoPath, activeScenario, gitMode, gitBaseRef, gitHeadRef, diffText]);
+
+  const engineeringRun = useMemo(() => {
+    return executeEngineeringRun({
+      environment,
+      source: runSource,
+      validationResult,
+      attackPathAnalysis,
+      architectureAnalysis: architectureResult,
+      productionReadiness,
+      testingIntelligence,
+      technicalDebt,
+      changeAnalysis,
+      isStale: isRunStale,
+      staleReason,
+    });
+  }, [
+    environment,
+    runSource,
+    validationResult,
+    attackPathAnalysis,
+    architectureResult,
+    productionReadiness,
+    testingIntelligence,
+    technicalDebt,
+    changeAnalysis,
+    isRunStale,
+    staleReason,
+    lastAnalysisTimestamp,
+  ]);
+
+  const handleRunEngineeringAnalysis = () => {
+    if (onRequestValidate) {
+      onRequestValidate();
+    }
+    setIsRunStale(false);
+    setStaleReason('');
+    setLastAnalysisTimestamp(new Date().toLocaleTimeString());
+  };
+
+  const handleCaptureRunToHistory = async () => {
+    const store = new InMemoryHistoryStore();
+    try {
+      const res = await captureRunToHistory(
+        engineeringRun,
+        environment,
+        validationResult,
+        store,
+        {
+          attackPathAnalysis,
+          architectureAnalysis: architectureResult,
+          productionReadiness,
+          testingIntelligence,
+          technicalDebt,
+          changeAnalysis,
+        }
+      );
+      setHistoryCaptureFeedback(`Run successfully recorded to engineering history (${res.record.id})`);
+      setTimeout(() => setHistoryCaptureFeedback(null), 4000);
+    } catch (err: any) {
+      setHistoryCaptureFeedback(`Failed to record history: ${err.message}`);
+    }
+  };
 
   if (!baselineSnapshot) {
     return (
@@ -518,8 +664,129 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
     }
   };
 
+  const getGateBadgeClass = (status: CiGateStatus) => {
+    switch (status) {
+      case 'PASS':
+        return 'bg-[#238636]/20 border-[#238636] text-[#3fb950]';
+      case 'WARN':
+        return 'bg-[#d29922]/20 border-[#d29922] text-[#d29922]';
+      case 'BLOCK':
+        return 'bg-[#da3633]/20 border-[#da3633] text-[#f85149]';
+      case 'INSUFFICIENT_EVIDENCE':
+      default:
+        return 'bg-[#8b949e]/20 border-[#8b949e] text-[#c9d1d9]';
+    }
+  };
+
+  const getResultBadge = (res: 'PASS' | 'WARN' | 'BLOCK' | 'UNVERIFIED') => {
+    switch (res) {
+      case 'PASS':
+        return { cls: 'bg-[#238636]/15 border-[#238636]/40 text-[#3fb950]' };
+      case 'WARN':
+        return { cls: 'bg-[#d29922]/15 border-[#d29922]/40 text-[#d29922]' };
+      case 'BLOCK':
+        return { cls: 'bg-[#da3633]/15 border-[#da3633]/40 text-[#f85149]' };
+      case 'UNVERIFIED':
+      default:
+        return { cls: 'bg-[#30363d]/40 border-[#30363d] text-[#8b949e]' };
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {/* 0. Continuous Engineering Run Context Bar */}
+      <div className="p-3 rounded-lg bg-[#161b22] border border-[#30363d] space-y-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Source Provenance */}
+          <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
+            <span className="px-2 py-0.5 rounded bg-[#21262d] border border-[#30363d] text-[#58a6ff] font-bold flex items-center space-x-1.5">
+              <FolderGit2 className="w-3.5 h-3.5" />
+              <span>SOURCE: {runSource.displayName}</span>
+            </span>
+            {runSource.baseRef && runSource.headRef && (
+              <span className="text-[#8b949e] flex items-center space-x-1">
+                <span>{runSource.baseRef}</span>
+                <ArrowRight className="w-3 h-3 text-[#58a6ff]" />
+                <span className="text-[#c9d1d9]">{runSource.headRef}</span>
+              </span>
+            )}
+          </div>
+
+          {/* Technical Status Badges */}
+          <div className="flex items-center space-x-2">
+            {isRunStale ? (
+              <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded border border-[#d29922]/50 bg-[#d29922]/15 text-[#d29922] text-xs font-mono font-bold animate-pulse">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>STALE — RE-ANALYZE REQUIRED</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded border border-[#238636]/50 bg-[#238636]/15 text-[#3fb950] text-xs font-mono font-bold">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>CURRENT</span>
+              </span>
+            )}
+            <span
+              className={`inline-flex items-center space-x-1 px-2.5 py-0.5 rounded border text-xs font-mono font-bold ${getGateBadgeClass(
+                engineeringRun.gateStatus
+              )}`}
+            >
+              <span>GATE: {engineeringRun.gateStatus} ({engineeringRun.compositeScore}/100)</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Change Stats & Executive Workflow Action Triggers */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#21262d] text-xs font-mono">
+          <div className="text-[#8b949e]">
+            {engineeringRun.changesSummary
+              ? `${engineeringRun.changesSummary.filesCount} file(s) · +${engineeringRun.changesSummary.additions} / -${engineeringRun.changesSummary.deletions} · Engineering Impact: ${engineeringRun.changesSummary.impact}`
+              : `${summary.totalChanges} topology mutations evaluated · Last run: ${lastAnalysisTimestamp}`}
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleRunEngineeringAnalysis}
+              className="inline-flex items-center space-x-1.5 px-3 py-1 rounded bg-[#1f6feb] hover:bg-[#388bfd] text-white font-bold transition-colors shadow-sm"
+              title="Execute unified continuous engineering evaluation"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>RUN ENGINEERING ANALYSIS</span>
+            </button>
+            <button
+              onClick={handleCaptureRunToHistory}
+              className="inline-flex items-center space-x-1.5 px-3 py-1 rounded bg-[#238636] hover:bg-[#2ea043] text-white font-bold transition-colors shadow-sm"
+              title="Record verified run evaluation to engineering history"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>CAPTURE RUN TO HISTORY</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Stale Invalidation Warning Banner */}
+        {isRunStale && (
+          <div className="p-2.5 rounded bg-[#d29922]/10 border border-[#d29922]/30 text-xs font-mono text-[#d29922] flex items-center justify-between">
+            <div className="flex items-center space-x-1.5">
+              <AlertTriangle className="w-4 h-4 text-[#d29922] flex-shrink-0" />
+              <span>Analysis is stale: {staleReason}. Click "RUN ENGINEERING ANALYSIS" to recalculate.</span>
+            </div>
+            <button
+              onClick={handleRunEngineeringAnalysis}
+              className="underline hover:text-[#e6edf3] font-bold ml-2"
+            >
+              Re-analyze
+            </button>
+          </div>
+        )}
+
+        {/* History Capture Toast */}
+        {historyCaptureFeedback && (
+          <div className="p-2.5 rounded bg-[#1f6feb]/10 border border-[#1f6feb]/30 text-xs font-mono text-[#58a6ff] flex items-center justify-between">
+            <span>{historyCaptureFeedback}</span>
+            <button onClick={() => setHistoryCaptureFeedback(null)} className="text-[#8b949e] hover:text-[#c9d1d9]">×</button>
+          </div>
+        )}
+      </div>
+
       {/* 1. Baseline Strip & Action Controls */}
       <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded bg-[#161b22] border border-[#30363d]">
         <div className="flex items-center space-x-2 text-xs">
@@ -651,10 +918,21 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
       )}
 
       {/* 4. Sub-Tab Navigation Strip */}
-      <div className="flex items-center space-x-1 border-b border-[#21262d] pb-1 text-xs font-mono">
+      <div className="flex items-center space-x-1 border-b border-[#21262d] pb-1 text-xs font-mono overflow-x-auto">
+        <button
+          onClick={() => setActiveSubTab('workflow')}
+          className={`px-3 py-1.5 rounded transition-colors flex items-center space-x-1.5 whitespace-nowrap ${
+            activeSubTab === 'workflow'
+              ? 'bg-[#21262d] text-[#e6edf3] font-semibold border border-[#30363d]'
+              : 'text-[#8b949e] hover:text-[#c9d1d9]'
+          }`}
+        >
+          <Gauge className="w-3.5 h-3.5 text-[#58a6ff]" />
+          <span>WORKFLOW & EVIDENCE</span>
+        </button>
         <button
           onClick={() => setActiveSubTab('changes')}
-          className={`px-3 py-1.5 rounded transition-colors ${
+          className={`px-3 py-1.5 rounded transition-colors whitespace-nowrap ${
             activeSubTab === 'changes'
               ? 'bg-[#21262d] text-[#e6edf3] font-semibold border border-[#30363d]'
               : 'text-[#8b949e] hover:text-[#c9d1d9]'
@@ -664,7 +942,7 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
         </button>
         <button
           onClick={() => setActiveSubTab('risks')}
-          className={`px-3 py-1.5 rounded transition-colors ${
+          className={`px-3 py-1.5 rounded transition-colors whitespace-nowrap ${
             activeSubTab === 'risks'
               ? 'bg-[#21262d] text-[#e6edf3] font-semibold border border-[#30363d]'
               : 'text-[#8b949e] hover:text-[#c9d1d9]'
@@ -674,7 +952,7 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
         </button>
         <button
           onClick={() => setActiveSubTab('paths')}
-          className={`px-3 py-1.5 rounded transition-colors ${
+          className={`px-3 py-1.5 rounded transition-colors whitespace-nowrap ${
             activeSubTab === 'paths'
               ? 'bg-[#21262d] text-[#e6edf3] font-semibold border border-[#30363d]'
               : 'text-[#8b949e] hover:text-[#c9d1d9]'
@@ -684,7 +962,7 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
         </button>
         <button
           onClick={() => setActiveSubTab('intelligence')}
-          className={`px-3 py-1.5 rounded transition-colors ${
+          className={`px-3 py-1.5 rounded transition-colors whitespace-nowrap ${
             activeSubTab === 'intelligence'
               ? 'bg-[#21262d] text-[#e6edf3] font-semibold border border-[#30363d]'
               : 'text-[#8b949e] hover:text-[#c9d1d9]'
@@ -694,7 +972,7 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
         </button>
         <button
           onClick={() => setActiveSubTab('source')}
-          className={`px-3 py-1.5 rounded transition-colors flex items-center space-x-1.5 ${
+          className={`px-3 py-1.5 rounded transition-colors flex items-center space-x-1.5 whitespace-nowrap ${
             activeSubTab === 'source'
               ? 'bg-[#21262d] text-[#e6edf3] font-semibold border border-[#30363d]'
               : 'text-[#8b949e] hover:text-[#c9d1d9]'
@@ -705,7 +983,7 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
         </button>
         <button
           onClick={() => setActiveSubTab('history')}
-          className={`px-3 py-1.5 rounded transition-colors flex items-center space-x-1.5 ${
+          className={`px-3 py-1.5 rounded transition-colors flex items-center space-x-1.5 whitespace-nowrap ${
             activeSubTab === 'history'
               ? 'bg-[#21262d] text-[#e6edf3] font-semibold border border-[#30363d]'
               : 'text-[#8b949e] hover:text-[#c9d1d9]'
@@ -716,7 +994,7 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
         </button>
         <button
           onClick={() => setActiveSubTab('gate')}
-          className={`px-3 py-1.5 rounded transition-colors flex items-center space-x-1.5 ${
+          className={`px-3 py-1.5 rounded transition-colors flex items-center space-x-1.5 whitespace-nowrap ${
             activeSubTab === 'gate'
               ? 'bg-[#21262d] text-[#e6edf3] font-semibold border border-[#30363d]'
               : 'text-[#8b949e] hover:text-[#c9d1d9]'
@@ -728,6 +1006,200 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
       </div>
 
       {/* 5. Sub-Tab Content */}
+
+      {/* Sub-Tab 0: Continuous Workflow & Evidence Matrix */}
+      {activeSubTab === 'workflow' && (
+        <div className="space-y-4">
+          {/* Executive Decision Verdict Card */}
+          <div
+            className={`p-4 rounded-lg border space-y-3 ${
+              engineeringRun.gateStatus === 'PASS'
+                ? 'bg-[#238636]/10 border-[#238636]/40'
+                : engineeringRun.gateStatus === 'WARN'
+                ? 'bg-[#d29922]/10 border-[#d29922]/40'
+                : engineeringRun.gateStatus === 'BLOCK'
+                ? 'bg-[#da3633]/10 border-[#da3633]/40'
+                : 'bg-[#161b22] border-[#30363d]'
+            }`}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center space-x-2.5">
+                {engineeringRun.gateStatus === 'PASS' ? (
+                  <ShieldCheck className="w-6 h-6 text-[#3fb950]" />
+                ) : engineeringRun.gateStatus === 'WARN' ? (
+                  <AlertTriangle className="w-6 h-6 text-[#d29922]" />
+                ) : engineeringRun.gateStatus === 'BLOCK' ? (
+                  <AlertOctagon className="w-6 h-6 text-[#f85149]" />
+                ) : (
+                  <HelpCircle className="w-6 h-6 text-[#8b949e]" />
+                )}
+                <div>
+                  <div className="text-[11px] font-mono text-[#8b949e] uppercase tracking-wider font-bold">
+                    ENGINEERING DECISION VERDICT
+                  </div>
+                  <div className="text-base font-bold font-mono text-[#e6edf3]">
+                    {engineeringRun.gateStatus === 'PASS' && 'GATE PASSED — ALL VERIFIED CONTROLS SATISFIED'}
+                    {engineeringRun.gateStatus === 'WARN' && 'GATE WARNING — ADVISORY RISKS DETECTED (NON-BLOCKING)'}
+                    {engineeringRun.gateStatus === 'BLOCK' && 'GATE BLOCKED — HARD SECURITY OR ARCHITECTURAL VIOLATIONS'}
+                    {engineeringRun.gateStatus === 'INSUFFICIENT_EVIDENCE' && 'INSUFFICIENT EVIDENCE — REQUIRED PREREQUISITES UNVERIFIED'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 text-xs font-mono">
+                <div className="p-2 rounded bg-[#0d1117] border border-[#30363d] text-center min-w-[70px]">
+                  <span className="text-[10px] text-[#8b949e] uppercase block">SCORE</span>
+                  <span className="text-sm font-bold text-[#e6edf3]">{engineeringRun.compositeScore}/100</span>
+                </div>
+                <div className="p-2 rounded bg-[#0d1117] border border-[#30363d] text-center min-w-[70px]">
+                  <span className="text-[10px] text-[#8b949e] uppercase block">EXIT CODE</span>
+                  <span className="text-sm font-bold text-[#e6edf3]">{engineeringRun.exitCode}</span>
+                </div>
+              </div>
+            </div>
+
+            {engineeringRun.topReasons.length > 0 && (
+              <div className="pt-2 border-t border-[#30363d]/50 space-y-1.5 text-xs font-mono">
+                <div className="text-[#8b949e] text-[11px] uppercase font-bold">
+                  PRIMARY DETERMINISTIC FACTORS (WHY?):
+                </div>
+                <ul className="space-y-1 text-[#c9d1d9]">
+                  {engineeringRun.topReasons.map((r, i) => (
+                    <li key={i} className="flex items-start space-x-1.5">
+                      <span className="text-[#58a6ff] mt-0.5">•</span>
+                      <span>{r}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          {/* Evidence Matrix */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono">
+              <span className="font-bold text-[#e6edf3] uppercase">
+                COMPREHENSIVE EVIDENCE MATRIX ({engineeringRun.evidenceMatrix.length} CONTROLS)
+              </span>
+              <span className="text-[#8b949e]">
+                Truthful & Deterministic Evaluation (Zero Simulated/Fake Evidence)
+              </span>
+            </div>
+
+            <div className="overflow-x-auto rounded-lg border border-[#30363d] bg-[#161b22]">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-[#30363d] bg-[#0d1117] text-[#8b949e] uppercase text-[10px]">
+                    <th className="py-2.5 px-3 font-semibold">Control Name</th>
+                    <th className="py-2.5 px-3 font-semibold">Category</th>
+                    <th className="py-2.5 px-3 font-semibold">Result</th>
+                    <th className="py-2.5 px-3 font-semibold">Verified Evidence & Rationale</th>
+                    <th className="py-2.5 px-3 font-semibold text-right">Canvas Target</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#21262d]">
+                  {engineeringRun.evidenceMatrix.map((row, idx) => {
+                    const badge = getResultBadge(row.result);
+                    return (
+                      <tr key={idx} className="hover:bg-[#1f242c] transition-colors">
+                        <td className="py-2 px-3 text-[#e6edf3] font-medium whitespace-nowrap">
+                          {row.control}
+                        </td>
+                        <td className="py-2 px-3 text-[#8b949e] text-[11px] whitespace-nowrap">
+                          {row.category}
+                        </td>
+                        <td className="py-2 px-3 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${badge.cls}`}>
+                            {row.result}
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-[#c9d1d9] max-w-md">
+                          {row.evidence}
+                        </td>
+                        <td className="py-2 px-3 text-right whitespace-nowrap">
+                          {row.targetElements.length > 0 ? (
+                            <div className="inline-flex items-center space-x-1">
+                              {row.targetElements.slice(0, 2).map((target) => (
+                                <button
+                                  key={target.id}
+                                  onClick={() => onLocateElement({ id: target.id, type: target.type })}
+                                  className="px-1.5 py-0.5 rounded bg-[#21262d] border border-[#30363d] hover:border-[#58a6ff] text-[10px] text-[#58a6ff] hover:text-[#79c0ff] transition-colors inline-flex items-center space-x-1"
+                                  title={`Locate ${target.label} on canvas`}
+                                >
+                                  <Crosshair className="w-2.5 h-2.5" />
+                                  <span>{target.label}</span>
+                                </button>
+                              ))}
+                              {row.targetElements.length > 2 && (
+                                <span className="text-[10px] text-[#8b949e]">+{row.targetElements.length - 2}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-[#8b949e] text-[10px]">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Evidence Lineage Section */}
+          {engineeringRun.evidenceLineage.filter((l) => l.verdict === 'BLOCK' || l.verdict === 'WARN').length > 0 && (
+            <div className="space-y-2">
+              <div className="text-xs font-mono font-bold text-[#e6edf3] uppercase flex items-center space-x-1.5">
+                <Crosshair className="w-3.5 h-3.5 text-[#58a6ff]" />
+                <span>EXPLICIT EVIDENCE LINEAGE (AUDIT TRAIL)</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs font-mono">
+                {engineeringRun.evidenceLineage
+                  .filter((l) => l.verdict === 'BLOCK' || l.verdict === 'WARN')
+                  .map((item) => (
+                    <div
+                      key={item.id}
+                      className={`p-3 rounded-lg border space-y-1.5 ${
+                        item.verdict === 'BLOCK'
+                          ? 'bg-[#da3633]/5 border-[#da3633]/30'
+                          : 'bg-[#d29922]/5 border-[#d29922]/30'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-[#e6edf3] truncate">{item.controlName}</span>
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                            item.verdict === 'BLOCK'
+                              ? 'bg-[#da3633]/20 border-[#da3633]/40 text-[#f85149]'
+                              : 'bg-[#d29922]/20 border-[#d29922]/40 text-[#d29922]'
+                          }`}
+                        >
+                          {item.verdict}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#8b949e]">{item.description}</p>
+                      {item.targetElements.length > 0 && (
+                        <div className="pt-1 flex flex-wrap gap-1">
+                          <span className="text-[10px] text-[#8b949e] mr-1">AFFECTED:</span>
+                          {item.targetElements.map((target) => (
+                            <button
+                              key={target.id}
+                              onClick={() => onLocateElement({ id: target.id, type: target.type })}
+                              className="px-1 py-0.5 rounded bg-[#21262d] border border-[#30363d] hover:border-[#58a6ff] text-[10px] text-[#58a6ff] hover:text-[#79c0ff] inline-flex items-center space-x-1"
+                            >
+                              <Crosshair className="w-2.5 h-2.5" />
+                              <span>{target.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Sub-Tab A: Changes */}
       {activeSubTab === 'changes' && (

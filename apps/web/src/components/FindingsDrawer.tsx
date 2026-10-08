@@ -577,6 +577,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
                   productionReadiness={productionReadiness}
                   testingIntelligence={testingIntelligence}
                   technicalDebt={technicalDebt}
+                  isValidationStale={isValidationStale}
                 />
               </div>
             ) : findings.length === 0 ? (
