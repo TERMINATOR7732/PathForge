@@ -4,7 +4,7 @@
 
 PathForge is an interactive infrastructure security simulator and learning lab. It enables engineers, architects, and security practitioners to visually design virtual infrastructure topologies, intentionally introduce misconfigurations or anti-patterns, understand why those designs are dangerous through deterministic explanatory reasoning, safely simulate attacks against modeled environments, apply defensive remediations, and verify that attack paths have been eliminated.
 
-PathForge is **not** a real-world penetration-testing tool. It operates entirely against a modeled, deterministic virtual graph.
+> **Notice**: PathForge performs deterministic analysis of modeled infrastructure and authorized repository/configuration evidence. It does not perform arbitrary real-world exploitation.
 
 ---
 

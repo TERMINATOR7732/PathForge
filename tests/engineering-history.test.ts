@@ -1167,7 +1167,7 @@ describe('Phase 3.5 — Persistent Engineering History & Trends', () => {
         source: 'local-git',
         sourceIdentity: {
           type: 'local-git',
-          repositoryPath: 'e:/MHT CET REGISTRATION/BE/Task/PathForge',
+          repositoryPath: '/workspace/pathforge',
           commitSha: '72a0761e1c2d365eed4271484641195da0b97565',
           branch: 'master',
           comparisonMode: 'working-tree-vs-head',

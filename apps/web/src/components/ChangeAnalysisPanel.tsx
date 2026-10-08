@@ -103,7 +103,7 @@ const LOCAL_GIT_SCENARIOS: Record<'A' | 'B' | 'C' | 'D' | 'E' | 'F', LocalGitSce
     badge: 'CLEAN',
     description: 'Working tree is synchronized with HEAD. Zero modifications or untracked files.',
     repository: {
-      rootPath: 'e:/MHT CET REGISTRATION/BE/Task/PathForge',
+      rootPath: '/workspace/pathforge',
       currentBranch: 'master',
       currentCommit: '620eeed1003660227b5489d62bb41f3043d48309',
       isDirty: false,
@@ -123,7 +123,7 @@ const LOCAL_GIT_SCENARIOS: Record<'A' | 'B' | 'C' | 'D' | 'E' | 'F', LocalGitSce
     badge: 'UNSTAGED',
     description: 'Application code modification in working tree (src/api.ts).',
     repository: {
-      rootPath: 'e:/MHT CET REGISTRATION/BE/Task/PathForge',
+      rootPath: '/workspace/pathforge',
       currentBranch: 'master',
       currentCommit: '620eeed1003660227b5489d62bb41f3043d48309',
       isDirty: true,
@@ -143,7 +143,7 @@ const LOCAL_GIT_SCENARIOS: Record<'A' | 'B' | 'C' | 'D' | 'E' | 'F', LocalGitSce
     badge: 'STAGED',
     description: 'Security-sensitive network policy ingress rule staged for commit.',
     repository: {
-      rootPath: 'e:/MHT CET REGISTRATION/BE/Task/PathForge',
+      rootPath: '/workspace/pathforge',
       currentBranch: 'feature/network-hardening',
       currentCommit: '823e73f4581907cb5b5278c2e7428f572a1e0912',
       isDirty: true,
@@ -163,7 +163,7 @@ const LOCAL_GIT_SCENARIOS: Record<'A' | 'B' | 'C' | 'D' | 'E' | 'F', LocalGitSce
     badge: 'RANGE',
     description: 'Historical commit comparison across release tags or feature commits.',
     repository: {
-      rootPath: 'e:/MHT CET REGISTRATION/BE/Task/PathForge',
+      rootPath: '/workspace/pathforge',
       currentBranch: 'master',
       currentCommit: '620eeed1003660227b5489d62bb41f3043d48309',
       isDirty: false,
@@ -185,7 +185,7 @@ const LOCAL_GIT_SCENARIOS: Record<'A' | 'B' | 'C' | 'D' | 'E' | 'F', LocalGitSce
     badge: 'DIRTY+UNTRACKED',
     description: 'Working tree containing unstaged edits plus untracked development logs.',
     repository: {
-      rootPath: 'e:/MHT CET REGISTRATION/BE/Task/PathForge',
+      rootPath: '/workspace/pathforge',
       currentBranch: 'master',
       currentCommit: '620eeed1003660227b5489d62bb41f3043d48309',
       isDirty: true,
@@ -205,7 +205,7 @@ const LOCAL_GIT_SCENARIOS: Record<'A' | 'B' | 'C' | 'D' | 'E' | 'F', LocalGitSce
     badge: 'SECURITY CRITICAL',
     description: 'Configuration file introducing hardcoded live API credential token.',
     repository: {
-      rootPath: 'e:/MHT CET REGISTRATION/BE/Task/PathForge',
+      rootPath: '/workspace/pathforge',
       currentBranch: 'fix/secret-handling',
       currentCommit: 'a1d506829c35472859132149bdf549926839cf92',
       isDirty: true,
@@ -376,7 +376,7 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
   const [diffText, setDiffText] = useState<string>(SAMPLE_APP_DIFF);
   const [sourceMode, setSourceMode] = useState<'git' | 'github' | 'diff'>('git');
   const [selectedQaScenario, setSelectedQaScenario] = useState<'A' | 'B' | 'C' | 'D' | 'E' | 'F'>('B');
-  const [gitRepoPath, setGitRepoPath] = useState<string>('e:/MHT CET REGISTRATION/BE/Task/PathForge');
+  const [gitRepoPath, setGitRepoPath] = useState<string>('/workspace/pathforge');
   const [gitMode, setGitMode] = useState<GitComparisonMode>('working-tree-vs-head');
   const [gitBaseRef, setGitBaseRef] = useState<string>('HEAD~1');
   const [gitHeadRef, setGitHeadRef] = useState<string>('HEAD');
