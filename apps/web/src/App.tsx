@@ -15,6 +15,7 @@ import {
   assessProductionReadiness,
   assessTestingIntelligence,
   assessTechnicalDebt,
+  analyzeInfrastructureChanges,
 } from '@pathforge/core';
 import { createDefaultRuleRegistry, ValidatorEngine, RemediationAction } from '@pathforge/validator';
 import { NodeType, ValidationResult, Finding } from '@pathforge/shared';
@@ -170,6 +171,27 @@ export const App: React.FC = () => {
     latestVerification,
     activeScenarioId,
   ]);
+
+  // Continuous Change Analysis (Phase 3.1)
+  const changeAnalysis = useMemo(() => {
+    if (!baselineSnapshot) return null;
+    return analyzeInfrastructureChanges(baselineSnapshot, environment, {
+      beforeValidationResult: baselineSnapshot.validationResult,
+      afterValidationResult: validationResult ?? undefined,
+      evaluateValidation: (e) => validatorEngine.evaluate(e),
+    });
+  }, [
+    baselineSnapshot,
+    environment,
+    graphVersion,
+    validationResult,
+    validatorEngine,
+  ]);
+
+  const handleCaptureBaseline = useCallback(() => {
+    const currentVal = validationResult ?? validatorEngine.evaluate(environment);
+    setBaselineSnapshot(createEnvironmentSnapshot(environment, currentVal));
+  }, [environment, validationResult, validatorEngine]);
 
   const handleAnalyzeBlastRadius = useCallback((nodeId: string) => {
     setSelectedCompromisedNodeId(nodeId);
@@ -479,6 +501,9 @@ export const App: React.FC = () => {
         productionReadiness={productionReadiness}
         testingIntelligence={testingIntelligence}
         technicalDebt={technicalDebt}
+        changeAnalysis={changeAnalysis}
+        baselineSnapshot={baselineSnapshot}
+        onCaptureBaseline={handleCaptureBaseline}
         onSelectNode={(nodeId) => {
           setSelectedNodeId(nodeId);
           setSelectedEdgeId(null);

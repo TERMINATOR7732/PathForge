@@ -9,6 +9,8 @@ import {
   ProductionReadinessAssessment,
   TestingIntelligenceResult,
   TechnicalDebtAssessment,
+  ChangeAnalysisResult,
+  EnvironmentSnapshot,
 } from '@pathforge/core';
 import { getRemediationActions, RemediationAction } from '@pathforge/validator';
 import {
@@ -31,6 +33,7 @@ import {
   Gauge,
   FlaskConical,
   Coins,
+  GitCompare,
 } from 'lucide-react';
 import { RecommendedArchitectureView } from './RecommendedArchitectureView.js';
 import { RemediationModal } from './RemediationModal.js';
@@ -41,6 +44,7 @@ import { ArchitecturePanel } from './ArchitecturePanel.js';
 import { ProductionReadinessPanel } from './ProductionReadinessPanel.js';
 import { TestingIntelligencePanel } from './TestingIntelligencePanel.js';
 import { TechnicalDebtPanel } from './TechnicalDebtPanel.js';
+import { ChangeAnalysisPanel } from './ChangeAnalysisPanel.js';
 
 interface FindingsDrawerProps {
   findings: Finding[];
@@ -60,6 +64,9 @@ interface FindingsDrawerProps {
   productionReadiness?: ProductionReadinessAssessment | null;
   testingIntelligence?: TestingIntelligenceResult | null;
   technicalDebt?: TechnicalDebtAssessment | null;
+  changeAnalysis?: ChangeAnalysisResult | null;
+  baselineSnapshot?: EnvironmentSnapshot | null;
+  onCaptureBaseline?: () => void;
   onSelectNode: (nodeId: string) => void;
   onLocateElement: (target: { id: string; type: 'node' | 'edge' }) => void;
   onHoverFinding: (finding: Finding | null) => void;
@@ -111,6 +118,9 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   productionReadiness,
   testingIntelligence,
   technicalDebt,
+  changeAnalysis = null,
+  baselineSnapshot = null,
+  onCaptureBaseline,
   onSelectNode,
   onLocateElement,
   onHoverFinding,
@@ -119,7 +129,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   onRequestValidate,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<'findings' | 'attack-paths' | 'blast-radius' | 'verification' | 'architecture' | 'readiness' | 'testing' | 'debt'>('findings');
+  const [activeTab, setActiveTab] = useState<'findings' | 'attack-paths' | 'blast-radius' | 'verification' | 'architecture' | 'readiness' | 'testing' | 'debt' | 'changes'>('findings');
   const [expandedFindingId, setExpandedFindingId] = useState<string | null>(
     findings[0]?.id ?? null
   );
@@ -376,6 +386,32 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
               </span>
             </button>
 
+            {/* Tab 9: Continuous Change Analysis */}
+            <button
+              onClick={() => {
+                setActiveTab('changes');
+                setIsOpen(true);
+              }}
+              className={`flex items-center space-x-1.5 px-2 py-1 rounded text-xs font-mono transition-colors ${
+                activeTab === 'changes'
+                  ? 'bg-[#181d26] text-[#e6edf3] font-semibold border border-[#58a6ff]'
+                  : 'text-[#8b949e] hover:text-[#c9d1d9] border border-transparent'
+              }`}
+            >
+              <GitCompare
+                className={`w-3.5 h-3.5 ${
+                  changeAnalysis?.regressionDetected
+                    ? 'text-[#f85149]'
+                    : changeAnalysis && changeAnalysis.summary.totalChanges > 0
+                    ? 'text-[#58a6ff]'
+                    : 'text-[#8b949e]'
+                }`}
+              />
+              <span>
+                CHANGES ({changeAnalysis ? `${changeAnalysis.summary.totalChanges}` : '—'})
+              </span>
+            </button>
+
             {/* Stale Validation Warning */}
             {isValidationStale && (
               <span className="px-2 py-0.5 rounded bg-[#2b1f14] text-[#f0883e] border border-[#f0883e]/50 text-[10px] font-semibold animate-pulse ml-1">
@@ -525,6 +561,17 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
                 onLocateElement={onLocateElement}
                 onSelectTab={setActiveTab}
               />
+            ) : activeTab === 'changes' ? (
+              <div className="flex-1 overflow-y-auto p-4 bg-[#0d0f13]">
+                <ChangeAnalysisPanel
+                  changeAnalysis={changeAnalysis}
+                  baselineSnapshot={baselineSnapshot}
+                  onCaptureBaseline={onCaptureBaseline ?? (() => {})}
+                  onLocateElement={onLocateElement}
+                  onSelectNode={onSelectNode}
+                  onRequestValidate={onRequestValidate}
+                />
+              </div>
             ) : findings.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center font-mono space-y-2">
                 <CheckCircle2 className="w-8 h-8 text-[#3fb950]" />

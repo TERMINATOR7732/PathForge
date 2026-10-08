@@ -295,32 +295,66 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
 
 ---
 
-## Phase 3 — Defense, Verification & Proof ("Prove")
+---
 
-### Phase 3.1 — Remediation Recommendations
-- Automated suggestions for defensive placement (where to place firewalls, WAFs, bastions)
-- Least-privilege port restriction suggestions
+## Phase 3 — Continuous Security Engineering & Verification
 
-### Phase 3.2 — Simulated Defensive Interventions
-- "What-If" defense staging mode (simulate adding a firewall without modifying baseline)
-- Live preview of attack path breakage
+### Phase 3.1 — Continuous Engineering & Change Analysis Foundation *(STATUS: COMPLETE)*
+- [x] Authoritative Domain Change Analysis Engine (`packages/core/src/change-analysis/`):
+  - Data contracts (`types.ts`):
+    - `EngineeringChangeType`: `NODE_ADDED`, `NODE_REMOVED`, `NODE_CONFIG_CHANGED`, `EDGE_ADDED`, `EDGE_REMOVED`, `EDGE_CONFIG_CHANGED`
+    - `SecuritySignificance`: `security-increasing`, `security-decreasing`, `security-neutral`, `security-ambiguous`
+    - `ChangeImpactLevel`: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW`
+    - `ChangeCategory`: `topology`, `policy`, `encryption`, `exposure`, `attack-surface`, `configuration`
+    - `InfrastructureChangeItem`: id, type, category, targetId, targetType, summary, securitySignificance, significanceReason, details, beforeState, afterState
+    - `AttackPathDelta`: addedPaths, removedPaths, unchangedPaths, riskScoreBefore, riskScoreAfter, riskScoreDelta
+    - `ArchitectureDelta`: tierBypassDelta, flatTopologyDelta, dataIngressDelta, managementExposureDelta, dependencyConcentrationDelta, structuralShifts
+    - `ReadinessDelta`: scoreBefore, scoreAfter, scoreDelta, ratingBefore, ratingAfter, newBlockers, resolvedBlockers, newWarnings, resolvedWarnings
+    - `TechnicalDebtDelta`: scoreBefore, scoreAfter, scoreDelta, p0Delta, p1Delta, newDebt, resolvedDebt
+    - `RegressionDetails`: regressionDetected, description, resolvedCount, introducedCount, introducedRules, introducedSeverities
+    - `ChangeAnalysisSummary`: totalChanges, securityIncreasingCount, securityDecreasingCount, securityNeutralCount, securityAmbiguousCount, overallSignificance, impactLevel, netRiskDelta
+    - `ChangeAnalysisResult`: beforeSnapshot, afterSnapshot, changes, newlyIntroducedRisks, resolvedRisks, unchangedRisks, attackPathDelta, architectureDelta, readinessDelta, technicalDebtDelta, regression, summary, recommendations
+  - Deterministic Classification Engine (`classification.ts`):
+    - Maps `diffEnvironments` output to `InfrastructureChangeItem`
+    - Deterministic significance classification (`security-increasing`, `security-decreasing`, `security-neutral`, `security-ambiguous`)
+    - Detailed engineering rationale explaining why each mutation strengthens or weakens defenses
+  - Impact Evaluation & Regression Engine (`impact.ts`):
+    - Regression detection: flags `regressionDetected: true` when a change resolves $\ge 1$ risks while introducing $\ge 1$ new risks
+    - Impact scoring: `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` driven by critical findings, attack paths, readiness blockers, and P0/P1 debt
+  - Primary Change Analyzer (`analyzer.ts`):
+    - `analyzeInfrastructureChanges(before, after, options)` orchestrating diffs, signature-based finding comparisons, attack paths, architecture, readiness, debt, regressions, and recommendations
+- [x] Comprehensive Automated Test Suite:
+  - 321 unit and integration tests passing across 24 test files (41 tests in `tests/change-analysis.test.ts` covering node additions, node removals, node config updates, edge additions, edge removals, edge policy updates, security significance classifications, risk deltas, finding signature tracking across reconfigurations, regression detection, readiness deltas, technical debt deltas, determinism, coordinate independence, byte-for-byte serialization, empty environment safety, and boundary validation).
+- [x] Interactive UI Console (`ChangeAnalysisPanel.tsx` & `FindingsDrawer.tsx`):
+  - Dedicated `CHANGES` Tab 9 in `FindingsDrawer` with `GitCompare` icon.
+  - Active baseline indicator (`Baseline Active`, `No Baseline`) with capture baseline trigger.
+  - Overall change impact badge (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) and summary metric counters.
+  - Regression alert banner (`SECURITY REGRESSION DETECTED`) highlighting introduced vulnerabilities.
+  - Sub-tabs: `CHANGES`, `RISK DELTA`, `ATTACK PATHS`, `INTELLIGENCE DELTA`.
+  - Filter toolbar for Significance (`ALL`, `INCREASING`, `DECREASING`, `NEUTRAL`, `AMBIGUOUS`).
+  - Interactive cards with "Locate" canvas actions.
+  - Deterministic recommendations for hardening.
+- [x] Strict Scope Boundaries & Governance:
+  - 100% local-first, zero telemetry, zero LLM dependencies, ₹0 operating cost.
+  - External PR/CI automation and persistent history tracking deferred to subsequent Phase 3 milestones.
 
-### Phase 3.3 — Before/After Graph Comparison
-- Visual side-by-side diff of topology graphs
-- Diff of findings and attack paths
+---
 
-### Phase 3.4 — Attack-Path Elimination Verification ("Prove")
-- Formal proof report: "Attack Path `P-01` is eliminated. Reachability = `UNREACHABLE`."
-- Verification certificate of hardened architecture
+### Phase 3.2 — Continuous Engineering History & Multi-Snapshot Evolution *(PLANNED)*
+- Local timeline of engineering changes across editing sessions
+- Snapshot version tree and change history navigation
+- Time-series progression of readiness, debt, and risk scores
 
-### Phase 3.5 — Chaos Lab & Drift Simulation
-- Random or scenario-based network sabotage (e.g., firewall rule dropped, port opened)
-- Student / engineer challenges: fix the topology within 3 moves
+### Phase 3.3 — Engineering Change Rules & Policy Enforcement *(PLANNED)*
+- Guardrail rules preventing merges that introduce security regressions
+- Configurable failure criteria (e.g., fail if new critical risk or P0 debt introduced)
+- Deterministic change approval gates
 
-### Phase 3.6 — Assess Mode & Harden Mode Workflows
-- **Assess Mode**: Audit existing topologies, highlight risks and compliance gaps
-- **Harden Mode**: Step-by-step guided security transformation
+### Phase 3.4 — CI/CD & Headless Verification CLI *(PLANNED)*
+- Headless CLI runner for executing change analysis in local git hooks and CI pipelines
+- Output formats: JSON, JUnit XML, Markdown summaries
+- PR comment markdown generator for GitHub / GitLab diff reviews
 
-### Phase 3.7 — Infrastructure-as-Code (IaC) Import & Export
-- Import parser for Terraform HCL graph / AWS CloudFormation / Docker Compose
-- Export hardened topology to Terraform or network policy manifests
+### Phase 3.5 — Infrastructure-as-Code (IaC) Continuous Drift Detection *(PLANNED)*
+- Import parser for Terraform / Docker Compose diffs
+- Compare modeled state against intended infrastructure code changes

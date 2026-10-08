@@ -86,7 +86,7 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 280 tests passing)
+├── tests/                       # Automated test suite (Vitest — 321 tests passing across 24 test files)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
@@ -109,6 +109,7 @@ PathForge/
 │   ├── production-readiness.test.ts # Phase 2.5 production readiness assessment tests
 │   ├── testing-intelligence.test.ts # Phase 2.6 testing intelligence & verification coverage tests
 │   ├── technical-debt.test.ts   # Phase 2.7 technical debt & engineering risk tracking tests
+│   ├── change-analysis.test.ts  # Phase 3.1 continuous engineering & change analysis tests
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -539,6 +540,58 @@ PathForge provides a deterministic **Technical Debt & Engineering Risk Tracking*
 
 ---
 
+## Phase 3.1 — Continuous Engineering & Change Analysis Foundation
+
+PathForge provides a deterministic **Continuous Engineering & Change Analysis** foundation that compares two infrastructure snapshots (`before` and `after`) to answer: *"What changed, and did that change make the modeled environment more or less secure?"*
+
+- **The Continuous Engineering Loop**:
+  ```text
+  Model → Analyze → Change Infrastructure → Compare Before/After → Detect New Risk → Detect Resolved Risk → Detect Security Regression → Verify Change
+  ```
+
+- **Domain Change Model**:
+  - `NODE_ADDED`: Added infrastructure asset with initial configuration.
+  - `NODE_REMOVED`: Removed asset with all associated relationships.
+  - `NODE_CONFIG_CHANGED`: Mutations to zone, criticality, CIDR, or listening services.
+  - `EDGE_ADDED`: New relationship or communications link introduced.
+  - `EDGE_REMOVED`: Relationship deleted.
+  - `EDGE_CONFIG_CHANGED`: Policy updates (`allow` ↔ `deny`), encryption state changes, protocol/port restriction adjustments.
+
+- **Deterministic Security Significance Classification**:
+  Every discrete change is categorized with an explicit rationale:
+  - `security-increasing`: Hardening change (e.g. converting `allow` to `deny`, enabling encryption, removing public exposures).
+  - `security-decreasing`: Weakening change (e.g. converting `deny` to `allow`, disabling encryption, introducing unsegmented untrusted links).
+  - `security-neutral`: Layout or naming adjustment with zero security or reachability impact (e.g. renaming, description change, position movement).
+  - `security-ambiguous`: Complex topology mutation requiring contextual revalidation (e.g. rewiring intermediate nodes or replacing nodes).
+
+- **Multi-Dimensional Intelligence Deltas**:
+  - **Risk Deltas**: Compares validated finding signatures, categorizing risks into `newlyIntroduced`, `resolved`, and `unchanged`.
+  - **Regression Detection**: Formally flags `regressionDetected: true` when a change resolves $\ge 1$ existing risks while simultaneously introducing $\ge 1$ new security risks.
+  - **Attack Path Deltas**: Evaluates newly added attack paths, eliminated paths, and reachability/risk score changes across attacker entry points.
+  - **Architecture Deltas**: Structural shifts in tier bypasses, flat topologies, untrusted data ingress links, management plane exposure, and dependency concentration.
+  - **Production Readiness Deltas**: Before vs after readiness scores, rating shifts (`NOT_READY` ↔ `READY`), and newly introduced or resolved readiness blockers/warnings.
+  - **Technical Debt Deltas**: Quantitative debt score deltas, net P0/P1 debt change, newly introduced debt items, and resolved debt items.
+
+- **Deterministic Change Impact Scoring**:
+  Overall change impact is computed into transparent levels:
+  - `CRITICAL`: Introduces critical findings, creates untrusted critical asset attack paths, introduces readiness blockers, or adds P0 technical debt.
+  - `HIGH`: Introduces high findings, adds attack paths, introduces architecture regressions, or adds P1 debt.
+  - `MEDIUM`: Medium-severity risk or debt changes, or non-critical configuration alterations.
+  - `LOW`: Purely hardening or neutral changes with zero new risks.
+
+- **Interactive UI (`ChangeAnalysisPanel`)**:
+  - Integrated as **Tab 9: `CHANGES`** in `FindingsDrawer` with `GitCompare` icon.
+  - Displays Baseline snapshot status badge (`Baseline Active`, `No Baseline`).
+  - Overall change impact level badge (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`) and summary metrics strip (Changes, New Risks, Fixed, Regressions).
+  - Prominent red alert banner upon detected security regressions.
+  - Sub-tabs: `CHANGES` (with significance pills, category badges, and canvas locate buttons), `RISK DELTA` (resolved vs introduced findings), `ATTACK PATHS` (path deltas and risk shifts), `INTELLIGENCE DELTA` (readiness and technical debt deltas), and deterministic recommendations.
+
+- **Scope Disclosures & Phase 3 Boundaries**:
+  - Operates 100% locally with zero cloud dependencies, zero external database requirements, zero telemetry, and ₹0 operating cost.
+  - CI/CD pipelines, GitHub PR comment automation, and persistent history tracking are strictly scheduled for subsequent Phase 3 milestones.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -558,7 +611,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (280 unit & integration tests across 23 test files):
+Execute the full Vitest suite (321 unit & integration tests across 24 test files):
 
 ```bash
 npm run test

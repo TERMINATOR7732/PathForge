@@ -13,3 +13,4 @@ export * from './architecture/index.js';
 export * from './production-readiness/index.js';
 export * from './testing-intelligence/index.js';
 export * from './technical-debt/index.js';
+export * from './change-analysis/index.js';
