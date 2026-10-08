@@ -18,3 +18,4 @@ export * from './change-ingestion/index.js';
 export * from './git/index.js';
 export * from './github/index.js';
 export * from './history/index.js';
+export * from './ci-gate/index.js';

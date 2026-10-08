@@ -12,7 +12,10 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev": "npm run dev --workspace=@pathforge/web"
+    "dev": "npm run dev --workspace=@pathforge/web",
+    "gate": "node apps/cli/dist/index.js gate",
+    "analyze": "node apps/cli/dist/index.js analyze",
+    "gate:test": "node apps/cli/dist/index.js gate environments/demo/standard-web-app.json"
   },
   "devDependencies": {
     "typescript": "^5.7.3",

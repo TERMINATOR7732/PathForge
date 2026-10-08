@@ -469,15 +469,36 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
 
 ---
 
-### Phase 3.6 — Engineering Change Rules & Policy Enforcement *(PLANNED)*
-- Guardrail rules preventing merges that introduce security regressions
-- Configurable failure criteria (e.g., fail if new critical risk or P0 debt introduced)
-- Deterministic change approval gates
+### Phase 3.6 — CI/CD Engineering Gates & Automated Verification *(STATUS: COMPLETE)*
+- [x] Pure Deterministic Core CI Gate Domain (`packages/core/src/ci-gate/`):
+  - `types.ts`: `CiGateStatus` (`PASS`, `WARN`, `BLOCK`, `INSUFFICIENT_EVIDENCE`), `CiGateExitCode` (`0`, `1`, `2`, `3`), status/exit code converters, `CiGatePolicy`, `CiGateReason`, `CiGatePassedControl`, `CiGateEvidenceGap`, `CiGateSummary`, `CiGateTargetInfo`, `CiGateResult` (Schema v1).
+  - `policy.ts`: Conservative default policy, policy validation rejecting malformed types/ranges, policy merging, custom threshold support.
+  - `evaluator.ts`: Pure deterministic `evaluateCiGate(input, policy)` composing validation findings, attack path intelligence, architecture quality, production readiness blockers, testing coverage, technical debt, and proven topology regressions.
+  - `formatter.ts`: Machine-readable JSON output (schema v1, secret-scrubbed) and human-readable terminal output (clean alignment, no decorative emojis).
+  - `config.ts`: Configuration file loader (`.pathforge/gate.json`), strict precedence (`Defaults → File → CLI Flags`).
+  - `index.ts`: Module exports re-exported from `@pathforge/core`.
+- [x] Standalone CLI Workspace (`@pathforge/cli` / `apps/cli/`):
+  - Bin executable `pathforge` supporting `gate` and `analyze` commands.
+  - Options: `--format <text|json>`, `--policy <path>`, `--baseline <path>`, `--strict`, `--require-baseline`, `--require-testing`, `--min-readiness`, `--min-debt`.
+  - Deterministic exit codes `0`, `1`, `2`, `3` suitable for automated CI pipelines.
+- [x] GitHub Actions Workflow Integration (`.github/workflows/pathforge-gate.yml`):
+  - Clean workflow executing `npm run build` and `npm run gate` on push and PR.
+  - 100% offline-compatible, ₹0 cost, zero secrets, zero external GitHub API calls.
+- [x] Interactive Web Workspace Integration (`apps/web/src/components/CiGateView.tsx`):
+  - Integrated under `ChangeAnalysisPanel` (`CI GATE` sub-tab).
+  - Real-time gate status badge, exit code, score gauge, copyable CI command button ("COPY CI COMMAND").
+  - Interactive policy configuration drawer with live re-evaluation.
+  - Blocking Reasons cards, Warnings cards, Passed Controls, Evidence Gaps (Unverified Operational Controls), and Machine-readable JSON schema v1 preview.
+- [x] Automated Test Suite:
+  - 560 unit and integration tests passing across 29 test files (32 tests in `tests/ci-gate.test.ts` covering policy validation, exit code mapping, evaluator logic, strict mode, regression gating, truthful governance, secret redaction, JSON formatting, human formatting, and CLI execution).
+- [x] Strict Scope Boundaries & Governance:
+  - 100% local-first, ₹0 operating cost, zero AI/LLMs, zero cloud dependencies, zero external database requirements.
 
-### Phase 3.7 — CI/CD & Headless Verification CLI *(PLANNED)*
-- Headless CLI runner for executing change analysis in local git hooks and CI pipelines
-- Output formats: JSON, JUnit XML, Markdown summaries
-- PR comment markdown generator for GitHub / GitLab diff reviews
+---
+
+### Phase 3.7 — CI/CD & Headless Verification CLI Enhancements *(PLANNED)*
+- Output formatters: JUnit XML and Markdown PR summaries
+- Multi-environment batch gating
 
 ### Phase 3.8 — Infrastructure-as-Code (IaC) Continuous Drift Detection *(PLANNED)*
 - Import parser for Terraform / Docker Compose diffs

@@ -1,0 +1,37 @@
+name: PathForge Engineering Gate
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: Verify Infrastructure Security Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build PathForge workspace
+        run: npm run build
+
+      - name: Run PathForge Engineering Gate (Human Output)
+        run: npm run gate -- environments/demo/standard-web-app.json
+
+      - name: Run PathForge Engineering Gate (Machine-Readable JSON Output)
+        if: always()
+        run: npm run gate -- environments/demo/standard-web-app.json --format json > gate-result.json

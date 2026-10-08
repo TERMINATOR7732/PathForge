@@ -1,0 +1,22 @@
+{
+  "name": "@pathforge/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "pathforge": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "gate": "node ./dist/index.js gate",
+    "analyze": "node ./dist/index.js analyze"
+  },
+  "dependencies": {
+    "@pathforge/shared": "*",
+    "@pathforge/core": "*",
+    "@pathforge/validator": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

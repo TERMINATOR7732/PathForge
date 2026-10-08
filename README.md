@@ -86,7 +86,7 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 528 tests passing across 28 test files)
+├── tests/                       # Automated test suite (Vitest — 560 tests passing across 29 test files)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
@@ -114,6 +114,7 @@ PathForge/
 │   ├── local-git.test.ts        # Phase 3.3 local git repository change analysis tests
 │   ├── github-pr.test.ts        # Phase 3.4 read-only GitHub repository & pull request tests
 │   ├── engineering-history.test.ts # Phase 3.5 persistent engineering history & trends tests
+│   ├── ci-gate.test.ts          # Phase 3.6 CI/CD engineering gates & automated verification tests
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -842,6 +843,70 @@ Longitudinal Trend Direction Evaluation (Scores, Findings, Exposure, Debt)
 
 ---
 
+## Phase 3.6 — CI/CD Engineering Gates & Automated Verification
+
+Phase 3.6 establishes the deterministic **CI/CD Engineering Gate** foundation for PathForge. It evaluates modeled infrastructure against configurable engineering policies and emits machine-readable and human-readable verdicts suitable for CI/CD pipelines:
+
+```text
+Repository / PR / Environment Target
+                 ↓
+PathForge Analysis & Intelligence Pipeline
+                 ↓
+Deterministic CI Gate Evaluation (evaluateCiGate)
+                 ↓
+Decision: PASS | WARN | BLOCK | INSUFFICIENT_EVIDENCE
+                 ↓
+Deterministic Exit Codes (0, 1, 2, 3) & JSON Schema v1 Output
+```
+
+- **Deterministic Exit Code Contract**:
+  - `0 = PASS`: All policy controls satisfied. Zero critical findings or unallowed warnings.
+  - `1 = WARN`: Non-blocking operational warnings or elevated risks detected (passes in non-strict mode).
+  - `2 = BLOCK`: Hard policy violation, critical security finding, critical attack path, production readiness block, or proven regression.
+  - `3 = INSUFFICIENT_EVIDENCE`: Required baseline or testing evidence missing, file not found, or invalid schema.
+
+- **Configurable Policy Model (`packages/core/src/ci-gate/`)**:
+  - Conservative defaults: blocks on critical findings, critical attack paths, production blockers, critical debt, and proven regressions.
+  - Policy configuration file: `.pathforge/gate.json`.
+  - Deterministic precedence: `Built-in Defaults → .pathforge/gate.json → CLI Flags`.
+  - Strict mode (`--strict` / `allowWarnings: false`): elevates warnings to `BLOCK` (exit code 2).
+
+- **Truthful Security Governance**:
+  - Code changes alone cannot fabricate security regressions without proven before/after topology deltas.
+  - Unverified operational controls (backups, failover, telemetry) are cataloged explicitly under `evidenceGaps`, never fabricated as failed controls.
+
+- **CLI Integration (`@pathforge/cli`)**:
+  ```bash
+  # Evaluate environment against gate policy
+  npm run gate -- environments/demo/standard-web-app.json
+
+  # Machine-readable JSON output for CI pipelines
+  npm run gate -- environments/demo/standard-web-app.json --format json
+
+  # Evaluate with strict mode (warnings cause failure)
+  npm run gate -- environments/demo/standard-web-app.json --strict
+
+  # Evaluate against a baseline for regression checking
+  npm run gate -- environments/demo/current.json --baseline environments/demo/baseline.json
+
+  # Run analysis without gating (exit code 0)
+  npm run analyze -- environments/demo/standard-web-app.json
+  ```
+
+- **Interactive UI Integration (`ChangeAnalysisPanel` · Sub-Tab `CI GATE`)**:
+  - Top Status Banner with gate badge (`PASS`, `WARN`, `BLOCK`, `INSUFFICIENT_EVIDENCE`), exit code, and score.
+  - Copyable CI command action ("COPY CI COMMAND") with visual confirmation.
+  - Interactive Policy Controls drawer with real-time toggle re-evaluation.
+  - Blocking Reasons cards with severity badges, category tags, and evidence traces.
+  - Non-blocking Warnings cards.
+  - Side-by-side Passed Controls vs Evidence Gaps (Unverified Controls) split view.
+  - Expandable machine-readable JSON schema v1 preview.
+
+- **GitHub Actions Workflow Example (`.github/workflows/pathforge-gate.yml`)**:
+  - 100% offline-compatible, ₹0 operating cost, zero secrets, and zero GitHub API dependencies.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -861,7 +926,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (528 unit & integration tests across 28 test files):
+Execute the full Vitest suite (560 unit & integration tests across 29 test files):
 
 ```bash
 npm run test
@@ -869,7 +934,7 @@ npm run test
 
 ### Building the Project
 
-Build all packages (`@pathforge/shared`, `@pathforge/core`, `@pathforge/validator`, and `@pathforge/web`):
+Build all packages (`@pathforge/shared`, `@pathforge/core`, `@pathforge/validator`, `@pathforge/cli`, and `@pathforge/web`):
 
 ```bash
 npm run build

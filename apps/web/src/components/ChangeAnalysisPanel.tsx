@@ -42,8 +42,10 @@ import {
   Lock,
   Eye,
   History,
+  ShieldCheck,
 } from 'lucide-react';
 import { EngineeringHistoryView } from './EngineeringHistoryView.js';
+import { CiGateView } from './CiGateView.js';
 
 const SAMPLE_APP_DIFF = `diff --git a/src/api.ts b/src/api.ts
 --- a/src/api.ts
@@ -362,7 +364,7 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
   testingIntelligence,
   technicalDebt,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'changes' | 'risks' | 'paths' | 'intelligence' | 'source' | 'history'>('changes');
+  const [activeSubTab, setActiveSubTab] = useState<'changes' | 'risks' | 'paths' | 'intelligence' | 'source' | 'history' | 'gate'>('changes');
   const [significanceFilter, setSignificanceFilter] = useState<'all' | SecuritySignificance>('all');
   const [diffText, setDiffText] = useState<string>(SAMPLE_APP_DIFF);
   const [sourceMode, setSourceMode] = useState<'git' | 'github' | 'diff'>('git');
@@ -711,6 +713,17 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
         >
           <History className="w-3.5 h-3.5 text-[#3fb950]" />
           <span>ENGINEERING HISTORY</span>
+        </button>
+        <button
+          onClick={() => setActiveSubTab('gate')}
+          className={`px-3 py-1.5 rounded transition-colors flex items-center space-x-1.5 ${
+            activeSubTab === 'gate'
+              ? 'bg-[#21262d] text-[#e6edf3] font-semibold border border-[#30363d]'
+              : 'text-[#8b949e] hover:text-[#c9d1d9]'
+          }`}
+        >
+          <ShieldCheck className="w-3.5 h-3.5 text-[#58a6ff]" />
+          <span>CI GATE</span>
         </button>
       </div>
 
@@ -1865,6 +1878,20 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
       {/* Sub-Tab F: Persistent Engineering History */}
       {activeSubTab === 'history' && (
         <EngineeringHistoryView
+          environment={environment ?? null}
+          validationResult={validationResult ?? null}
+          attackPathAnalysis={attackPathAnalysis}
+          architectureResult={architectureResult}
+          productionReadiness={productionReadiness}
+          testingIntelligence={testingIntelligence}
+          technicalDebt={technicalDebt}
+          changeAnalysis={changeAnalysis}
+        />
+      )}
+
+      {/* Sub-Tab G: CI/CD Engineering Gate */}
+      {activeSubTab === 'gate' && (
+        <CiGateView
           environment={environment ?? null}
           validationResult={validationResult ?? null}
           attackPathAnalysis={attackPathAnalysis}
