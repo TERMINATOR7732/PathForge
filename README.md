@@ -86,7 +86,7 @@ PathForge/
 │       ├── standard-web-app.json     # Hardened 3-tier baseline (passes validation)
 │       └── compromised-direct-db.json # Chaos lab testbed (triggers critical findings)
 │
-├── tests/                       # Automated test suite (Vitest — 278 tests passing)
+├── tests/                       # Automated test suite (Vitest — 280 tests passing)
 │   ├── node.test.ts             # Node domain lifecycle & mutations
 │   ├── edge.test.ts             # Edge domain lifecycle & metadata
 │   ├── graph.test.ts            # Graph traversals, degrees, cascading deletions
@@ -511,16 +511,16 @@ PathForge provides a deterministic **Technical Debt & Engineering Risk Tracking*
 
 - **Deterministic Prioritization & P0–P3 Scoring**:
   - Transparent 0–100 integer score incorporating:
-    - Base severity points (`CRITICAL`: 40, `HIGH`: 25, `MEDIUM`: 15, `LOW`: 10)
+    - Base severity points (`CRITICAL`: 40, `HIGH`: 30, `MEDIUM`: 20, `LOW`: 10)
     - Crown jewel or sensitive asset involvement (+10 to +20)
     - Untrusted ingress reachability context from attack path intelligence (+20)
     - Multi-component architectural scope (+10)
     - Verification gap (+5 to +10)
   - Strict deterministic tiers:
-    - `P0`: Critical security or architecture debt with active untrusted reachability.
-    - `P1`: High-severity structural debt or unverified critical verification assumptions.
-    - `P2`: Medium-severity structural compromises or missing verification.
-    - `P3`: Low-severity cleanup, minor complexity, or informational debt.
+    - `P0`: Critical security or architecture debt with active untrusted reachability (score 80–100).
+    - `P1`: High-severity structural debt or unverified critical verification assumptions (score 60–79).
+    - `P2`: Medium-severity structural compromises or missing verification (score 35–59).
+    - `P3`: Low-severity cleanup, minor complexity, or informational debt (score 0–34).
   - Strict tie-breaking: `priorityScore (desc) → severity (desc) → category (asc) → id (asc)`.
 
 - **Truthful Governance & Boundary Rules**:
@@ -530,7 +530,7 @@ PathForge provides a deterministic **Technical Debt & Engineering Risk Tracking*
 
 - **Interactive UI (`TechnicalDebtPanel`)**:
   - Integrated as **Tab 8: `DEBT (${activeCount} active)`** in `FindingsDrawer` with `Coins` icon.
-  - Health Score (`0–100`) and Rating badge (`LOW_DEBT`, `MANAGEABLE`, `ELEVATED`, `HIGH`, `SEVERE`).
+  - Health Score (`0–100`) and Rating badge (`LOW_DEBT`: 90–100, `MANAGEABLE`: 75–89, `ELEVATED`: 50–74, `HIGH`: 25–49, `SEVERE`: 0–24).
   - Active, P0, P1, P2, P3, Mitigated, and Unverified metric counters.
   - Priority and status filter toolbars (`ALL`, `P0`, `P1`, `P2`, `P3`, `ACTIVE`, `MITIGATED`, `UNVERIFIED`).
   - Detailed backlog cards showing "Why It Matters (Future Engineering Cost)", transparent priority factors, evidence sources, and "Locate" canvas buttons.
@@ -558,7 +558,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (278 unit & integration tests across 23 test files):
+Execute the full Vitest suite (280 unit & integration tests across 23 test files):
 
 ```bash
 npm run test

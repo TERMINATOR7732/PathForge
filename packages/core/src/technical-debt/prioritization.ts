@@ -26,6 +26,30 @@ export interface PrioritizationResult {
 }
 
 /**
+ * Deterministically maps an aggregate overall debt score (0-100) to qualitative rating.
+ * 90–100 → LOW_DEBT
+ * 75–89  → MANAGEABLE
+ * 50–74  → ELEVATED
+ * 25–49  → HIGH
+ * 0–24   → SEVERE
+ */
+export function getDebtRating(overallScore: number): DebtRating {
+  if (overallScore >= 90) {
+    return 'LOW_DEBT';
+  }
+  if (overallScore >= 75) {
+    return 'MANAGEABLE';
+  }
+  if (overallScore >= 50) {
+    return 'ELEVATED';
+  }
+  if (overallScore >= 25) {
+    return 'HIGH';
+  }
+  return 'SEVERE';
+}
+
+/**
  * Deterministically calculates a transparent 0-100 priority score and priority level
  * for a technical debt item based on observable architectural facts.
  */
@@ -40,12 +64,12 @@ export function calculateDebtPriority(input: PrioritizationInput): Prioritizatio
       factors.push({ id: 'sev-crit', label: 'Critical severity impact', points: 40 });
       break;
     case 'HIGH':
-      score += 25;
-      factors.push({ id: 'sev-high', label: 'High severity impact', points: 25 });
+      score += 30;
+      factors.push({ id: 'sev-high', label: 'High severity impact', points: 30 });
       break;
     case 'MEDIUM':
-      score += 15;
-      factors.push({ id: 'sev-med', label: 'Medium severity impact', points: 15 });
+      score += 20;
+      factors.push({ id: 'sev-med', label: 'Medium severity impact', points: 20 });
       break;
     case 'LOW':
     default:
@@ -218,18 +242,7 @@ export function calculateDebtSummary(
   }
 
   // Determine qualitative debt rating
-  let rating: DebtRating;
-  if (overallScore >= 90) {
-    rating = 'LOW_DEBT';
-  } else if (overallScore >= 75) {
-    rating = 'MANAGEABLE';
-  } else if (overallScore >= 50) {
-    rating = 'ELEVATED';
-  } else if (overallScore >= 25) {
-    rating = 'HIGH';
-  } else {
-    rating = 'SEVERE';
-  }
+  const rating: DebtRating = getDebtRating(overallScore);
 
   const sortedActive = sortDebtItems(activeItems);
   const topPriorities = sortedActive.slice(0, 5);

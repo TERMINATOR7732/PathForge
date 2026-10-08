@@ -4,6 +4,8 @@ import {
   assessTechnicalDebt,
   instantiateScenario,
   TECHNICAL_DEBT_CATALOG,
+  getDebtRating,
+  calculateDebtPriority,
 } from '@pathforge/core';
 import {
   createDefaultRuleRegistry,
@@ -455,5 +457,70 @@ describe('Phase 2.7 — Technical Debt & Engineering Risk Tracking', () => {
     expect(categories.has('testing-debt')).toBe(true);
     expect(categories.has('operational-debt')).toBe(true);
     expect(categories.has('complexity-debt')).toBe(true);
+  });
+
+  // Test 26: Boundary tests for aggregate rating thresholds
+  it('26. verifies exact debt rating classification across all 10 boundary values', () => {
+    expect(getDebtRating(100)).toBe('LOW_DEBT');
+    expect(getDebtRating(90)).toBe('LOW_DEBT');
+    expect(getDebtRating(89)).toBe('MANAGEABLE');
+    expect(getDebtRating(75)).toBe('MANAGEABLE');
+    expect(getDebtRating(74)).toBe('ELEVATED');
+    expect(getDebtRating(50)).toBe('ELEVATED');
+    expect(getDebtRating(49)).toBe('HIGH');
+    expect(getDebtRating(25)).toBe('HIGH');
+    expect(getDebtRating(24)).toBe('SEVERE');
+    expect(getDebtRating(0)).toBe('SEVERE');
+  });
+
+  // Test 27: Priority severity base weights and clamping
+  it('27. evaluates priority severity weights (40/30/20/10) and clamps max score to 100', () => {
+    const baseInput = {
+      category: 'security-debt' as const,
+      hasCriticalAsset: false,
+      hasSensitiveAsset: false,
+      reachableFromUntrustedIngress: false,
+      affectedComponentsCount: 0,
+      isCriticalPropertyUnverified: false,
+      isHighPropertyUnverified: false,
+    };
+
+    const crit = calculateDebtPriority({ ...baseInput, severity: 'CRITICAL' });
+    const high = calculateDebtPriority({ ...baseInput, severity: 'HIGH' });
+    const med = calculateDebtPriority({ ...baseInput, severity: 'MEDIUM' });
+    const low = calculateDebtPriority({ ...baseInput, severity: 'LOW' });
+
+    expect(crit.factors.find((f) => f.id === 'sev-crit')?.points).toBe(40);
+    expect(high.factors.find((f) => f.id === 'sev-high')?.points).toBe(30);
+    expect(med.factors.find((f) => f.id === 'sev-med')?.points).toBe(20);
+    expect(low.factors.find((f) => f.id === 'sev-low')?.points).toBe(10);
+
+    // Max score clamping
+    const maxed = calculateDebtPriority({
+      severity: 'CRITICAL',
+      category: 'security-debt',
+      hasCriticalAsset: true,
+      hasSensitiveAsset: false,
+      reachableFromUntrustedIngress: true,
+      affectedComponentsCount: 5,
+      isCriticalPropertyUnverified: true,
+      isHighPropertyUnverified: false,
+    });
+    // Sum is 40 + 20 + 20 + 10 + 10 = 100, clamped to 100
+    expect(maxed.score).toBe(100);
+    expect(maxed.priority).toBe('P0');
+
+    // Theoretical overflow sum (if points exceed 100)
+    const overMaxed = calculateDebtPriority({
+      severity: 'CRITICAL',
+      category: 'security-debt',
+      hasCriticalAsset: true,
+      hasSensitiveAsset: true,
+      reachableFromUntrustedIngress: true,
+      affectedComponentsCount: 5,
+      isCriticalPropertyUnverified: true,
+      isHighPropertyUnverified: true,
+    });
+    expect(overMaxed.score).toBe(100);
   });
 });

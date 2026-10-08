@@ -70,9 +70,54 @@ export function detectTechnicalDebt(ctx: DetectorContext): TechnicalDebtItem[] {
       (n) => n?.criticality === 'high' || n?.zone === 'restricted' || n?.type === 'database' || n?.type === 'redis'
     );
 
-    const reachableFromUntrustedIngress = attackPathAnalysis.attackPaths.some((p) =>
-      params.affectedNodeIds.includes(p.target.id)
+    const hasUntrustedIngressNode = params.affectedNodeIds.some((id) => {
+      const node = environment.getNode(id);
+      if (!node) return false;
+      return (
+        node.type === 'internet' ||
+        node.type === 'external_network' ||
+        node.zone === 'public'
+      );
+    });
+
+    const hasDirectUntrustedEdgeToAffected = edges.some((e) => {
+      if (e.access === 'deny') return false;
+      const srcNode = environment.getNode(e.source);
+      if (!srcNode) return false;
+      const isSrcUntrusted =
+        srcNode.type === 'internet' ||
+        srcNode.type === 'external_network' ||
+        srcNode.zone === 'public';
+      if (!isSrcUntrusted) return false;
+      const tgtNode = environment.getNode(e.target);
+      if (!tgtNode) return false;
+      // Untrusted edge directly exposing a critical/sensitive asset or non-perimeter component
+      return (
+        params.affectedNodeIds.includes(e.target) &&
+        (tgtNode.criticality === 'critical' ||
+          tgtNode.criticality === 'high' ||
+          tgtNode.zone === 'restricted' ||
+          tgtNode.type === 'database' ||
+          tgtNode.type === 'admin')
+      );
+    });
+
+    const hasHighRiskAttackPathToAffected = attackPathAnalysis.attackPaths.some(
+      (p) =>
+        (p.risk === 'critical' || p.risk === 'high') &&
+        params.affectedNodeIds.includes(p.target.id)
     );
+
+    const isSecurityOrAccessOrArch =
+      def.category === 'security-debt' ||
+      def.category === 'access-control-debt' ||
+      def.category === 'architecture-debt';
+
+    const reachableFromUntrustedIngress =
+      isSecurityOrAccessOrArch &&
+      (hasUntrustedIngressNode ||
+        hasDirectUntrustedEdgeToAffected ||
+        hasHighRiskAttackPathToAffected);
 
     const affectedComponentsCount =
       new Set([...params.affectedNodeIds, ...params.affectedEdgeIds]).size;
@@ -350,8 +395,8 @@ export function detectTechnicalDebt(ctx: DetectorContext): TechnicalDebtItem[] {
   if (arch004Findings.length > 0 || spofs.length > 0) {
     const affectedNodeIds = Array.from(
       new Set([
-        ...arch004Findings.flatMap((f) => f.affectedNodeIds),
         ...spofs.map((s) => s.nodeId),
+        ...arch004Findings.map((f) => f.affectedNodeIds[0]).filter(Boolean),
       ])
     ).sort();
 
