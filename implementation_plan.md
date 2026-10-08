@@ -415,21 +415,51 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
 
 ---
 
-### Phase 3.4 — Engineering Change Rules & Policy Enforcement *(PLANNED)*
+### Phase 3.4 — Read-only GitHub Repository & Pull Request Integration *(STATUS: COMPLETE)*
+- [x] Pure Deterministic Core GitHub Domain (`packages/core/src/github/`):
+  - `types.ts`: `GitHubRepositoryReference`, `GitHubPullRequestReference`, `PullRequestMetadata`, `PullRequestFile`, `PullRequestRiskStatus`, `PullRequestEvidence`, `GitHubAnalysisResult`, `GitHubError`, `GitHubProvider`
+  - `repository.ts`: Owner/repository format validation, canonical string representation (`owner/repo`), repository URL parsing (`https://github.com/owner/repo`), metadata retrieval
+  - `pull-request.ts`: Pull request ref parsing (`owner/repo#123`, `https://github.com/owner/repo/pull/123`), PR metadata validation, normalized changed file listing with deterministic sorting and binary detection
+  - `diff.ts`: Unified diff / patch extraction and normalization, canonical patch synthesis fallback from changed files, binary diff marker support
+  - `provider.ts`: Read-only provider abstraction, deterministic `MockGitHubProvider` for 100% offline testing, `SystemGitHubCliProvider` utilizing authenticated system `gh` CLI without token prompts or secret storage, and automatic `sanitizeErrorMessage()` token redaction (`ghp_`, `gho_`, `Bearer`, `sk-`, `AKIA`)
+  - `mapper.ts`: Direct reuse of Phase 3.2 `ingestRepositoryChanges()` without code duplication, partitioned signals summary (`partitionSignals`)
+  - `analyzer.ts`: Orchestrated `analyzePullRequest()` flow, building structured `PullRequestEvidence`, computing deterministic `PullRequestRiskStatus` (`NO_ENGINEERING_IMPACT`, `ENGINEERING_CHANGE_DETECTED`, `SECURITY_SENSITIVE_CHANGE`, `SECURITY_REGRESSION`, `SECURITY_IMPROVEMENT`, `INSUFFICIENT_EVIDENCE`), and Phase 3.1 `bridgeToChangeAnalysis()` connection
+  - `index.ts`: Module exports integrated into `@pathforge/core`
+- [x] Comprehensive Automated Test Suite:
+  - 481 unit and integration tests passing across 27 test files (57 tests in `tests/github-pr.test.ts` covering repository refs, PR refs, PR metadata, changed files, diff normalization, Phase 3.2 ingestion reuse, truthful governance, PR risk statuses, determinism across executions, provider error handling, credential sanitization, and read-only invariants).
+- [x] Interactive UI Integration (`ChangeAnalysisPanel.tsx` · `GITHUB PR (Phase 3.4)`):
+  - 3-way source toggle: `Local Git (Phase 3.3)`, `GitHub PR (Phase 3.4)`, `Raw Diff (Phase 3.2)`
+  - Target input fields for Owner, Repository, and PR Number with "Inspect Pull Request" action
+  - 4 Quick QA verification presets: QA A Normal PR, QA B Security-Sensitive PR, QA C Code-Only PR, QA D Failure / Inaccessible PR
+  - Structured failure state card displaying `ANALYSIS INCOMPLETE (INSUFFICIENT EVIDENCE)` and sanitized provider errors
+  - PR Header Card displaying PR number, title, author, state badge (`OPEN`/`MERGED`/`CLOSED`), base/head branches and commit SHAs, line stats
+  - Source disclosure banner: `Source: GitHub Pull Request ...` with `100% READ-ONLY · CLI PROVIDER BOUNDARY · ₹0 COST` badge
+  - Pull Request Risk Evaluation card with Truthful Governance Rule disclosure
+  - Category Signals breakdown strip (Security, Infra, CI/CD, Testing, Dependency)
+  - Expandable raw unified PR patch viewer with diff line counter
+- [x] Strict Scope Boundaries & Governance:
+  - 100% read-only inspection.
+  - Zero token or credential storage in PathForge domain models.
+  - Zero PR comments, review comments, Checks API, status checks, automatic merging, pushing commits, branch creation, GitHub Actions, webhooks, or cloud telemetry.
+  - ₹0 operating cost, local-first.
+
+---
+
+### Phase 3.5 — Engineering Change Rules & Policy Enforcement *(PLANNED)*
 - Guardrail rules preventing merges that introduce security regressions
 - Configurable failure criteria (e.g., fail if new critical risk or P0 debt introduced)
 - Deterministic change approval gates
 
-### Phase 3.5 — CI/CD & Headless Verification CLI *(PLANNED)*
+### Phase 3.6 — CI/CD & Headless Verification CLI *(PLANNED)*
 - Headless CLI runner for executing change analysis in local git hooks and CI pipelines
 - Output formats: JSON, JUnit XML, Markdown summaries
 - PR comment markdown generator for GitHub / GitLab diff reviews
 
-### Phase 3.6 — Continuous Engineering History & Multi-Snapshot Evolution *(PLANNED)*
+### Phase 3.7 — Continuous Engineering History & Multi-Snapshot Evolution *(PLANNED)*
 - Local timeline of engineering changes across editing sessions
 - Snapshot version tree and change history navigation
 - Time-series progression of readiness, debt, and risk scores
 
-### Phase 3.7 — Infrastructure-as-Code (IaC) Continuous Drift Detection *(PLANNED)*
+### Phase 3.8 — Infrastructure-as-Code (IaC) Continuous Drift Detection *(PLANNED)*
 - Import parser for Terraform / Docker Compose diffs
 - Compare modeled state against intended infrastructure code changes

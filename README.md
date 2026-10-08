@@ -111,6 +111,8 @@ PathForge/
 │   ├── technical-debt.test.ts   # Phase 2.7 technical debt & engineering risk tracking tests
 │   ├── change-analysis.test.ts  # Phase 3.1 continuous engineering & change analysis tests
 │   ├── change-ingestion.test.ts # Phase 3.2 repository change ingestion & normalization tests
+│   ├── local-git.test.ts        # Phase 3.3 local git repository change analysis tests
+│   ├── github-pr.test.ts        # Phase 3.4 read-only GitHub repository & pull request tests
 │   └── manual-qa-workflow.test.ts # Automated 10-step manual QA verification test
 │
 ├── vitest.config.ts             # Root test runner configuration
@@ -701,6 +703,78 @@ PathForge Phase 3.3 integrates directly with local Git repositories, enabling pr
 
 ---
 
+## Read-Only GitHub Repository & Pull Request Integration (Phase 3.4)
+
+PathForge connects directly to GitHub repositories and Pull Requests to inspect incoming pull requests and deterministically answer:
+> *"What changed in this Pull Request, what engineering/security signals did the change introduce, and what deterministic PathForge analysis can be proven?"*
+
+### Architecture & Pipeline Flow
+
+```text
+GitHub Repository / PR Target
+  ↓
+Read-Only Provider Boundary (gh CLI / System / Mock)
+  ↓
+Pull Request Metadata + Base/Head Commits + Changed Files + Unified Diff
+  ↓
+Phase 3.2 Change Ingestion (Normalization, Classification, Secret Masking, Signals)
+  ↓
+Phase 3.1 Change Analysis Bridge
+  ↓
+Pull Request Risk Status Evaluation & Truthful Evidence Synthesis
+  ↓
+Interactive Read-Only Pull Request UI Inspection
+```
+
+### Key Technical Capabilities
+
+- **Strict Read-Only Provider Boundary (`packages/core/src/github/`)**:
+  - `GitHubProvider` interface abstracting `getRepository()`, `getPullRequest()`, `getPullRequestFiles()`, and `getPullRequestDiff()`.
+  - Zero token or credential storage in PathForge domain models; uses existing system/environment credentials via `gh` CLI (e.g. `gh pr view`, `gh api`) without prompting for PAT entry.
+  - Automatic error sanitization via `sanitizeErrorMessage()` stripping tokens (`ghp_`, `gho_`, `Bearer`, `sk-`, `AKIA`) before returning error messages to UI or logs.
+  - Pure deterministic `MockGitHubProvider` enabling 100% offline unit and integration testing without network calls or rate limits.
+
+- **Deterministic Repository & Pull Request References**:
+  - Canonical repo identity: `owner/repository` format with owner (`[a-zA-Z0-9_.-]+`) and repo validation. Accepts URLs (`https://github.com/owner/repo`).
+  - PR references: Supports `owner/repo#123` shorthand and web URLs (`https://github.com/owner/repo/pull/123`).
+  - Pull request metadata: Number, title, state (`OPEN`, `MERGED`, `CLOSED`), draft flag, author, base branch/commit SHA, head branch/commit SHA, file counts, and additions/deletions.
+  - Display-only timestamp invariant: PR timestamps (`createdAt`, `updatedAt`) are retained strictly for human display; they never participate in change identity, hashing, or security delta calculations.
+
+- **Normalized File Changes & Patch Ingestion**:
+  - Directory traversal prevention (`../` disallowed) and path normalization via `normalizeRepositoryPath()`.
+  - Deterministic alphabetical file ordering.
+  - Binary file marker detection (`GIT binary patch`, `Binary files differ`).
+  - Patch synthesis fallback: Automatically constructs canonical unified diff headers from file lists if raw diff is absent.
+
+- **Deterministic Pull Request Risk Evaluation & Truthful Governance**:
+  - PR Risk Statuses:
+    - `SECURITY_REGRESSION`: Only declared when baseline vs head environment topology proves a security regression.
+    - `SECURITY_SENSITIVE_CHANGE`: High-risk engineering files modified (e.g., K8s ingress, firewall policies, auth configs, IAM, secrets).
+    - `SECURITY_IMPROVEMENT`: Modeled topology proves risk reduction or debt decrease.
+    - `ENGINEERING_CHANGE_DETECTED`: Normal application code, CI/CD, documentation, or dependency changes.
+    - `NO_ENGINEERING_IMPACT`: 0 files changed or completely non-functional changes.
+    - `INSUFFICIENT_EVIDENCE`: PR not found, inaccessible repository, provider failure, or rate limit.
+  - **Truthful Governance Invariant**: Code/patch inspection alone never fabricates findings or declares regressions without correlated before/after infrastructure topology.
+
+- **Interactive UI Integration (`ChangeAnalysisPanel` · Sub-Tab: `GITHUB PR (Phase 3.4)`)**:
+  - Target input bar: Owner, Repository, PR Number, and "Inspect Pull Request" action.
+  - 4 Quick QA verification presets:
+    - `QA A`: Normal PR (App code changes in `src/api.ts`)
+    - `QA B`: Security-Sensitive PR (Kubernetes network policy ingress modification)
+    - `QA C`: Code-Only PR (CI workflow and automated security scan step)
+    - `QA D`: Inaccessible / Failure PR (Error handling, non-existent PR, `INSUFFICIENT_EVIDENCE`)
+  - Source disclosure banner: `https://github.com/owner/repo/pull/123` with `100% READ-ONLY · CLI PROVIDER BOUNDARY · ₹0 COST` badge.
+  - PR Metadata card: Author, State badge (`OPEN`/`MERGED`/`CLOSED`), base/head branches and commit SHAs, line stats (`+lines` / `-lines`).
+  - Pull Request Risk Evaluation card with Truthful Governance rule badge.
+  - PR Signals breakdown strip: Security, Infra, CI/CD, Testing, and Dependency signals.
+  - Expandable raw unified PR patch viewer with diff line counter.
+
+- **Strict Scope Boundaries**:
+  - 100% read-only inspection.
+  - Strictly zero PR comments, review comments, Checks API, status checks, automatic merging, pushing commits, branch creation, GitHub Actions, webhooks, or cloud telemetry.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -720,7 +794,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (424 unit & integration tests across 26 test files):
+Execute the full Vitest suite (481 unit & integration tests across 27 test files):
 
 ```bash
 npm run test

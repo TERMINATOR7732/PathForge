@@ -7,6 +7,8 @@ import {
   bridgeToChangeAnalysis,
   GitComparisonMode,
   GitRepository,
+  PullRequestRiskStatus,
+  partitionSignals,
 } from '@pathforge/core';
 import {
   AlertOctagon,
@@ -29,6 +31,7 @@ import {
   GitBranch,
   GitCommit,
   FolderGit2,
+  GitPullRequest,
   Lock,
   Eye,
 } from 'lucide-react';
@@ -202,6 +205,124 @@ const LOCAL_GIT_SCENARIOS: Record<'A' | 'B' | 'C' | 'D' | 'E' | 'F', LocalGitSce
   },
 };
 
+interface GitHubPrScenario {
+  id: 'A' | 'B' | 'C' | 'D';
+  name: string;
+  badge: string;
+  description: string;
+  owner: string;
+  repository: string;
+  prNumber: number;
+  title: string;
+  author: string;
+  state: 'OPEN' | 'MERGED' | 'CLOSED';
+  isDraft: boolean;
+  baseBranch: string;
+  headBranch: string;
+  baseSha: string;
+  headSha: string;
+  filesCount: number;
+  additions: number;
+  deletions: number;
+  diff: string;
+  isError?: boolean;
+  errorMessage?: string;
+  riskStatus: PullRequestRiskStatus;
+}
+
+const GITHUB_PR_SCENARIOS: Record<'A' | 'B' | 'C' | 'D', GitHubPrScenario> = {
+  A: {
+    id: 'A',
+    name: 'QA A: Normal PR',
+    badge: 'APP CODE',
+    description: 'Application service modification updating payment calculation logic (src/api.ts).',
+    owner: 'acme-corp',
+    repository: 'cloud-infrastructure',
+    prNumber: 101,
+    title: 'Update payment calculation service',
+    author: 'alice-engineer',
+    state: 'OPEN',
+    isDraft: false,
+    baseBranch: 'main',
+    headBranch: 'feature/payment-calc',
+    baseSha: '7fd1a60b01f91b314f59955a4e4d4e80d8edf11d',
+    headSha: 'ae2acad5c06dc59578955187a8972329a7f2ee22',
+    filesCount: 1,
+    additions: 3,
+    deletions: 0,
+    diff: SAMPLE_APP_DIFF,
+    riskStatus: 'ENGINEERING_CHANGE_DETECTED',
+  },
+  B: {
+    id: 'B',
+    name: 'QA B: Security-Sensitive PR',
+    badge: 'INGRESS CONFIG',
+    description: 'Kubernetes network policy rule modified to allow database ingress on port 5432.',
+    owner: 'acme-corp',
+    repository: 'cloud-infrastructure',
+    prNumber: 102,
+    title: 'Allow database ingress for backend pods',
+    author: 'dev-secops',
+    state: 'OPEN',
+    isDraft: false,
+    baseBranch: 'main',
+    headBranch: 'feature/k8s-ingress',
+    baseSha: '7fd1a60b01f91b314f59955a4e4d4e80d8edf11d',
+    headSha: 'f31a982cb123e4567890abcdef1234567890abcd',
+    filesCount: 1,
+    additions: 4,
+    deletions: 0,
+    diff: SAMPLE_INFRA_DIFF,
+    riskStatus: 'SECURITY_SENSITIVE_CHANGE',
+  },
+  C: {
+    id: 'C',
+    name: 'QA C: Code-Only PR',
+    badge: 'CI & TESTS',
+    description: 'CI workflow and automated security scan step added (.github/workflows/deploy.yml).',
+    owner: 'acme-corp',
+    repository: 'cloud-infrastructure',
+    prNumber: 103,
+    title: 'Integrate Snyk automated scanning step into CI',
+    author: 'qa-charlie',
+    state: 'OPEN',
+    isDraft: false,
+    baseBranch: 'main',
+    headBranch: 'ci/security-scan',
+    baseSha: '7fd1a60b01f91b314f59955a4e4d4e80d8edf11d',
+    headSha: '89bc321def4567890abcdef1234567890abcdef1',
+    filesCount: 1,
+    additions: 4,
+    deletions: 0,
+    diff: SAMPLE_CI_DIFF,
+    riskStatus: 'ENGINEERING_CHANGE_DETECTED',
+  },
+  D: {
+    id: 'D',
+    name: 'QA D: Inaccessible / Failure PR',
+    badge: 'ERROR / NOT FOUND',
+    description: 'Repository or pull request not found, permission denied, or rate limited.',
+    owner: 'private-org',
+    repository: 'restricted-infra',
+    prNumber: 999,
+    title: 'Restricted Pull Request',
+    author: 'unknown',
+    state: 'OPEN',
+    isDraft: false,
+    baseBranch: 'main',
+    headBranch: 'patch',
+    baseSha: '0000000000000000000000000000000000000000',
+    headSha: '0000000000000000000000000000000000000000',
+    filesCount: 0,
+    additions: 0,
+    deletions: 0,
+    diff: '',
+    isError: true,
+    errorMessage: '[REPOSITORY_NOT_FOUND] Repository private-org/restricted-infra was not found or access is restricted.',
+    riskStatus: 'INSUFFICIENT_EVIDENCE',
+  },
+};
+
 interface ChangeAnalysisPanelProps {
   changeAnalysis: ChangeAnalysisResult | null;
   baselineSnapshot: EnvironmentSnapshot | null;
@@ -221,7 +342,7 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
   const [activeSubTab, setActiveSubTab] = useState<'changes' | 'risks' | 'paths' | 'intelligence' | 'source'>('changes');
   const [significanceFilter, setSignificanceFilter] = useState<'all' | SecuritySignificance>('all');
   const [diffText, setDiffText] = useState<string>(SAMPLE_APP_DIFF);
-  const [sourceMode, setSourceMode] = useState<'git' | 'diff'>('git');
+  const [sourceMode, setSourceMode] = useState<'git' | 'github' | 'diff'>('git');
   const [selectedQaScenario, setSelectedQaScenario] = useState<'A' | 'B' | 'C' | 'D' | 'E' | 'F'>('B');
   const [gitRepoPath, setGitRepoPath] = useState<string>('e:/MHT CET REGISTRATION/BE/Task/PathForge');
   const [gitMode, setGitMode] = useState<GitComparisonMode>('working-tree-vs-head');
@@ -231,11 +352,23 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
   const [showRawDiff, setShowRawDiff] = useState<boolean>(false);
   const [inspectionTimestamp, setInspectionTimestamp] = useState<string>(new Date().toLocaleTimeString());
 
+  // GitHub PR state
+  const [selectedGhScenario, setSelectedGhScenario] = useState<'A' | 'B' | 'C' | 'D'>('B');
+  const [ghOwner, setGhOwner] = useState<string>('acme-corp');
+  const [ghRepo, setGhRepo] = useState<string>('cloud-infrastructure');
+  const [ghPrNumber, setGhPrNumber] = useState<string>('102');
+  const [ghInspectionTimestamp, setGhInspectionTimestamp] = useState<string>(new Date().toLocaleTimeString());
+
   const activeScenario = LOCAL_GIT_SCENARIOS[selectedQaScenario];
+  const activeGhScenario = GITHUB_PR_SCENARIOS[selectedGhScenario];
 
   const activeDiff = useMemo(() => {
     if (sourceMode === 'diff') {
       return diffText;
+    }
+    if (sourceMode === 'github') {
+      if (activeGhScenario.isError) return '';
+      return activeGhScenario.diff;
     }
     if (selectedQaScenario === 'A') {
       return '';
@@ -244,10 +377,11 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
       return LOCAL_GIT_SCENARIOS.E.diff;
     }
     return activeScenario.diff;
-  }, [sourceMode, diffText, selectedQaScenario, includeUntracked, activeScenario]);
+  }, [sourceMode, diffText, selectedQaScenario, includeUntracked, activeScenario, selectedGhScenario, activeGhScenario]);
 
   const ingestedChangeSet = useMemo(() => ingestRepositoryChanges(activeDiff), [activeDiff]);
   const ingestionBridge = useMemo(() => bridgeToChangeAnalysis(ingestedChangeSet), [ingestedChangeSet]);
+  const ghSignalsSummary = useMemo(() => partitionSignals(ingestedChangeSet.signals), [ingestedChangeSet]);
 
   if (!baselineSnapshot) {
     return (
@@ -338,6 +472,24 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
           badge: 'bg-[#30363d]/30 text-[#8b949e] border-[#30363d]',
           icon: Minus,
         };
+    }
+  };
+
+  const getPrRiskBadge = (status: PullRequestRiskStatus) => {
+    switch (status) {
+      case 'SECURITY_REGRESSION':
+        return 'bg-[#da3633]/20 text-[#f85149] border-[#da3633]/40';
+      case 'SECURITY_SENSITIVE_CHANGE':
+        return 'bg-[#d29922]/20 text-[#d29922] border-[#d29922]/40';
+      case 'SECURITY_IMPROVEMENT':
+        return 'bg-[#238636]/20 text-[#3fb950] border-[#238636]/40';
+      case 'ENGINEERING_CHANGE_DETECTED':
+        return 'bg-[#1f6feb]/20 text-[#58a6ff] border-[#1f6feb]/40';
+      case 'NO_ENGINEERING_IMPACT':
+        return 'bg-[#8b949e]/20 text-[#8b949e] border-[#8b949e]/40';
+      case 'INSUFFICIENT_EVIDENCE':
+      default:
+        return 'bg-[#8b949e]/20 text-[#c9d1d9] border-[#8b949e]/40';
     }
   };
 
@@ -523,8 +675,8 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
               : 'text-[#8b949e] hover:text-[#c9d1d9]'
           }`}
         >
-          <FolderGit2 className="w-3.5 h-3.5 text-[#58a6ff]" />
-          <span>LOCAL GIT & DIFF ({ingestedChangeSet.files.length})</span>
+          <GitPullRequest className="w-3.5 h-3.5 text-[#58a6ff]" />
+          <span>CHANGE SOURCE ({ingestedChangeSet.files.length})</span>
         </button>
       </div>
 
@@ -908,7 +1060,18 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
                 }`}
               >
                 <FolderGit2 className="w-3.5 h-3.5" />
-                <span>Local Git Repository (Phase 3.3)</span>
+                <span>Local Git (Phase 3.3)</span>
+              </button>
+              <button
+                onClick={() => setSourceMode('github')}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded transition-colors ${
+                  sourceMode === 'github'
+                    ? 'bg-[#8957e5] text-white font-semibold'
+                    : 'bg-[#21262d] text-[#8b949e] hover:text-[#c9d1d9]'
+                }`}
+              >
+                <GitPullRequest className="w-3.5 h-3.5" />
+                <span>GitHub PR (Phase 3.4)</span>
               </button>
               <button
                 onClick={() => setSourceMode('diff')}
@@ -919,12 +1082,12 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
                 }`}
               >
                 <FileCode className="w-3.5 h-3.5" />
-                <span>Raw Unified Diff (Phase 3.2)</span>
+                <span>Raw Diff (Phase 3.2)</span>
               </button>
             </div>
             <div className="flex items-center space-x-1.5 text-[11px] font-mono text-[#8b949e]">
               <Lock className="w-3 h-3 text-[#3fb950]" />
-              <span className="hidden sm:inline">100% Offline · Zero Remote Exposure</span>
+              <span className="hidden sm:inline">100% Read-Only · Zero Remote Credential Storage</span>
             </div>
           </div>
 
@@ -1204,6 +1367,274 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
                     </pre>
                   )}
                 </div>
+              )}
+            </div>
+          ) : sourceMode === 'github' ? (
+            /* GitHub Pull Request Mode (Phase 3.4) */
+            <div className="space-y-4">
+              {/* Target Input Bar */}
+              <div className="p-3 rounded-lg bg-[#161b22] border border-[#30363d] space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs font-mono font-semibold text-[#e6edf3] flex items-center space-x-1.5">
+                    <GitPullRequest className="w-3.5 h-3.5 text-[#8957e5]" />
+                    <span>GitHub Pull Request Target</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setGhInspectionTimestamp(new Date().toLocaleTimeString())}
+                      className="flex items-center space-x-1 px-2.5 py-1 rounded bg-[#21262d] border border-[#30363d] text-xs text-[#8957e5] hover:bg-[#30363d] transition-colors"
+                      title="Inspect and analyze remote Pull Request"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Inspect Pull Request</span>
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-[#8b949e] block mb-1">Owner / Organization</label>
+                    <input
+                      type="text"
+                      value={ghOwner}
+                      onChange={(e) => setGhOwner(e.target.value)}
+                      placeholder="e.g. acme-corp"
+                      className="w-full p-2 rounded bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] font-mono text-xs focus:outline-none focus:border-[#8957e5]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-[#8b949e] block mb-1">Repository Name</label>
+                    <input
+                      type="text"
+                      value={ghRepo}
+                      onChange={(e) => setGhRepo(e.target.value)}
+                      placeholder="e.g. cloud-infrastructure"
+                      className="w-full p-2 rounded bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] font-mono text-xs focus:outline-none focus:border-[#8957e5]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-mono uppercase text-[#8b949e] block mb-1">PR Number</label>
+                    <input
+                      type="number"
+                      value={ghPrNumber}
+                      onChange={(e) => setGhPrNumber(e.target.value)}
+                      placeholder="e.g. 102"
+                      className="w-full p-2 rounded bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] font-mono text-xs focus:outline-none focus:border-[#8957e5]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Verification Presets (QA A - QA D) */}
+              <div className="p-3 rounded-lg bg-[#161b22] border border-[#30363d] space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs font-mono font-semibold text-[#e6edf3]">
+                    Quick QA Verification Presets:
+                  </div>
+                  <span className="text-[11px] font-mono text-[#8b949e]">
+                    Deterministic test pull requests & failure states
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs font-mono">
+                  {(['A', 'B', 'C', 'D'] as const).map((id) => {
+                    const sc = GITHUB_PR_SCENARIOS[id];
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => {
+                          setSelectedGhScenario(id);
+                          setGhOwner(sc.owner);
+                          setGhRepo(sc.repository);
+                          setGhPrNumber(String(sc.prNumber));
+                        }}
+                        className={`p-2 rounded text-left transition-colors border ${
+                          selectedGhScenario === id
+                            ? 'bg-[#21262d] border-[#8957e5] text-[#e6edf3]'
+                            : 'bg-[#0d1117] border-[#21262d] text-[#8b949e] hover:border-[#30363d]'
+                        }`}
+                      >
+                        <div className="font-bold text-[11px] truncate">{sc.name.split(':')[0]}</div>
+                        <div className="text-[10px] text-[#8957e5] truncate">{sc.badge}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="p-2 rounded bg-[#0d1117] border border-[#21262d] text-xs font-mono text-[#8b949e]">
+                  <span className="text-[#c9d1d9] font-bold">{activeGhScenario.name}:</span>{' '}
+                  {activeGhScenario.description}
+                </div>
+              </div>
+
+              {/* Source Disclosure Banner */}
+              <div className="p-2.5 rounded bg-[#0d1117] border border-[#30363d] text-xs font-mono text-[#8b949e] flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="text-[#8957e5] font-bold">SOURCE DISCLOSURE:</span>{' '}
+                  <span>GitHub Pull Request <code className="text-[#e6edf3]">https://github.com/{activeGhScenario.owner}/{activeGhScenario.repository}/pull/{activeGhScenario.prNumber}</code></span>
+                </div>
+                <span className="text-[10px] text-[#3fb950] font-bold uppercase">
+                  100% READ-ONLY · CLI PROVIDER BOUNDARY · ₹0 COST
+                </span>
+              </div>
+
+              {/* Failure State / Inaccessible PR (QA D) */}
+              {activeGhScenario.isError ? (
+                <div className="p-5 rounded-lg bg-[#da3633]/10 border border-[#da3633]/30 space-y-3">
+                  <div className="flex items-center space-x-2 text-[#f85149]">
+                    <AlertOctagon className="w-5 h-5 flex-shrink-0" />
+                    <span className="text-sm font-semibold font-mono">ANALYSIS INCOMPLETE (INSUFFICIENT EVIDENCE)</span>
+                  </div>
+                  <div className="p-3 rounded bg-[#0d1117] border border-[#30363d] font-mono text-xs text-[#f85149]">
+                    {activeGhScenario.errorMessage}
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                    <span className="text-[#8b949e]">
+                      Status: <span className="px-2 py-0.5 rounded border font-bold text-[#c9d1d9] bg-[#8b949e]/20 border-[#8b949e]/40">INSUFFICIENT_EVIDENCE</span>
+                    </span>
+                    <span className="text-[#8b949e]">
+                      Deterministic Truth Rule: Zero assumptions fabricated on failed reads.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* PR Metadata Header Card */}
+                  <div className="p-3.5 rounded-lg bg-[#161b22] border border-[#30363d] space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-xs font-mono font-bold text-[#e6edf3] uppercase tracking-wider flex items-center space-x-2">
+                        <span className="text-[#8957e5]">#{activeGhScenario.prNumber}</span>
+                        <span>{activeGhScenario.title}</span>
+                      </div>
+                      <div className="text-[11px] font-mono text-[#8b949e]">
+                        Inspected: <span className="text-[#c9d1d9]">{ghInspectionTimestamp}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+                      {/* State Badge */}
+                      <div className="p-2.5 rounded bg-[#0d1117] border border-[#21262d] space-y-1">
+                        <div className="text-[10px] text-[#8b949e] uppercase">PR State</div>
+                        <div>
+                          <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded border font-bold text-[11px] ${
+                            activeGhScenario.state === 'OPEN'
+                              ? 'bg-[#238636]/20 text-[#3fb950] border-[#238636]/40'
+                              : activeGhScenario.state === 'MERGED'
+                              ? 'bg-[#8957e5]/20 text-[#a371f7] border-[#8957e5]/40'
+                              : 'bg-[#da3633]/20 text-[#f85149] border-[#da3633]/40'
+                          }`}>
+                            <span>{activeGhScenario.state}</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Author */}
+                      <div className="p-2.5 rounded bg-[#0d1117] border border-[#21262d] space-y-1">
+                        <div className="text-[10px] text-[#8b949e] uppercase">Author</div>
+                        <div className="text-[#e6edf3] font-bold truncate">
+                          @{activeGhScenario.author}
+                        </div>
+                      </div>
+
+                      {/* Branches */}
+                      <div className="p-2.5 rounded bg-[#0d1117] border border-[#21262d] space-y-1">
+                        <div className="text-[10px] text-[#8b949e] uppercase">Branches</div>
+                        <div className="text-[#c9d1d9] truncate text-[11px]">
+                          <span className="text-[#8b949e]">{activeGhScenario.baseBranch}</span> ← <span className="text-[#58a6ff]">{activeGhScenario.headBranch}</span>
+                        </div>
+                      </div>
+
+                      {/* Commits */}
+                      <div className="p-2.5 rounded bg-[#0d1117] border border-[#21262d] space-y-1">
+                        <div className="text-[10px] text-[#8b949e] uppercase">Commit SHAs</div>
+                        <div className="text-[#c9d1d9] font-mono text-[11px] truncate">
+                          {activeGhScenario.baseSha.slice(0, 7)}..{activeGhScenario.headSha.slice(0, 7)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* PR Risk Status & Truthful Evidence Card */}
+                  <div className="p-3.5 rounded-lg bg-[#161b22] border border-[#30363d] space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-xs font-mono font-bold text-[#e6edf3] uppercase tracking-wider">
+                        Pull Request Risk Evaluation
+                      </div>
+                      <span className={`px-2.5 py-0.5 rounded border text-xs font-mono font-bold ${getPrRiskBadge(activeGhScenario.riskStatus)}`}>
+                        {activeGhScenario.riskStatus}
+                      </span>
+                    </div>
+                    <div className="p-2.5 rounded bg-[#0d1117] border border-[#21262d] text-xs font-mono text-[#8b949e] space-y-1">
+                      <div className="text-[#c9d1d9] font-semibold flex items-center space-x-1.5">
+                        <Lock className="w-3 h-3 text-[#58a6ff]" />
+                        <span>Truthful Governance Rule:</span>
+                      </div>
+                      <p>
+                        Code & patch inspection discovers engineering changes and flags security-sensitive configuration signals.
+                        It never declares a security regression without correlated modeled topology.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* PR Signal Categories Strip */}
+                  <div className="p-3.5 rounded-lg bg-[#161b22] border border-[#30363d] space-y-2">
+                    <div className="text-xs font-mono font-bold text-[#e6edf3] uppercase tracking-wider">
+                      Pull Request Signals Breakdown
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs font-mono">
+                      <div className="p-2 rounded bg-[#0d1117] border border-[#21262d] text-center">
+                        <div className="text-[10px] text-[#f0883e] uppercase">Security</div>
+                        <div className="text-sm font-bold text-[#f0883e]">
+                          {ghSignalsSummary.securitySensitive.length}
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-[#0d1117] border border-[#21262d] text-center">
+                        <div className="text-[10px] text-[#58a6ff] uppercase">Infra</div>
+                        <div className="text-sm font-bold text-[#58a6ff]">
+                          {ghSignalsSummary.infrastructure.length}
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-[#0d1117] border border-[#21262d] text-center">
+                        <div className="text-[10px] text-[#a371f7] uppercase">CI/CD</div>
+                        <div className="text-sm font-bold text-[#a371f7]">
+                          {ghSignalsSummary.cicd.length}
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-[#0d1117] border border-[#21262d] text-center">
+                        <div className="text-[10px] text-[#3fb950] uppercase">Testing</div>
+                        <div className="text-sm font-bold text-[#3fb950]">
+                          {ghSignalsSummary.testing.length}
+                        </div>
+                      </div>
+                      <div className="p-2 rounded bg-[#0d1117] border border-[#21262d] text-center">
+                        <div className="text-[10px] text-[#8b949e] uppercase">Dependency</div>
+                        <div className="text-sm font-bold text-[#c9d1d9]">
+                          {ghSignalsSummary.dependency.length}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Raw PR Diff Toggle & View */}
+                  {activeDiff && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <button
+                          onClick={() => setShowRawDiff(!showRawDiff)}
+                          className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#21262d] border border-[#30363d] text-xs font-mono text-[#8b949e] hover:text-[#c9d1d9] transition-colors"
+                        >
+                          <Eye className="w-3 h-3" />
+                          <span>{showRawDiff ? 'Hide Raw PR Patch' : 'Show Raw PR Patch'}</span>
+                        </button>
+                        <span className="text-[11px] font-mono text-[#8b949e]">
+                          {activeDiff.split('\n').length} patch lines
+                        </span>
+                      </div>
+                      {showRawDiff && (
+                        <pre className="p-3 rounded bg-[#0d1117] border border-[#30363d] font-mono text-xs text-[#c9d1d9] overflow-x-auto max-h-60 leading-relaxed whitespace-pre">
+                          {activeDiff}
+                        </pre>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ) : (
