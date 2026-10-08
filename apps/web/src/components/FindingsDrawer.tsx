@@ -132,7 +132,13 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   onClearResolved,
   onRequestValidate,
 }) => {
-  const [isOpen, setIsOpen] = useState(false); // Default collapsed into dock to let canvas dominate!
+  const [isOpen, setIsOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('console') === 'open') return true;
+    }
+    return false;
+  }); // Default collapsed into dock to let canvas dominate!
   const [primaryMode, setPrimaryMode] = useState<PrimaryMode>('findings');
   const [threatSubTab, setThreatSubTab] = useState<ThreatSubTab>('attack-paths');
   const [intelSubTab, setIntelSubTab] = useState<IntelSubTab>('architecture');

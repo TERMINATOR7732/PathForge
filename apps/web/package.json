@@ -9,17 +9,20 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@pathforge/shared": "*",
     "@pathforge/core": "*",
+    "@pathforge/shared": "*",
     "@pathforge/validator": "*",
+    "lucide-react": "^0.475.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "lucide-react": "^0.475.0"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.6.1",
+    "postcss": "^8.5.29",
+    "tailwindcss": "^3.4.19",
     "typescript": "^5.7.3",
     "vite": "^6.1.0"
   }

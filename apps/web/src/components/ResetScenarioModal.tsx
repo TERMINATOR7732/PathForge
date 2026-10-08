@@ -29,7 +29,7 @@ export const ResetScenarioModal: React.FC<ResetScenarioModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 font-mono select-none"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 font-sans select-none"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

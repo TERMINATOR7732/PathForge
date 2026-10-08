@@ -1,0 +1,426 @@
+/* PathForge Design System — Reusable Workbench UI Components */
+
+/* ==========================================================================
+   1. Typography System
+   ========================================================================== */
+.pf-app-title {
+  font-family: var(--pf-font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pf-text-primary);
+}
+
+.pf-page-title {
+  font-family: var(--pf-font-ui);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--pf-text-primary);
+}
+
+.pf-section-title {
+  font-family: var(--pf-font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pf-text-muted);
+}
+
+.pf-label {
+  font-family: var(--pf-font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--pf-text-secondary);
+}
+
+.pf-body {
+  font-family: var(--pf-font-ui);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--pf-text-secondary);
+}
+
+.pf-body-small {
+  font-family: var(--pf-font-ui);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--pf-text-muted);
+}
+
+.pf-muted {
+  font-family: var(--pf-font-ui);
+  font-size: 12px;
+  color: var(--pf-text-muted);
+}
+
+.pf-technical {
+  font-family: var(--pf-font-mono) !important;
+  font-size: 12px;
+  font-weight: 500;
+  font-feature-settings: 'tnum', 'zero';
+}
+
+.pf-technical-small {
+  font-family: var(--pf-font-mono) !important;
+  font-size: 10px;
+  font-weight: 500;
+  font-feature-settings: 'tnum', 'zero';
+}
+
+/* ==========================================================================
+   2. Buttons
+   ========================================================================== */
+.pf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-family: var(--pf-font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  border-radius: var(--pf-radius-sm);
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 120ms ease-in-out;
+}
+
+.pf-btn-primary {
+  background-color: var(--pf-accent);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.pf-btn-primary:hover {
+  background-color: var(--pf-accent-hover);
+}
+
+.pf-btn-primary:active {
+  background-color: #1158c7;
+}
+
+.pf-btn-secondary {
+  background-color: var(--pf-bg-panel-raised);
+  border-color: var(--pf-border-default);
+  color: var(--pf-text-secondary);
+}
+
+.pf-btn-secondary:hover {
+  background-color: var(--pf-bg-panel-hover);
+  border-color: var(--pf-border-strong);
+  color: var(--pf-text-primary);
+}
+
+.pf-btn-secondary:active {
+  background-color: var(--pf-bg-panel-active);
+}
+
+.pf-btn-ghost {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--pf-text-muted);
+}
+
+.pf-btn-ghost:hover {
+  background-color: var(--pf-bg-panel-hover);
+  color: var(--pf-text-primary);
+}
+
+.pf-btn-ghost:active {
+  background-color: var(--pf-bg-panel-active);
+}
+
+.pf-btn-danger {
+  background-color: var(--pf-danger-subtle);
+  border-color: rgba(248, 81, 73, 0.4);
+  color: var(--pf-danger);
+}
+
+.pf-btn-danger:hover {
+  background-color: rgba(248, 81, 73, 0.22);
+  border-color: var(--pf-danger);
+}
+
+.pf-btn-icon {
+  padding: 6px;
+  border-radius: var(--pf-radius-sm);
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--pf-text-muted);
+}
+
+.pf-btn-icon:hover {
+  background-color: var(--pf-bg-panel-hover);
+  color: var(--pf-text-primary);
+}
+
+/* ==========================================================================
+   3. Inputs & Selects
+   ========================================================================== */
+.pf-input {
+  width: 100%;
+  padding: 6px 10px;
+  font-family: var(--pf-font-ui);
+  font-size: 12px;
+  background-color: var(--pf-bg-app);
+  color: var(--pf-text-primary);
+  border: 1px solid var(--pf-border-default);
+  border-radius: var(--pf-radius-sm);
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.pf-input:focus {
+  border-color: var(--pf-border-focus);
+  box-shadow: 0 0 0 1px var(--pf-border-focus);
+}
+
+.pf-select {
+  padding: 5px 24px 5px 10px;
+  font-family: var(--pf-font-ui);
+  font-size: 12px;
+  background-color: var(--pf-bg-panel);
+  color: var(--pf-text-primary);
+  border: 1px solid var(--pf-border-default);
+  border-radius: var(--pf-radius-sm);
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.pf-select:hover {
+  background-color: var(--pf-bg-panel-raised);
+  border-color: var(--pf-border-strong);
+}
+
+.pf-select:focus {
+  border-color: var(--pf-border-focus);
+  box-shadow: 0 0 0 1px var(--pf-border-focus);
+}
+
+/* ==========================================================================
+   4. Panels & Enclosures
+   ========================================================================== */
+.pf-panel {
+  background-color: var(--pf-bg-panel);
+  border: 1px solid var(--pf-border-default);
+  border-radius: var(--pf-radius-md);
+  overflow: hidden;
+}
+
+.pf-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--pf-border-subtle);
+  background-color: rgba(11, 14, 20, 0.4);
+}
+
+.pf-panel-section {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--pf-border-subtle);
+}
+
+.pf-panel-section:last-child {
+  border-bottom: none;
+}
+
+.pf-panel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 0;
+  font-size: 12px;
+}
+
+.pf-panel-label {
+  font-size: 11px;
+  color: var(--pf-text-muted);
+}
+
+.pf-panel-value {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--pf-text-primary);
+}
+
+.pf-panel-divider {
+  height: 1px;
+  background-color: var(--pf-border-subtle);
+  margin: 10px 0;
+}
+
+/* ==========================================================================
+   5. Status & Severity Badges
+   ========================================================================== */
+.pf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: var(--pf-radius-sm);
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--pf-font-mono);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.pf-status-verified {
+  background-color: var(--pf-success-subtle);
+  border: 1px solid rgba(63, 185, 80, 0.4);
+  color: var(--pf-success);
+}
+
+.pf-status-warning {
+  background-color: var(--pf-warning-subtle);
+  border: 1px solid rgba(210, 153, 34, 0.4);
+  color: var(--pf-warning);
+}
+
+.pf-status-danger, .pf-status-critical {
+  background-color: var(--pf-danger-subtle);
+  border: 1px solid rgba(248, 81, 73, 0.4);
+  color: var(--pf-danger);
+}
+
+.pf-status-high {
+  background-color: rgba(240, 136, 62, 0.12);
+  border: 1px solid rgba(240, 136, 62, 0.4);
+  color: var(--pf-severity-high);
+}
+
+.pf-status-medium {
+  background-color: rgba(210, 153, 34, 0.12);
+  border: 1px solid rgba(210, 153, 34, 0.4);
+  color: var(--pf-severity-medium);
+}
+
+.pf-status-low {
+  background-color: rgba(88, 166, 255, 0.12);
+  border: 1px solid rgba(88, 166, 255, 0.4);
+  color: var(--pf-info);
+}
+
+.pf-status-pass {
+  background-color: rgba(63, 185, 80, 0.15);
+  border: 1px solid rgba(63, 185, 80, 0.4);
+  color: var(--pf-success);
+}
+
+.pf-status-warn {
+  background-color: rgba(210, 153, 34, 0.15);
+  border: 1px solid rgba(210, 153, 34, 0.4);
+  color: var(--pf-warning);
+}
+
+.pf-status-block {
+  background-color: rgba(248, 81, 73, 0.18);
+  border: 1px solid rgba(248, 81, 73, 0.5);
+  color: var(--pf-danger);
+}
+
+/* ==========================================================================
+   6. Canvas Grid & Animation Flow
+   ========================================================================== */
+.canvas-grid {
+  background-color: var(--pf-bg-canvas);
+  background-image:
+    radial-gradient(circle, #212836 1.25px, transparent 1.25px),
+    radial-gradient(circle, #141a24 0.75px, transparent 0.75px);
+  background-size: 32px 32px, 16px 16px;
+  background-position: 0 0, 8px 8px;
+}
+
+@keyframes attackFlow {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.attack-path-flow {
+  animation: attackFlow 1.2s linear infinite;
+}
+
+/* ==========================================================================
+   7. Application Shell Classes
+   ========================================================================== */
+.pf-shell {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--pf-bg-app);
+}
+
+.pf-shell-header {
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background-color: var(--pf-bg-panel);
+  border-bottom: 1px solid var(--pf-border-default);
+  z-index: 30;
+}
+
+.pf-shell-main {
+  flex: 1 1 0%;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.pf-shell-palette {
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--pf-bg-panel);
+  border-right: 1px solid var(--pf-border-default);
+  overflow-y: auto;
+  z-index: 20;
+}
+
+.pf-shell-canvas {
+  flex: 1 1 0%;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--pf-bg-canvas);
+}
+
+.pf-shell-inspector {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--pf-bg-panel);
+  border-left: 1px solid var(--pf-border-default);
+  overflow-y: auto;
+  z-index: 20;
+}
+
+.pf-shell-dock {
+  flex-shrink: 0;
+  background-color: var(--pf-bg-panel);
+  border-top: 1px solid var(--pf-border-default);
+  z-index: 25;
+}

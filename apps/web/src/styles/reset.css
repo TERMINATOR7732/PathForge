@@ -1,0 +1,133 @@
+/* PathForge Global CSS Reset & Baseline Normalization */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--pf-bg-app);
+  color: var(--pf-text-primary);
+  font-family: var(--pf-font-ui);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Explicit Button Normalization — Eliminates browser-default button appearance */
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--pf-radius-sm);
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--pf-border-focus);
+  outline-offset: 1px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Explicit Select Normalization — Eliminates browser-default white select */
+select {
+  font-family: inherit;
+  font-size: 12px;
+  line-height: inherit;
+  background-color: var(--pf-bg-panel);
+  color: var(--pf-text-primary);
+  border: 1px solid var(--pf-border-default);
+  border-radius: var(--pf-radius-sm);
+  padding: 4px 8px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+select:hover {
+  background-color: var(--pf-bg-panel-raised);
+  border-color: var(--pf-border-strong);
+}
+
+select:focus, select:focus-visible {
+  border-color: var(--pf-border-focus);
+  outline: 1px solid var(--pf-border-focus);
+}
+
+select option {
+  background-color: var(--pf-bg-panel);
+  color: var(--pf-text-primary);
+}
+
+/* Explicit Input Normalization */
+input, textarea {
+  font-family: inherit;
+  font-size: 12px;
+  line-height: inherit;
+  background-color: var(--pf-bg-panel);
+  color: var(--pf-text-primary);
+  border: 1px solid var(--pf-border-default);
+  border-radius: var(--pf-radius-sm);
+  padding: 6px 10px;
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+input:hover, textarea:hover {
+  border-color: var(--pf-border-strong);
+}
+
+input:focus, textarea:focus, input:focus-visible, textarea:focus-visible {
+  border-color: var(--pf-border-focus);
+  outline: 1px solid var(--pf-border-focus);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--pf-text-muted);
+}
+
+/* Monospace text formatting */
+code, pre, .technical, .technical-small, .font-mono {
+  font-family: var(--pf-font-mono) !important;
+  font-feature-settings: 'tnum', 'zero';
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--pf-bg-app);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--pf-border-default);
+  border-radius: var(--pf-radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--pf-border-strong);
+}

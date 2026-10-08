@@ -90,6 +90,45 @@ const ZONE_METADATA: Record<
   },
 };
 
+// Helper to compute deterministic framing and viewport coordinates
+function computeFitViewport(
+  nodes: readonly InfrastructureNode[],
+  containerW: number,
+  containerH: number
+): { pan: { x: number; y: number }; zoom: number } {
+  if (nodes.length === 0) return { pan: { x: 0, y: 0 }, zoom: 1.0 };
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (const n of nodes) {
+    minX = Math.min(minX, n.position.x);
+    minY = Math.min(minY, n.position.y);
+    maxX = Math.max(maxX, n.position.x + NODE_WIDTH);
+    maxY = Math.max(maxY, n.position.y + NODE_HEIGHT);
+  }
+
+  const graphW = Math.max(maxX - minX, 100);
+  const graphH = Math.max(maxY - minY, 100);
+  const graphCenterX = minX + graphW / 2;
+  const graphCenterY = minY + graphH / 2;
+
+  const padX = 55;
+  const padY = 55;
+  const availW = Math.max(containerW - padX * 2, 200);
+  const availH = Math.max(containerH - padY * 2, 200);
+
+  const scaleX = availW / graphW;
+  const scaleY = availH / graphH;
+
+  const newZoom = Number(Math.min(Math.max(Math.min(scaleX, scaleY), 0.45), 1.15).toFixed(2));
+  const newPanX = Math.round(containerW / 2 - graphCenterX * newZoom);
+  const newPanY = Math.round(containerH / 2 - graphCenterY * newZoom);
+
+  return { pan: { x: newPanX, y: newPanY }, zoom: newZoom };
+}
+
 export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   environment,
   selectedNodeId,
@@ -112,22 +151,28 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Viewport navigation state
-  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState<number>(1.0);
+  // Viewport navigation state with deterministic initial framing
   const [dimensions, setDimensions] = useState<{ width: number; height: number }>({
-    width: 1200,
-    height: 800,
+    width: 880,
+    height: 700,
+  });
+
+  const [pan, setPan] = useState<{ x: number; y: number }>(() => {
+    return computeFitViewport(environment.getNodes(), 880, 700).pan;
+  });
+  const [zoom, setZoom] = useState<number>(() => {
+    return computeFitViewport(environment.getNodes(), 880, 700).zoom;
   });
 
   // Track container dimensions
   useEffect(() => {
     const updateDims = () => {
       if (containerRef.current) {
-        setDimensions({
-          width: containerRef.current.clientWidth,
-          height: containerRef.current.clientHeight,
-        });
+        const w = containerRef.current.clientWidth;
+        const h = containerRef.current.clientHeight;
+        if (w > 0 && h > 0) {
+          setDimensions({ width: w, height: h });
+        }
       }
     };
     updateDims();
@@ -172,55 +217,23 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
 
   // Auto-Fit Topology into Viewport
   const fitToGraph = useCallback(() => {
-    if (!containerRef.current) return;
-    const currentNodes = environment.getNodes();
-    if (currentNodes.length === 0) {
-      setZoom(1.0);
-      setPan({ x: 0, y: 0 });
-      return;
-    }
+    const w =
+      (containerRef.current && containerRef.current.clientWidth > 0
+        ? containerRef.current.clientWidth
+        : dimensions.width) || 880;
+    const h =
+      (containerRef.current && containerRef.current.clientHeight > 0
+        ? containerRef.current.clientHeight
+        : dimensions.height) || 700;
 
-    const containerW = containerRef.current.clientWidth;
-    const containerH = containerRef.current.clientHeight;
-
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-
-    for (const n of currentNodes) {
-      minX = Math.min(minX, n.position.x);
-      minY = Math.min(minY, n.position.y);
-      maxX = Math.max(maxX, n.position.x + NODE_WIDTH);
-      maxY = Math.max(maxY, n.position.y + NODE_HEIGHT);
-    }
-
-    const graphW = Math.max(maxX - minX, 100);
-    const graphH = Math.max(maxY - minY, 100);
-    const graphCenterX = minX + graphW / 2;
-    const graphCenterY = minY + graphH / 2;
-
-    const padX = 70;
-    const padY = 70;
-    const availW = Math.max(containerW - padX * 2, 200);
-    const availH = Math.max(containerH - padY * 2, 200);
-
-    const scaleX = availW / graphW;
-    const scaleY = availH / graphH;
-
-    // Constrain zoom scale between 0.65 and 1.25 for ideal readability
-    const newZoom = Math.min(Math.max(Math.min(scaleX, scaleY), 0.65), 1.25);
-
-    const newPanX = Math.round(containerW / 2 - graphCenterX * newZoom);
-    const newPanY = Math.round(containerH / 2 - graphCenterY * newZoom);
-
-    setZoom(newZoom);
-    setPan({ x: newPanX, y: newPanY });
-  }, [environment]);
+    const fit = computeFitViewport(environment.getNodes(), w, h);
+    setZoom(fit.zoom);
+    setPan(fit.pan);
+  }, [environment, dimensions]);
 
   // Automatically trigger auto-fit when environment or scenario loads
   useEffect(() => {
-    // Slight delay to ensure DOM dimensions are ready
+    fitToGraph();
     const timer = setTimeout(() => {
       fitToGraph();
     }, 40);

@@ -29,7 +29,16 @@ import { ScenarioModal } from './components/ScenarioModal.js';
 import { ResetScenarioModal } from './components/ResetScenarioModal.js';
 
 export const App: React.FC = () => {
-  const [activeScenarioId, setActiveScenarioId] = useState<string>(() => getDefaultScenario().id);
+  const initialScenarioId = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const s = params.get('scenario');
+      if (s && getScenarioById(s)) return s;
+    }
+    return getDefaultScenario().id;
+  }, []);
+
+  const [activeScenarioId, setActiveScenarioId] = useState<string>(initialScenarioId);
   const [isScenarioModalOpen, setIsScenarioModalOpen] = useState<boolean>(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState<boolean>(false);
 
@@ -68,7 +77,7 @@ export const App: React.FC = () => {
 
   // Load and hold authoritative Environment instance
   const [environment, setEnvironment] = useState<Environment>(() => {
-    return instantiateScenario(getDefaultScenario().id);
+    return instantiateScenario(initialScenarioId);
   });
 
   // Compute validation result
@@ -428,7 +437,7 @@ export const App: React.FC = () => {
   const activeScenario = getScenarioById(activeScenarioId);
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-[#0b0e14] text-[#e6edf3] overflow-hidden select-none font-sans">
+    <div className="pf-shell h-screen w-screen flex flex-col bg-[var(--pf-bg-app)] text-[var(--pf-text-primary)] overflow-hidden select-none font-sans">
       {/* Top Navigation */}
       <TopNav
         currentScenarioId={activeScenarioId}
@@ -443,7 +452,7 @@ export const App: React.FC = () => {
       />
 
       {/* Main Workspace Body */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="pf-shell-main flex-1 flex overflow-hidden min-h-0">
         <ComponentPalette
           onAddNodeType={(type) => {
             handleCreateNode(type, { x: 300, y: 250 });

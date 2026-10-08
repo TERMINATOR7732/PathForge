@@ -37,7 +37,7 @@ export const RemediationModal: React.FC<RemediationModalProps> = ({
       aria-modal="true"
       aria-labelledby="remediation-modal-title"
     >
-      <div className="w-[520px] rounded-lg bg-[#14171d] border border-[#30363d] shadow-2xl overflow-hidden font-mono text-xs">
+      <div className="w-[520px] rounded-lg bg-[#14171d] border border-[#30363d] shadow-2xl overflow-hidden font-sans text-xs">
         {/* Modal Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-[#161b22] border-b border-[#2d333b]">
           <div className="flex items-center space-x-2 text-[#e6edf3]">
