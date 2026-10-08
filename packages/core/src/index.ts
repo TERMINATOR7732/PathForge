@@ -15,3 +15,4 @@ export * from './testing-intelligence/index.js';
 export * from './technical-debt/index.js';
 export * from './change-analysis/index.js';
 export * from './change-ingestion/index.js';
+export * from './git/index.js';

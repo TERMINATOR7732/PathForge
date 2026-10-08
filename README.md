@@ -652,6 +652,55 @@ PathForge provides a deterministic local **Repository Change Ingestion Foundatio
 
 ---
 
+## Phase 3.3 — Local Git Repository Change Analysis
+
+PathForge Phase 3.3 integrates directly with local Git repositories, enabling practitioners to deterministically inspect differences between commits, branches, or uncommitted workspace modifications without network dependencies or third-party Git services:
+
+- **Strict Read-Only Guarantee & Whitelist Governance**:
+  - Whitelist of permitted inspection subcommands: `rev-parse`, `status`, `branch`, `log`, `diff`, `show`, `ls-files`, `remote`, `version`.
+  - Mutating operations (`checkout`, `commit`, `push`, `pull`, `fetch`, `reset`, `stash`, `merge`, `rebase`) are strictly forbidden and blocked before invocation.
+  - Dangerous shell injection flags (`--exec`, `--ext-cmd`, `-c`, `--config`, `--upload-pack`, `--receive-pack`) are rejected immediately.
+  - Non-shell, array-based process spawning with timeout and buffer limits.
+
+- **Deterministic Repository State Discovery**:
+  - Recursively discovers repository root from both root paths and deeply nested subdirectories via `git rev-parse --show-toplevel`.
+  - Captures current branch, commit SHA, detached HEAD states, and unborn branch scenarios.
+  - Inspects staged, unstaged, and untracked file counts via porcelain status parsing.
+  - Sorts untracked files deterministically without leaking remote URLs, auth tokens, or private credentials.
+
+- **5 Deterministic Comparison Modes**:
+  1. `working-tree-vs-head`: Committed `HEAD` vs working tree modifications (unstaged changes).
+  2. `index-vs-head`: Committed `HEAD` vs staged index (`git diff --cached HEAD`).
+  3. `working-state-vs-head`: Committed `HEAD` vs full working state.
+  4. `commit-vs-commit`: Base commit SHA/ref vs head commit SHA/ref.
+  5. `branch-vs-branch`: Base branch vs head branch.
+  - Includes rename detection (`-M`) and deterministic untracked file diff block generation when requested.
+
+- **Revision Validation & Semantic Invariant**:
+  - Pure deterministic ref sanitization preventing flag injection, shell metacharacters, and path traversal (`../`).
+  - Supports two-dot (`base..head`) and three-dot (`base...head`) revision ranges.
+  - Commit timestamps are captured strictly for human inspection and display; they never participate in semantic change hashing or risk delta calculations.
+
+- **Phase 3.2 & 3.1 Reuse Pipeline**:
+  - Bridges local Git diff directly into Phase 3.2 ingestion (`ingestRepositoryChanges`) and Phase 3.1 change analysis bridge (`bridgeToChangeAnalysis`).
+
+- **Interactive UI Integration (`ChangeAnalysisPanel` · Sub-Tab: `LOCAL GIT & DIFF`)**:
+  - Live source toggle between Local Git repository inspection and raw unified diff.
+  - Repository directory target input with "Inspect Git Changes" refresh action.
+  - Repository state card: Branch badge, Commit SHA badge, `CLEAN`/`DIRTY` status badge, and staged/unstaged/untracked breakdown.
+  - Interactive comparison mode selector buttons and revision input fields.
+  - Untracked file inclusion toggle.
+  - 6 Quick QA verification presets:
+    - `QA A`: Clean Working Tree (`working-tree-vs-head`, 0 changes)
+    - `QA B`: Modified Working Tree (Application code edit in `src/api.ts`)
+    - `QA C`: Staged Changes (Security-sensitive K8s ingress rule in `k8s/network-policy.yaml`)
+    - `QA D`: Commit Range (`v1.0.0..HEAD` historical commit comparison)
+    - `QA E`: Dirty + Untracked (Unstaged edits + untracked debug notes)
+    - `QA F`: Security Config Change (Secret credential token leak)
+  - Source disclosure banner and expandable raw unified Git diff viewer.
+
+---
+
 ## Getting Started
 
 ### Prerequisites
@@ -671,7 +720,7 @@ npm install
 
 ### Running Tests
 
-Execute the full Vitest suite (372 unit & integration tests across 25 test files):
+Execute the full Vitest suite (424 unit & integration tests across 26 test files):
 
 ```bash
 npm run test

@@ -388,21 +388,48 @@ Phase 1: Infrastructure Modeling & Validation (In Progress — 1.1 Complete)
 
 ---
 
-### Phase 3.3 — Engineering Change Rules & Policy Enforcement *(PLANNED)*
+### Phase 3.3 — Local Git Repository Change Analysis *(STATUS: COMPLETE)*
+- [x] Pure Deterministic Core Git Domain (`packages/core/src/git/`):
+  - `types.ts`: `GitComparisonMode`, `GitRepository`, `GitCommit`, `GitDiffOptions`, `GitDiffResult`, `GitAnalysisResult`, `GitCommandResult`, `GitCommandOptions`, `GitCommandExecutor`, `GitErrorCode`, `GitError`
+  - `refs.ts`: Pure deterministic ref validation (`validateGitRevision`), ref range parsing (`parseRevisionRange`), preventing flag injection (`-`), shell metacharacters, and directory traversal
+  - `command.ts`: Whitelist of permitted read-only Git subcommands (`rev-parse`, `status`, `branch`, `log`, `diff`, `show`, `ls-files`, `remote`, `version`), non-shell process execution with timeout/buffer limits, rejecting dangerous flags (`--exec`, `--ext-cmd`, `-c`, `--config`), `createNodeGitExecutor()`, and deterministic `createMockGitExecutor()`
+  - `repository.ts`: Repository root discovery (`discoverRepository`) supporting root and nested paths, full state inspection (`getRepositoryState`) for branch, commit SHA, detached HEAD, staged/unstaged counts, deterministically sorted untracked files, and remote presence without leaking credentials
+  - `diff.ts`: Unified diff generation (`generateGitDiff`) across 5 comparison modes (`working-tree-vs-head`, `index-vs-head`, `working-state-vs-head`, `commit-vs-commit`, `branch-vs-branch`), rename detection (`-M`), deterministic untracked file handling, and full ingestion bridging (`analyzeGitChanges`)
+  - `history.ts`: Commit history (`getCommitHistory`) and commit metadata (`getCommitMetadata`) parsing author, subject, parents, and timestamps (display-only invariant: timestamps never participate in semantic change hashing)
+  - `index.ts`: Module exports integrated into `@pathforge/core`
+- [x] Comprehensive Automated Test Suite:
+  - 424 unit and integration tests passing across 26 test files (52 tests in `tests/local-git.test.ts` covering repository discovery, nested discovery, non-git directories, git command failure, permission/not-found handling, clean/dirty repositories, staged/unstaged counts, untracked file inclusion, detached HEAD, unborn branches, 5 comparison modes, commit metadata, revision safety, shell injection prevention, Phase 3.2 ingestion reuse, Phase 3.1 change analysis bridging, determinism across executions, and live repository untouched safety verification).
+- [x] Interactive UI Integration (`ChangeAnalysisPanel.tsx` · `LOCAL GIT & DIFF`):
+  - Toggle between Local Git repository inspection and raw unified diff
+  - Local repository target input with "Inspect Git Changes" action
+  - Repository state overview card with branch, commit, `CLEAN`/`DIRTY` badge, and staged/unstaged/untracked breakdown
+  - 5 Comparison mode buttons with revision inputs for commit/branch ranges
+  - Untracked file inclusion toggle
+  - 6 Quick QA verification presets (QA A Clean, QA B Modified, QA C Staged, QA D Commit Range, QA E Dirty+Untracked, QA F Security Config)
+  - Source disclosure banner and expandable raw unified Git diff viewer
+- [x] Strict Scope Boundaries & Governance:
+  - Read-only Git inspection strictly enforced.
+  - Zero mutating commands executed (`checkout`, `commit`, `push`, `pull`, `fetch`, `reset`, `stash`, `merge`, `rebase`).
+  - 100% offline, local-first, zero telemetry, zero LLM dependencies, ₹0 operating cost.
+  - GitHub API, OAuth, PR comments, and CI/CD webhooks strictly scheduled for future Phase 3 milestones.
+
+---
+
+### Phase 3.4 — Engineering Change Rules & Policy Enforcement *(PLANNED)*
 - Guardrail rules preventing merges that introduce security regressions
 - Configurable failure criteria (e.g., fail if new critical risk or P0 debt introduced)
 - Deterministic change approval gates
 
-### Phase 3.4 — CI/CD & Headless Verification CLI *(PLANNED)*
+### Phase 3.5 — CI/CD & Headless Verification CLI *(PLANNED)*
 - Headless CLI runner for executing change analysis in local git hooks and CI pipelines
 - Output formats: JSON, JUnit XML, Markdown summaries
 - PR comment markdown generator for GitHub / GitLab diff reviews
 
-### Phase 3.5 — Continuous Engineering History & Multi-Snapshot Evolution *(PLANNED)*
+### Phase 3.6 — Continuous Engineering History & Multi-Snapshot Evolution *(PLANNED)*
 - Local timeline of engineering changes across editing sessions
 - Snapshot version tree and change history navigation
 - Time-series progression of readiness, debt, and risk scores
 
-### Phase 3.6 — Infrastructure-as-Code (IaC) Continuous Drift Detection *(PLANNED)*
+### Phase 3.7 — Infrastructure-as-Code (IaC) Continuous Drift Detection *(PLANNED)*
 - Import parser for Terraform / Docker Compose diffs
 - Compare modeled state against intended infrastructure code changes
