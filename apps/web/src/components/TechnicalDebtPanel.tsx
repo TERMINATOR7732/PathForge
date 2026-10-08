@@ -19,6 +19,7 @@ import {
   FlaskConical,
   Server,
   Network,
+  ArrowRight,
 } from 'lucide-react';
 
 interface TechnicalDebtPanelProps {
@@ -40,7 +41,7 @@ interface TechnicalDebtPanelProps {
 export const TechnicalDebtPanel: React.FC<TechnicalDebtPanelProps> = ({
   assessment,
   onLocateElement,
-  onSelectTab: _onSelectTab,
+  onSelectTab,
 }) => {
   const [activeSection, setActiveSection] = useState<
     'backlog' | 'categories' | 'roadmap' | 'governance'
@@ -489,6 +490,21 @@ export const TechnicalDebtPanel: React.FC<TechnicalDebtPanelProps> = ({
                                   </span>
                                 )}
                               </div>
+                              {onSelectTab && item.sourceAnalysis && (
+                                <button
+                                  onClick={() => {
+                                    if (item.sourceAnalysis === 'validation') onSelectTab('findings');
+                                    else if (item.sourceAnalysis === 'attack-path') onSelectTab('attack-paths');
+                                    else if (item.sourceAnalysis === 'architecture') onSelectTab('architecture');
+                                    else if (item.sourceAnalysis === 'production-readiness') onSelectTab('readiness');
+                                    else onSelectTab('findings');
+                                  }}
+                                  className="mt-2 px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] text-[10px] border border-[#30363d] transition-colors flex items-center space-x-1"
+                                >
+                                  <span>Inspect in {item.sourceAnalysis.replace('-', ' ')}</span>
+                                  <ArrowRight className="w-2.5 h-2.5" />
+                                </button>
+                              )}
                             </div>
 
                             <div className="p-2 rounded bg-[#0d0f13] border border-[#30363d]/60">

@@ -88,7 +88,7 @@ export const TopNav: React.FC<TopNavProps> = ({
               PathForge
             </span>
             <span className="text-[10px] text-[#5c6370] uppercase font-mono tracking-wider hidden sm:inline">
-              v0.3.0 · Phase 1.7
+              v0.1.0 · Continuous Engineering
             </span>
           </div>
         </div>
@@ -99,8 +99,9 @@ export const TopNav: React.FC<TopNavProps> = ({
         <div className="flex items-center space-x-1.5">
           <button
             onClick={onOpenScenarioModal}
-            className="flex items-center space-x-2 px-2.5 py-1 rounded bg-[#181c24] border border-[#2a303c] text-xs text-[#e6edf3] font-mono hover:bg-[#202530] hover:border-[#388bfd]/60 transition-colors shadow-sm"
+            className="flex items-center space-x-2 px-2.5 py-1 rounded bg-[#181c24] border border-[#2a303c] text-xs text-[#e6edf3] font-mono hover:bg-[#202530] hover:border-[#388bfd]/60 transition-colors shadow-sm focus:outline-hidden focus:ring-1 focus:ring-[#388bfd]"
             title="Open Scenario Lab to load preconfigured topologies"
+            aria-label="Select demo scenario"
           >
             <Layers className="w-3.5 h-3.5 text-[#58a6ff]" />
             <span className="text-[#8b949e]">SCENARIO:</span>
@@ -113,8 +114,9 @@ export const TopNav: React.FC<TopNavProps> = ({
           {/* Reset Scenario Button */}
           <button
             onClick={onOpenResetModal}
-            className="flex items-center space-x-1 px-2 py-1 rounded bg-[#181c24] border border-[#2a303c] text-xs text-[#8b949e] hover:bg-[#241a18] hover:text-[#f85149] hover:border-[#da3633]/40 transition-colors font-mono"
+            className="flex items-center space-x-1 px-2 py-1 rounded bg-[#181c24] border border-[#2a303c] text-xs text-[#8b949e] hover:bg-[#241a18] hover:text-[#f85149] hover:border-[#da3633]/40 transition-colors font-mono focus:outline-hidden focus:ring-1 focus:ring-[#f85149]"
             title="Reset scenario to original baseline definition"
+            aria-label="Reset scenario"
           >
             <RotateCcw className="w-3 h-3" />
             <span className="hidden md:inline">Reset</span>
@@ -127,7 +129,7 @@ export const TopNav: React.FC<TopNavProps> = ({
         {isValidationStale ? (
           <div className="flex items-center space-x-2 px-2.5 py-0.5 rounded bg-[#2b1f14] border border-[#f0883e]/50 text-[#f0883e] text-xs font-mono animate-pulse">
             <RefreshCw className="w-3 h-3" />
-            <span>TOPOLOGY MODIFIED · VALIDATION STALE</span>
+            <span>STALE — RE-ANALYZE REQUIRED</span>
           </div>
         ) : validationResult ? (
           <div className="flex items-center space-x-2">
@@ -287,7 +289,7 @@ export const TopNav: React.FC<TopNavProps> = ({
           title="Run deterministic validation engine"
         >
           <Play className="w-3 h-3 fill-current" />
-          <span>{isValidationStale ? 'Re-Validate Topology' : 'Validate Topology'}</span>
+          <span>{isValidationStale ? 'Revalidate Topology' : 'Validate Topology'}</span>
         </button>
       </div>
     </header>

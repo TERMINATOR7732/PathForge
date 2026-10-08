@@ -26,7 +26,7 @@ interface ProductionReadinessPanelProps {
 export const ProductionReadinessPanel: React.FC<ProductionReadinessPanelProps> = ({
   assessment,
   onLocateElement,
-  onSelectTab: _onSelectTab,
+  onSelectTab,
 }) => {
   const [activeSection, setActiveSection] = useState<'all' | 'gates' | 'categories' | 'blocking' | 'strengths' | 'gaps'>('all');
 
@@ -257,15 +257,38 @@ export const ProductionReadinessPanel: React.FC<ProductionReadinessPanelProps> =
                       <span className="font-semibold text-[#e6edf3] text-[11px]">{reason.title}</span>
                     </div>
 
-                    {reason.affectedNodeIds.length > 0 && (
-                      <button
-                        onClick={() => onLocateElement({ id: reason.affectedNodeIds[0], type: 'node' })}
-                        className="flex items-center space-x-1 px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] text-[10px] border border-[#30363d] transition-colors"
-                      >
-                        <Crosshair className="w-3 h-3 text-[#58a6ff]" />
-                        <span>Locate Asset</span>
-                      </button>
-                    )}
+                    <div className="flex items-center space-x-1.5">
+                      {onSelectTab && (
+                        <button
+                          onClick={() => {
+                            if (reason.id.includes('finding') || reason.title.toLowerCase().includes('finding')) {
+                              onSelectTab('findings');
+                            } else if (reason.id.includes('attack') || reason.title.toLowerCase().includes('attack')) {
+                              onSelectTab('attack-paths');
+                            } else if (reason.id.includes('arch') || reason.title.toLowerCase().includes('arch')) {
+                              onSelectTab('architecture');
+                            } else {
+                              onSelectTab('findings');
+                            }
+                          }}
+                          className="flex items-center space-x-1 px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] text-[10px] border border-[#30363d] transition-colors"
+                          title="Jump to relevant analysis lens"
+                        >
+                          <span>Inspect Source</span>
+                          <ArrowRight className="w-2.5 h-2.5" />
+                        </button>
+                      )}
+
+                      {reason.affectedNodeIds.length > 0 && (
+                        <button
+                          onClick={() => onLocateElement({ id: reason.affectedNodeIds[0], type: 'node' })}
+                          className="flex items-center space-x-1 px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] text-[10px] border border-[#30363d] transition-colors"
+                        >
+                          <Crosshair className="w-3 h-3 text-[#58a6ff]" />
+                          <span>Locate Asset</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <p className="text-[10.5px] text-[#c9d1d9] leading-relaxed">

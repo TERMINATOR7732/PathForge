@@ -35,7 +35,7 @@ interface TestingIntelligencePanelProps {
 export const TestingIntelligencePanel: React.FC<TestingIntelligencePanelProps> = ({
   intelligence,
   onLocateElement,
-  onSelectTab: _onSelectTab,
+  onSelectTab,
 }) => {
   const [activeSection, setActiveSection] = useState<
     'all' | 'gaps' | 'properties' | 'categories' | 'regressions' | 'recommendations'
@@ -379,9 +379,19 @@ export const TestingIntelligencePanel: React.FC<TestingIntelligencePanelProps> =
               </div>
             )}
             {regressions.regressedFindings.length > 0 && (
-              <div className="mt-2.5 p-2 rounded bg-[#da3633]/10 border border-[#da3633]/20 text-[11px] text-[#f85149]">
-                <span className="font-semibold">Reintroduced findings: </span>
-                {regressions.regressedFindings.join(', ')}
+              <div className="mt-2.5 p-2 rounded bg-[#da3633]/10 border border-[#da3633]/20 text-[11px] text-[#f85149] flex items-center justify-between">
+                <div>
+                  <span className="font-semibold">Reintroduced findings: </span>
+                  {regressions.regressedFindings.join(', ')}
+                </div>
+                {onSelectTab && (
+                  <button
+                    onClick={() => onSelectTab('findings')}
+                    className="ml-2 px-2 py-0.5 rounded bg-[#da3633]/20 hover:bg-[#da3633]/30 text-[#f85149] text-[10px] font-medium transition-colors shrink-0"
+                  >
+                    Inspect Findings
+                  </button>
+                )}
               </div>
             )}
           </div>

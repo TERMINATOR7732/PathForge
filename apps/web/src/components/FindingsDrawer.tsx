@@ -980,6 +980,34 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
                           </>
                         )}
                       </div>
+
+                      {/* Cross-Analysis Actions */}
+                      <div className="flex items-center space-x-2 pt-2 border-t border-[#21262d] text-[11px]">
+                        <span className="text-[#8b949e]">Cross-Analysis:</span>
+                        {attackPathAnalysis && attackPathAnalysis.attackPaths.length > 0 && (
+                          <button
+                            onClick={() => setActiveTab('attack-paths')}
+                            className="flex items-center space-x-1 px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#58a6ff] transition-colors"
+                            title="Trace paths involving this finding"
+                          >
+                            <Flame className="w-3 h-3 text-[#f85149]" />
+                            <span>Trace in Attack Paths</span>
+                          </button>
+                        )}
+                        {currentFinding.affectedNodes[0] && (
+                          <button
+                            onClick={() => {
+                              onSelectCompromisedNode?.(currentFinding.affectedNodes[0]);
+                              setActiveTab('blast-radius');
+                            }}
+                            className="flex items-center space-x-1 px-2 py-0.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#e6edf3] transition-colors"
+                            title="Simulate compromise blast radius from primary affected node"
+                          >
+                            <Radio className="w-3 h-3 text-[#f0883e]" />
+                            <span>Simulate Blast Radius</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ) : null}
                 </div>

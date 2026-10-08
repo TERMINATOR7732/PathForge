@@ -26,21 +26,114 @@ Build → Validate → Break → Simulate Attack → Explain → Defend → Fix 
 
 ---
 
-## Architectural Principles
+## System Architecture
 
-- **Deterministic**: The core graph traversal and validation rules are pure engineering algorithms. For identical inputs, validation and reachability produce identical results every time.
-- **LLM-Free Security Engine**: The core security reasoning does **NOT** rely on external LLM APIs. Rule evaluation is local, auditable, and instant.
-- **Local-First & Free-First**: Runs 100% locally with zero cloud dependencies, zero external database requirements, and a ₹0 operating cost.
-- **Modular & Decoupled**: Clear separation across tiers:
-  ```text
-  Domain / Graph Model  (@pathforge/core)
-          ↓
-  Validation Engine     (@pathforge/validator)
-          ↓
-  Application & UI      (@pathforge/web)
-  ```
-  The core graph and security logic have **zero** dependency on React or UI libraries.
-- **Chaos Lab UX Principle**: The workspace never blocks users from creating "bad" infrastructure. Creating mistakes is the primary vehicle for learning and proving defense.
+```text
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 PATHFORGE ARCHITECTURE                                 │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+
+  ┌───────────────────────────────────┐       ┌────────────────────────────────────────┐
+  │     WEB APPLICATION (REACT 19)    │       │         HEADLESS CLI RUNNER            │
+  │         (@pathforge/web)          │       │          (@pathforge/cli)              │
+  │                                   │       │                                        │
+  │  • Interactive Network Canvas     │       │  • npm run gate <env>                  │
+  │  • Component Palette & Inspector  │       │  • npm run inspect <env>               │
+  │  • Findings Drawer (9 Lenses)     │       │  • npm run analyze <env>               │
+  │  • Continuous Workflow Matrix     │       │  • Exit Codes: 0 (PASS), 1 (WARN),     │
+  │  • Vector SVG & Print Exporters   │       │    2 (BLOCK), 3 (INSUFFICIENT_EVIDENCE)│
+  └─────────────────┬─────────────────┘       └───────────────────┬────────────────────┘
+                    │                                             │
+                    └──────────────────────┬──────────────────────┘
+                                           │
+                                           ▼
+  ┌────────────────────────────────────────────────────────────────────────────────────┐
+  │                     CONTINUOUS WORKFLOW & ORCHESTRATION LAYER                      │
+  │                              (@pathforge/core/workflow)                            │
+  │                                                                                    │
+  │   • executeEngineeringRun()        • buildEvidenceMatrix()                         │
+  │   • captureRunToHistory()          • buildEvidenceLineage()                        │
+  │   • State Invalidation Coordinator (CURRENT vs STALE — RE-ANALYZE REQUIRED)        │
+  └─────────────┬────────────────────────────────────────────────────────┬─────────────┘
+                │                                                        │
+                ▼                                                        ▼
+  ┌───────────────────────────┐                            ┌───────────────────────────┐
+  │  CONTINUOUS CHANGE ENGINE │                            │   ENGINEERING HISTORY     │
+  │ (@pathforge/core/change-*)│                            │ (@pathforge/core/history) │
+  │                           │                            │                           │
+  │ • Change Ingestion Engine │                            │ • FileSystemHistoryStore  │
+  │ • Local Git Inspector     │                            │ • Atomic JSON Persistence │
+  │ • Read-Only GitHub Client │                            │ • Longitudinal Trends     │
+  │ • Diff Normalization      │                            │ • Historical Comparison   │
+  └─────────────┬─────────────┘                            └─────────────┬─────────────┘
+                │                                                        │
+                └──────────────────────────┬─────────────────────────────┘
+                                           │
+                                           ▼
+  ┌────────────────────────────────────────────────────────────────────────────────────┐
+  │                     ENGINEERING INTELLIGENCE & REASONING ENGINES                   │
+  │                                  (@pathforge/core)                                 │
+  │                                                                                    │
+  │  ┌───────────────────────┐ ┌───────────────────────┐ ┌───────────────────────────┐ │
+  │  │   Attack Paths (BFS)  │ │ Lateral Blast Radius  │ │ Architecture Intelligence │ │
+  │  │   • Traversal Facts   │ │ • Lateral Depth Hops  │ │ • Layered Tier Inference  │ │
+  │  │   • Boundary Crossing │ │ • Critical Asset Risk │ │ • SPOF & Concentration    │ │
+  │  │   • Risk Scoring      │ │ • Containment Checks  │ │ • ARCH-001 - ARCH-007     │ │
+  │  └───────────────────────┘ └───────────────────────┘ └───────────────────────────┘ │
+  │  ┌───────────────────────┐ ┌───────────────────────┐ ┌───────────────────────────┐ │
+  │  │ Production Readiness  │ │ Testing Intelligence  │ │ Technical Debt Engine     │ │
+  │  │ • 6 Hard Gates        │ │ • 20 Property Catalog │ │ • 7 Debt Categories       │ │
+  │  │ • 7 Weighted Domains  │ │ • Verification Gaps   │ │ • Concrete Evidence Line  │ │
+  │  │ • 10 Evidence Gaps    │ │ • Test Recommendations│ │ • Remediation Roadmaps    │ │
+  │  └───────────────────────┘ └───────────────────────┘ └───────────────────────────┘ │
+  └────────────────────────────────────────┬───────────────────────────────────────────┘
+                                           │
+                                           ▼
+  ┌────────────────────────────────────────────────────────────────────────────────────┐
+  │                    DETERMINISTIC VALIDATOR & REMEDIATION ENGINE                    │
+  │                              (@pathforge/validator)                                │
+  │                                                                                    │
+  │  • RuleRegistry (PF-001 to PF-009)          • FixVerificationEngine (Diff Engine)  │
+  │  • 6-Dimensional Finding Explanations       • Safe Deterministic Graph Remediations│
+  └────────────────────────────────────────┬───────────────────────────────────────────┘
+                                           │
+                                           ▼
+  ┌────────────────────────────────────────────────────────────────────────────────────┐
+  │                    DOMAIN MODEL & DIRECTED GRAPH ABSTRACTION                       │
+  │                               (@pathforge/core)                                    │
+  │                                                                                    │
+  │  • InfrastructureGraph (Adjacency list, BFS/DFS, Cycle detection, Degrees)         │
+  │  • InfrastructureNode  (Public, DMZ, Internal, Restricted, Management zones)      │
+  │  • InfrastructureEdge  (ALLOW/DENY, Ports, TLS/SSH encryption, Relationship types) │
+  │  • Immutable Environment Snapshots (Deep-frozen baseline snapshots)                │
+  └────────────────────────────────────────┬───────────────────────────────────────────┘
+                                           │
+                                           ▼
+  ┌────────────────────────────────────────────────────────────────────────────────────┐
+  │                           SHARED PROTOCOLS & SCHEMAS                               │
+  │                              (@pathforge/shared)                                   │
+  │                                                                                    │
+  │  • Finding, RuleCategory, Severity, AccessPolicy, PortRange, NodeType, EdgeProtocol│
+  └────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Architectural Principles & Truthful Governance
+
+PathForge is built under strict systems engineering discipline:
+
+1. **Deterministic Execution**: The core graph traversal and validation rules are pure engineering algorithms. For identical inputs, validation and reachability produce identical results every time.
+2. **Zero AI / LLM APIs**: The security reasoning engine does **NOT** rely on external LLM APIs, probabilistic prompt completions, or non-deterministic natural language models. All findings, attack paths, and remediations are backed by mathematical graph invariants and auditable static rules.
+3. **Strict ₹0 Operating Budget**: Runs 100% locally with zero cloud subscriptions, zero trial accounts requiring credit cards, zero hosted databases, and zero external network calls.
+4. **Decoupled Monorepo Architecture**: Strict physical separation across layers:
+   - Domain Model & Graph: `@pathforge/core`
+   - Validator & Remediation: `@pathforge/validator`
+   - Headless CLI Automation: `@pathforge/cli`
+   - Interactive UI Shell: `@pathforge/web`
+   The core graph and security logic have **zero** dependency on React or UI libraries.
+5. **Truthful Evidence Accounting**: PathForge never manufactures false passes or fake confidence metrics. When operational properties (such as backups, telemetry, and failover) cannot be evaluated from a static network topology, they are explicitly cataloged as **Evidence Gaps** rather than fabricated as failures or silently assumed to pass.
+6. **Permissive Chaos UX Principle**: The workspace never artificially blocks users from creating "bad" infrastructure. Creating intentional mistakes is the primary vehicle for understanding vulnerabilities and proving defense.
 
 ---
 
@@ -52,6 +145,34 @@ PathForge is built as a **serious engineering and security workspace**, taking i
 - **Technical Restraint**: Monospace accents (`JetBrains Mono`), 1px slate structural borders, subtle selection outlines, and crisp status badges.
 - **Zero Decorative Blobs**: No generic SaaS gradients, no purple AI glows, no glassmorphism, no meaningless metric cards, and no cartoonish illustrations.
 - **Information Density**: Compact side panels with instant property inspection and deep diagnostic logs.
+
+---
+
+## Continuous Engineering Loop
+
+PathForge unifies static analysis with continuous repository change evaluation:
+
+```text
+Model
+  ↓
+Analyze
+  ↓
+Change Infrastructure
+  ↓
+Compare Before / After
+  ↓
+Detect New Risk
+  ↓
+Detect Resolved Risk
+  ↓
+Detect Security Regression
+  ↓
+Verify Change
+  ↓
+Track History
+  ↓
+CI / CD Engineering Gate
+```
 
 ---
 
@@ -950,11 +1071,156 @@ CAPTURE ENGINEERING HISTORY
   ```
 
 - **Interactive UI Workflow Workspace (`ChangeAnalysisPanel` · Sub-Tab `WORKFLOW & EVIDENCE`)**:
+  - **Continuous Verification Pipeline Strip**: 5-stage interactive progression strip (`1. SOURCE → 2. CHANGE → 3. INTEL → 4. HISTORY → 5. GATE`) with quick-jump navigation and live status metrics.
   - **Run Context Bar**: Displays source provenance badge (`Local Git`, `GitHub PR`, `Raw Diff`), base/head references, changes summary, gate decision pill, and staleness indicator (`CURRENT` vs `STALE — RE-ANALYZE REQUIRED`).
   - **Executive Decision Verdict Card**: Prominently highlights the authoritative gate status, exit code, composite score, and primary decision drivers ("WHY?").
   - **Comprehensive Evidence Matrix**: Displays all 9 deterministic controls with status badges (`PASS`, `WARN`, `BLOCK`, `UNVERIFIED`), metrics, and "Locate on Canvas" quick links for affected nodes/edges.
   - **Audit Trail Lineage Cards**: Deep audit items mapping each blocking rule and warning to its concrete affected elements.
   - **Actions**: Explicit "RUN ENGINEERING ANALYSIS" and "CAPTURE RUN TO HISTORY" buttons with real-time feedback.
+
+---
+
+## Recruiter & Technical Interviewer Walkthrough Scripts
+
+PathForge is built specifically to demonstrate serious systems architecture, graph algorithms, and continuous security engineering in technical interviews. Below are five structured walkthrough sequences:
+
+### Walkthrough 1: Modeling & Baseline Architecture (`Secure Web App`)
+* **Goal**: Demonstrate production-grade multi-tier modeling and clean baseline validation.
+1. **Load Scenario**: On first run, click **Start from Secure Web App** on the canvas onboarding card.
+2. **Inspect Topology**: Observe the modeled 6-tier architecture (`Internet → Perimeter Firewall → Load Balancer → Web Cluster → Internal API → Postgres DB & Redis Cache`).
+3. **Inspect Nodes**: Click on the `Postgres Database` node to open the Inspector. Note its `restricted` zone, `critical` asset criticality, private CIDR subnet (`10.0.3.10/32`), and listening service (`5432/TCP`).
+4. **Check Findings**: The Findings Drawer reports `Zero Security Violations Detected`.
+5. **Inspect Architecture & Readiness**: Click the **Architecture** tab (Score: 85/100, verified tier boundaries). Click **Readiness** to view the 6 operational gates.
+6. **Technical Talking Point**: *"PathForge models infrastructure as a directed graph where visual $(x, y)$ layout coordinates are decoupled from topology semantics. Validation is pure, deterministic graph evaluation."*
+
+### Walkthrough 2: Intentional Attack Path Simulation (`Public DB Exposure`)
+* **Goal**: Demonstrate adversarial graph reachability and the complete `Find → Explain → Fix → Prove` loop.
+1. **Load Anti-Pattern**: In TopNav, click **Scenarios** and select **Public Database Exposure**.
+2. **Review Critical Finding**: The Findings Drawer highlights `PF-001: Critical Public Database Exposure`.
+3. **Simulate Attack Path**: Click the **Attack Paths** tab. PathForge identifies the direct ingress path from `Internet` to `Production Database`. Clicking the path highlights the adversarial route in crimson across the canvas.
+4. **Inspect Explanations**: Click the finding to expand the 6-dimensional explanation (Risk context, Threat impact, Recommended architecture, Concrete remediation).
+5. **Apply Safe Remediation**: Click the automated remediation action **Deny Access on Ingress Edge**.
+6. **Observe State Discipline**: The workspace updates the edge to `[DENY]` and enters `VALIDATION STALE · TOPOLOGY MODIFIED`.
+7. **Prove the Fix**: Click **Revalidate Topology**. The status transitions to `✓ VERIFICATION PASSED (1 RESOLVED)`.
+8. **Technical Talking Point**: *"A security fix is never assumed to work without proof. PathForge captures immutable frozen snapshots and runs differential graph comparisons before and after every remediation."*
+
+### Walkthrough 3: Lateral Movement & Blast Radius (`Flat Network`)
+* **Goal**: Demonstrate post-compromise traversal and structural fragility analysis.
+1. **Load Scenario**: In TopNav, click **Scenarios** and select **Flat / Poorly Segmented Network**.
+2. **Examine Architecture**: Observe how the Internet is bridged directly to an unsegmented internal switch where Web, API, Database, and Admin nodes share the same broadcast domain.
+3. **Simulate Compromise**: Click the **Blast Radius** tab. Select `Web Server` as the compromised origin asset.
+4. **Trace Lateral Movement**: The engine discovers an unmitigated blast radius: all sensitive internal assets (Database, Admin console, Redis) are reached in a single lateral hop (+1).
+5. **Inspect Architecture Deficiencies**: Click the **Architecture** tab. PathForge detects `ARCH-003: Flat Internal Network Topology` and single points of failure (`ARCH-006`).
+6. **Technical Talking Point**: *"Blast radius analysis answers 'If this container or server is compromised, what else can the attacker reach?' Directed BFS strictly traverses permitted egress edges while respecting DENY barriers."*
+
+### Walkthrough 4: Continuous Engineering & Regression Detection
+* **Goal**: Demonstrate continuous change ingestion and automated regression prevention.
+1. **Capture Baseline**: In any clean environment, switch to the **Changes** tab and establish a verified baseline.
+2. **Mutate Infrastructure**: Connect a new edge directly from `Internet` to an internal node, or switch to the **QA B (Modified Working Tree)** preset.
+3. **Continuous Pipeline Strip**: Notice the 5-stage pipeline header: `1. SOURCE → 2. CHANGE → 3. INTEL → 4. HISTORY → 5. GATE`.
+4. **Inspect Risk Delta**: Click **Risk Delta** to see newly introduced risks versus resolved risks.
+5. **Observe Regression Blocker**: If an edit reintroduces a previously fixed flaw, PathForge marks verification as `REGRESSION DETECTED` and blocks the CI gate.
+6. **Technical Talking Point**: *"Security tools often only look at point-in-time snapshots. PathForge tracks the delta between commits or pull requests, differentiating security-increasing changes from security regressions."*
+
+### Walkthrough 5: Headless CI/CD Engineering Gate (CLI Integration)
+* **Goal**: Demonstrate that PathForge runs headless in automated deployment pipelines without a browser.
+1. **Run Standard Web App Gate**:
+   ```bash
+   npm run gate -- environments/demo/standard-web-app.json
+   ```
+   Exits with status `WARN` (exit code 1), showing verified passed controls and explicit operational evidence gaps.
+2. **Run Compromised Anti-Pattern Gate**:
+   ```bash
+   npm run gate -- environments/demo/compromised-direct-db.json
+   ```
+   Exits with status `BLOCK` (exit code 2), detailing hard policy blockers.
+3. **Run Continuous Inspection with Evidence Matrix**:
+   ```bash
+   npm run inspect -- environments/demo/standard-web-app.json
+   ```
+   Outputs the comprehensive 9-control Evidence Matrix with traceable element pointers.
+4. **Technical Talking Point**: *"The CLI shares 100% of the core reasoning engines with the web UI. It operates with zero browser dependencies, zero network calls, and deterministic exit codes for automated GitHub Actions or GitLab CI gates."*
+
+---
+
+## Real CLI Execution Examples
+
+PathForge includes a dedicated `@pathforge/cli` tool capable of headless evaluation in automated CI/CD pipelines.
+
+### 1. `npm run inspect -- environments/demo/standard-web-app.json`
+
+```text
+> pathforge@0.1.0 inspect
+> node apps/cli/dist/index.js inspect environments/demo/standard-web-app.json
+
+PATHFORGE CONTINUOUS ENGINEERING INSPECTION
+──────────────────────────────────────────────────────
+Target:          environments/demo/standard-web-app.json
+Environment:     Standard Secure 3-Tier Web Application (env-demo-standard-web)
+Status:          CURRENT
+
+ENGINEERING DECISION: WARN
+Composite Score:      87/100
+Exit Code:            1
+
+EVIDENCE MATRIX
+──────────────────────────────────────────────────────
+Critical Security Findings   PASS         0 active critical findings verified
+High Security Findings       PASS         0 active high findings verified
+Attack Path Exposure         WARN         2 elevated path(s) detected with lateral movement opportunities
+Architecture Quality         PASS         Architecture score 85/100 (good) · 3 anti-pattern(s)
+Production Readiness         WARN         Status READY_WITH_WARNINGS (91/100) · 0 blocked gates, 2 warnings
+Testing Intelligence         PASS         Coverage score 80/100 (GOOD) · 11 verified, 0 unverified properties
+Technical Debt Health        PASS         Debt health score 89/100 (MANAGEABLE) · 2 active item(s)
+Continuous Regression Delta  UNVERIFIED   No baseline established for comparative regression analysis
+CI Engineering Gate          WARN         Gate verdict: WARN (exit code 1) · composite score 87/100
+
+PRIMARY FACTORS (Why?)
+──────────────────────────────────────────────────────
+• 2 Elevated/High Attack Path(s): Detected 2 elevated attack path(s) with lateral traversal opportunities.
+• Production Readiness Warnings (4): Environment exhibits operational or resilience warnings that should be resolved.
+
+──────────────────────────────────────────────────────
+Engineering Decision: WARN (Exit code: 1)
+```
+
+### 2. `npm run inspect -- environments/demo/compromised-direct-db.json`
+
+```text
+> pathforge@0.1.0 inspect
+> node apps/cli/dist/index.js inspect environments/demo/compromised-direct-db.json
+
+PATHFORGE CONTINUOUS ENGINEERING INSPECTION
+──────────────────────────────────────────────────────
+Target:          environments/demo/compromised-direct-db.json
+Environment:     Chaos Lab — Anti-Pattern Sandbox (env-demo-compromised-chaos)
+Status:          CURRENT
+
+ENGINEERING DECISION: BLOCK
+Composite Score:      21/100
+Exit Code:            2
+
+EVIDENCE MATRIX
+──────────────────────────────────────────────────────
+Critical Security Findings   BLOCK        2 critical finding(s) detected: Public Database Exposure, Untrusted Network Directly Bridged
+High Security Findings       WARN         7 high finding(s) detected: Public Administrative Port, Unencrypted Sensitive Communication
+Attack Path Exposure         BLOCK        2 critical attack path(s) reaching high-value targets
+Architecture Quality         BLOCK        Architecture score 30/100 (weak) · 5 anti-pattern(s)
+Production Readiness         BLOCK        Status NOT_READY (29/100) · 4 blocked gates, 1 warnings
+Testing Intelligence         WARN         Coverage score 17/100 (INSUFFICIENT) · 2 verified, 14 unverified properties
+Technical Debt Health        BLOCK        Debt health score 0/100 (SEVERE) · 15 active item(s)
+Continuous Regression Delta  UNVERIFIED   No baseline established for comparative regression analysis
+CI Engineering Gate          BLOCK        Gate verdict: BLOCK (exit code 2) · composite score 21/100
+
+PRIMARY FACTORS (Why?)
+──────────────────────────────────────────────────────
+• 2 Critical Security Finding(s): Detected 2 critical vulnerability finding(s), exceeding policy maximum of 0.
+• 2 Critical Attack Path(s): 2 multi-hop critical attack path(s) reach restricted assets or sensitive databases.
+• Production Readiness Hard Gate Blocked: Production readiness status is NOT_READY (7 blocker(s)).
+
+──────────────────────────────────────────────────────
+Engineering Decision: BLOCK (Exit code: 2)
+```
 
 ---
 

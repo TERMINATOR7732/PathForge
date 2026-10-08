@@ -15,6 +15,7 @@
     "dev": "npm run dev --workspace=@pathforge/web",
     "gate": "node apps/cli/dist/index.js gate",
     "analyze": "node apps/cli/dist/index.js analyze",
+    "inspect": "node apps/cli/dist/index.js inspect",
     "gate:test": "node apps/cli/dist/index.js gate environments/demo/standard-web-app.json"
   },
   "devDependencies": {

@@ -1010,6 +1010,139 @@ export const ChangeAnalysisPanel: React.FC<ChangeAnalysisPanelProps> = ({
       {/* Sub-Tab 0: Continuous Workflow & Evidence Matrix */}
       {activeSubTab === 'workflow' && (
         <div className="space-y-4">
+          {/* Continuous Verification Pipeline Strip: SOURCE → CHANGE → INTELLIGENCE → HISTORY → GATE */}
+          <div className="bg-[#12161f] border border-[#21262d] rounded-lg p-3">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-[#8b949e] mb-2.5 flex items-center justify-between">
+              <span className="font-bold text-[#c9d1d9] flex items-center space-x-1.5">
+                <Layers className="w-3.5 h-3.5 text-[#58a6ff]" />
+                <span>CONTINUOUS VERIFICATION PIPELINE</span>
+              </span>
+              <span className="text-[#58a6ff] text-[10px]">Deterministic Stage Progression</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono">
+              {/* Stage 1: SOURCE */}
+              <button
+                type="button"
+                onClick={() => setActiveSubTab('source')}
+                className="flex flex-col p-2.5 rounded bg-[#161b22] hover:bg-[#21262d] border border-[#30363d] text-left transition-colors cursor-pointer group"
+                title="Inspect ingestion source and unified diff"
+              >
+                <div className="flex items-center justify-between text-[10px] text-[#8b949e] group-hover:text-[#58a6ff]">
+                  <span className="font-bold">1. SOURCE</span>
+                  <ArrowRight className="w-3 h-3 text-[#30363d] group-hover:text-[#58a6ff]" />
+                </div>
+                <div className="mt-1 text-xs font-semibold text-[#e6edf3] truncate">
+                  {sourceMode === 'git' ? 'Local Git' : sourceMode === 'github' ? 'GitHub PR' : 'Manual Diff'}
+                </div>
+                <div className="text-[10px] text-[#8b949e] truncate">
+                  {ingestedChangeSet.files.length} file{ingestedChangeSet.files.length === 1 ? '' : 's'}
+                </div>
+              </button>
+
+              {/* Stage 2: CHANGE */}
+              <button
+                type="button"
+                onClick={() => setActiveSubTab('changes')}
+                className="flex flex-col p-2.5 rounded bg-[#161b22] hover:bg-[#21262d] border border-[#30363d] text-left transition-colors cursor-pointer group"
+                title="Inspect classified changes and security deltas"
+              >
+                <div className="flex items-center justify-between text-[10px] text-[#8b949e] group-hover:text-[#58a6ff]">
+                  <span className="font-bold">2. CHANGE</span>
+                  <ArrowRight className="w-3 h-3 text-[#30363d] group-hover:text-[#58a6ff]" />
+                </div>
+                <div className="mt-1 text-xs font-semibold text-[#e6edf3] truncate">
+                  {changes.length} Deltas
+                </div>
+                <div className="text-[10px] truncate">
+                  {changes.filter((c) => c.classification === 'security-decreasing').length > 0 ? (
+                    <span className="text-[#f85149] font-bold">
+                      -{changes.filter((c) => c.classification === 'security-decreasing').length} sec
+                    </span>
+                  ) : (
+                    <span className="text-[#3fb950]">clean delta</span>
+                  )}
+                </div>
+              </button>
+
+              {/* Stage 3: INTELLIGENCE */}
+              <button
+                type="button"
+                onClick={() => setActiveSubTab('intelligence')}
+                className="flex flex-col p-2.5 rounded bg-[#161b22] hover:bg-[#21262d] border border-[#30363d] text-left transition-colors cursor-pointer group"
+                title="Inspect security intelligence and attack-path mutations"
+              >
+                <div className="flex items-center justify-between text-[10px] text-[#8b949e] group-hover:text-[#58a6ff]">
+                  <span className="font-bold">3. INTEL</span>
+                  <ArrowRight className="w-3 h-3 text-[#30363d] group-hover:text-[#58a6ff]" />
+                </div>
+                <div className="mt-1 text-xs font-semibold text-[#e6edf3] truncate">
+                  {newlyIntroducedRisks.length > 0 ? (
+                    <span className="text-[#f85149]">+{newlyIntroducedRisks.length} Risks</span>
+                  ) : resolvedRisks.length > 0 ? (
+                    <span className="text-[#3fb950]">-{resolvedRisks.length} Risks</span>
+                  ) : (
+                    <span>Delta Zero</span>
+                  )}
+                </div>
+                <div className="text-[10px] text-[#8b949e] truncate">
+                  Paths: {attackPathDelta.added.length > 0 ? `+${attackPathDelta.added.length}` : '0 added'}
+                </div>
+              </button>
+
+              {/* Stage 4: HISTORY */}
+              <button
+                type="button"
+                onClick={() => setActiveSubTab('history')}
+                className="flex flex-col p-2.5 rounded bg-[#161b22] hover:bg-[#21262d] border border-[#30363d] text-left transition-colors cursor-pointer group"
+                title="Review persistent history runs and trends"
+              >
+                <div className="flex items-center justify-between text-[10px] text-[#8b949e] group-hover:text-[#58a6ff]">
+                  <span className="font-bold">4. HISTORY</span>
+                  <ArrowRight className="w-3 h-3 text-[#30363d] group-hover:text-[#58a6ff]" />
+                </div>
+                <div className="mt-1 text-xs font-semibold text-[#e6edf3] truncate">
+                  Run History
+                </div>
+                <div className="text-[10px] text-[#3fb950] truncate">
+                  Persistent Ledger
+                </div>
+              </button>
+
+              {/* Stage 5: GATE */}
+              <button
+                type="button"
+                onClick={() => setActiveSubTab('gate')}
+                className={`flex flex-col p-2.5 rounded border text-left transition-colors cursor-pointer group ${
+                  engineeringRun.gateStatus === 'PASS'
+                    ? 'bg-[#238636]/15 border-[#238636]/40 hover:bg-[#238636]/25'
+                    : engineeringRun.gateStatus === 'WARN'
+                    ? 'bg-[#d29922]/15 border-[#d29922]/40 hover:bg-[#d29922]/25'
+                    : 'bg-[#da3633]/15 border-[#da3633]/40 hover:bg-[#da3633]/25'
+                }`}
+                title="Evaluate automated CI/CD gating rules"
+              >
+                <div className="flex items-center justify-between text-[10px] text-[#8b949e] group-hover:text-[#58a6ff]">
+                  <span className="font-bold">5. GATE</span>
+                  <ShieldCheck className="w-3 h-3 text-[#58a6ff]" />
+                </div>
+                <div
+                  className={`mt-1 text-xs font-bold truncate ${
+                    engineeringRun.gateStatus === 'PASS'
+                      ? 'text-[#3fb950]'
+                      : engineeringRun.gateStatus === 'WARN'
+                      ? 'text-[#d29922]'
+                      : 'text-[#f85149]'
+                  }`}
+                >
+                  {engineeringRun.gateStatus}
+                </div>
+                <div className="text-[10px] text-[#8b949e] truncate">
+                  {engineeringRun.gateResult.summary.totalBlockingReasons} blocker
+                  {engineeringRun.gateResult.summary.totalBlockingReasons === 1 ? '' : 's'}
+                </div>
+              </button>
+            </div>
+          </div>
           {/* Executive Decision Verdict Card */}
           <div
             className={`p-4 rounded-lg border space-y-3 ${

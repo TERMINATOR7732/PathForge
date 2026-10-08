@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Environment, InfrastructureEdge, InfrastructureNode, AttackPath, BlastRadiusAnalysisResult } from '@pathforge/core';
 import { Finding, NodeType } from '@pathforge/shared';
-import { Flame } from 'lucide-react';
+import { Flame, ShieldCheck, AlertOctagon, AlertTriangle, Layers, Plus } from 'lucide-react';
 import { CanvasNode } from './CanvasNode.js';
 import { CanvasEdge } from './CanvasEdge.js';
 import { ConnectionPreview } from './ConnectionPreview.js';
@@ -92,6 +92,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   const [isPanning, setIsPanning] = useState<boolean>(false);
   const [panStart, setPanStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [isSpacePressed, setIsSpacePressed] = useState<boolean>(false);
+  const [isDismissedEmptyState, setIsDismissedEmptyState] = useState<boolean>(false);
 
   // Findings index for styling
   const criticalAffectedNodes = new Set(
@@ -536,60 +537,95 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       )}
 
       {/* Empty Canvas First-Run Workflow Experience */}
-      {nodes.length === 0 && (
+      {nodes.length === 0 && !isDismissedEmptyState && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 p-4 select-none">
-          <div className="w-full max-w-lg p-6 rounded-lg bg-[#111318]/95 border border-[#30363d] shadow-2xl backdrop-blur-md pointer-events-auto font-mono text-center space-y-4">
+          <div className="w-full max-w-xl p-6 rounded-lg bg-[#111318]/95 border border-[#30363d] shadow-2xl backdrop-blur-md pointer-events-auto font-mono text-center space-y-4">
             <div className="space-y-1">
               <div className="text-xs uppercase tracking-widest text-[#58a6ff] font-bold">
-                Build Your Environment
+                PathForge — Infrastructure Security Laboratory
               </div>
-              <p className="text-xs text-[#8b949e] max-w-md mx-auto leading-relaxed">
-                Add infrastructure components to the canvas and connect them to model communication and trust boundaries.
+              <p className="text-xs text-[#8b949e] max-w-lg mx-auto leading-relaxed">
+                Design virtual topologies, simulate adversarial reachability, and prove defensive remediations deterministically.
               </p>
             </div>
 
-            {/* 3 Core Product Steps */}
-            <div className="grid grid-cols-3 gap-2 text-left text-[11px] pt-1">
-              <div className="p-2.5 rounded bg-[#161b24] border border-[#222630] space-y-1">
-                <span className="text-[10px] font-bold text-[#58a6ff] uppercase block">1. Validate</span>
-                <span className="text-[#8b949e] text-[10px] leading-tight block">
-                  Find security and topology misconfigurations deterministically.
-                </span>
-              </div>
-              <div className="p-2.5 rounded bg-[#161b24] border border-[#222630] space-y-1">
-                <span className="text-[10px] font-bold text-[#f0883e] uppercase block">2. Fix</span>
-                <span className="text-[#8b949e] text-[10px] leading-tight block">
-                  Apply recommended automated or manual remediations.
-                </span>
-              </div>
-              <div className="p-2.5 rounded bg-[#161b24] border border-[#222630] space-y-1">
-                <span className="text-[10px] font-bold text-[#3fb950] uppercase block">3. Prove</span>
-                <span className="text-[#8b949e] text-[10px] leading-tight block">
-                  Revalidate and verify that the attack surface was eliminated.
-                </span>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="pt-2 flex items-center justify-center gap-2 flex-wrap">
+            {/* 5 Demonstration & Workspace Actions */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left text-xs pt-1">
               <button
                 onClick={() => onLoadScenario?.('secure-web-app')}
-                className="px-3 py-1.5 rounded bg-[#238636] hover:bg-[#2ea043] text-white text-xs font-semibold transition-colors shadow-sm"
+                className="p-3 rounded bg-[#161b24] border border-[#222630] hover:border-[#238636] hover:bg-[#1a231e] transition-all text-left space-y-1 group"
               >
-                Load Secure Web App
+                <div className="flex items-center space-x-1.5 text-[#3fb950] font-semibold text-xs">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#3fb950]" />
+                  <span>Start from Secure Web App</span>
+                </div>
+                <div className="text-[10px] text-[#8b949e] group-hover:text-[#c9d1d9] leading-tight">
+                  Hardened 3-tier reference architecture with perimeter DMZ, reverse proxy, and zero critical findings.
+                </div>
               </button>
+
               <button
                 onClick={() => onLoadScenario?.('public-db-exposure')}
-                className="px-3 py-1.5 rounded bg-[#1f6feb] hover:bg-[#388bfd] text-white text-xs font-semibold transition-colors shadow-sm"
+                className="p-3 rounded bg-[#161b24] border border-[#222630] hover:border-[#da3633] hover:bg-[#251518] transition-all text-left space-y-1 group"
               >
-                Load Public DB Lab
+                <div className="flex items-center space-x-1.5 text-[#f85149] font-semibold text-xs">
+                  <AlertOctagon className="w-3.5 h-3.5 text-[#f85149]" />
+                  <span>Open Public DB Exposure</span>
+                </div>
+                <div className="text-[10px] text-[#8b949e] group-hover:text-[#c9d1d9] leading-tight">
+                  Dangerous unmediated Internet → DB connection (PF-001). Practice one-click defensive remediation.
+                </div>
               </button>
+
+              <button
+                onClick={() => onLoadScenario?.('flat-network')}
+                className="p-3 rounded bg-[#161b24] border border-[#222630] hover:border-[#f0883e] hover:bg-[#251b14] transition-all text-left space-y-1 group"
+              >
+                <div className="flex items-center space-x-1.5 text-[#f0883e] font-semibold text-xs">
+                  <AlertTriangle className="w-3.5 h-3.5 text-[#f0883e]" />
+                  <span>Open Flat Network</span>
+                </div>
+                <div className="text-[10px] text-[#8b949e] group-hover:text-[#c9d1d9] leading-tight">
+                  Unsegmented corporate LAN lacking perimeter firewalls, exposing internal admin and database tiers.
+                </div>
+              </button>
+
+              <button
+                onClick={() => onLoadScenario?.('chaos-lab')}
+                className="p-3 rounded bg-[#161b24] border border-[#222630] hover:border-[#8957e5] hover:bg-[#241733]/60 transition-all text-left space-y-1 group"
+              >
+                <div className="flex items-center space-x-1.5 text-[#d2a8ff] font-semibold text-xs">
+                  <Flame className="w-3.5 h-3.5 text-[#d2a8ff]" />
+                  <span>Open Chaos Lab</span>
+                </div>
+                <div className="text-[10px] text-[#8b949e] group-hover:text-[#c9d1d9] leading-tight">
+                  Intentionally permissive multi-violation sandbox. PathForge never blocks insecure architecture designs.
+                </div>
+              </button>
+            </div>
+
+            {/* Build from Scratch or Browse */}
+            <div className="pt-2 flex items-center justify-between border-t border-[#222630] text-xs">
               <button
                 onClick={() => onOpenScenarioLab?.()}
-                className="px-3 py-1.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#c9d1d9] text-xs font-medium transition-colors"
+                className="px-3 py-1.5 rounded bg-[#181c24] hover:bg-[#222734] border border-[#2a303c] text-[#8b949e] hover:text-[#e6edf3] text-xs font-medium transition-colors flex items-center space-x-1.5"
               >
-                Browse All Scenarios
+                <Layers className="w-3 h-3 text-[#58a6ff]" />
+                <span>Browse All Scenarios</span>
               </button>
+
+              <button
+                onClick={() => setIsDismissedEmptyState(true)}
+                className="px-3 py-1.5 rounded bg-[#21262d] hover:bg-[#30363d] text-[#e6edf3] text-xs font-semibold transition-colors flex items-center space-x-1.5 border border-[#30363d]"
+              >
+                <Plus className="w-3.5 h-3.5 text-[#3fb950]" />
+                <span>Build from Scratch</span>
+              </button>
+            </div>
+
+            {/* Core Ethos Footer */}
+            <div className="text-[10px] text-[#5c6370] tracking-wider uppercase pt-1">
+              Build · Validate · Break · Simulate Attack · Explain · Defend · Fix · Re-test · Prove
             </div>
           </div>
         </div>
