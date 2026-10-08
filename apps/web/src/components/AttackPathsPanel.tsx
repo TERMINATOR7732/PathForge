@@ -112,7 +112,7 @@ export const AttackPathsPanel: React.FC<AttackPathsPanelProps> = ({
   }, [selectedPathId, filteredPaths, attackPaths]);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-[#0d0f12] text-xs font-mono select-none">
+    <div className="flex-1 flex flex-col overflow-hidden bg-[#0d0f12] text-xs font-sans select-none">
       {/* 1. Header Toolbar & Summary Metrics */}
       <div className="p-3 border-b border-[#222630] bg-[#12151b] space-y-2.5">
         <div className="flex items-center justify-between">

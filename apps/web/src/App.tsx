@@ -428,7 +428,7 @@ export const App: React.FC = () => {
   const activeScenario = getScenarioById(activeScenarioId);
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-[#0d0f12] text-[#e6edf3] overflow-hidden select-none">
+    <div className="h-screen w-screen flex flex-col bg-[#0b0e14] text-[#e6edf3] overflow-hidden select-none font-sans">
       {/* Top Navigation */}
       <TopNav
         currentScenarioId={activeScenarioId}

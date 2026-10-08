@@ -6,9 +6,9 @@
   }
 
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: #08090c;
-    color: #c9d1d9;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #0b0e14;
+    color: #e6edf3;
     overflow: hidden;
     height: 100vh;
     width: 100vw;
@@ -16,45 +16,48 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Monospace only for technical addresses, ports, code, hashes, and CLI outputs */
   code, pre, .font-mono {
-    font-family: 'JetBrains Mono', 'Fira Code', Menlo, Consolas, monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', Menlo, Consolas, monospace;
     font-feature-settings: 'tnum', 'zero';
   }
 }
 
-/* Design Tokens for Professional Engineering Workstation */
+/* Professional Engineering Workstation Design Tokens */
 :root {
-  --bg-workspace: #08090c;
-  --bg-surface: #0f1218;
-  --bg-surface-elevated: #151821;
-  --bg-panel: #0d1016;
-  --border-subtle: #1c212c;
-  --border-active: #2f3747;
+  --bg-app: #0b0e14;
+  --bg-panel: #11151c;
+  --bg-panel-elevated: #161b24;
+  --bg-canvas: #090c10;
+  --border-subtle: #212631;
+  --border-strong: #303746;
+  --border-active: #58a6ff;
+
   --text-primary: #f0f3f6;
   --text-secondary: #c9d1d9;
-  --text-muted: #7d8590;
-  --text-dim: #484f58;
+  --text-muted: #8b949e;
+  --text-subtle: #484f58;
 
-  /* Semantic Security Tokens */
+  /* Semantic Security System */
   --sec-critical: #f85149;
   --sec-high: #f0883e;
   --sec-warning: #d29922;
   --sec-verified: #3fb950;
   --sec-interactive: #58a6ff;
-  --sec-lateral: #a371f7;
+  --sec-lateral: #bc8cff;
 }
 
 /* Precision Engineering Dot-Matrix Canvas Grid */
 .canvas-grid {
-  background-color: #08090c;
-  background-image: 
-    radial-gradient(circle, #1e2430 1.25px, transparent 1.25px),
-    radial-gradient(circle, #141822 0.75px, transparent 0.75px);
-  background-size: 40px 40px, 20px 20px;
-  background-position: 0 0, 10px 10px;
+  background-color: #090c10;
+  background-image:
+    radial-gradient(circle, #212836 1.25px, transparent 1.25px),
+    radial-gradient(circle, #141a24 0.75px, transparent 0.75px);
+  background-size: 32px 32px, 16px 16px;
+  background-position: 0 0, 8px 8px;
 }
 
-/* Attack Path Directional Traversal Animation */
+/* Attack Path Directional Traversal Flow Animation */
 @keyframes attackFlow {
   from {
     stroke-dashoffset: 24;
@@ -75,14 +78,14 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #0b0d12;
+  background: #0d1117;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #212631;
+  background: #252c38;
   border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #303746;
+  background: #343e4f;
 }

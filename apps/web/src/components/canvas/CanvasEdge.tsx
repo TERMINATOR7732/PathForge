@@ -1,6 +1,7 @@
 import React from 'react';
 import { InfrastructureEdge, InfrastructureNode } from '@pathforge/core';
 import { Lock } from 'lucide-react';
+import { NODE_WIDTH, NODE_HEIGHT } from './CanvasNode.js';
 
 interface CanvasEdgeProps {
   edge: InfrastructureEdge;
@@ -23,151 +24,143 @@ export const CanvasEdge: React.FC<CanvasEdgeProps> = ({
   targetNode,
   isSelected,
   isVulnerable,
-  isHoveredFromFinding,
-  isFocusedTarget,
+  isHoveredFromFinding = false,
   isOnAttackPath = false,
   attackHopOrder = null,
   isLateralMovement = false,
   isDimmed = false,
   onSelect,
 }) => {
-  // Source connects from right handle (x + 204, y + 37)
-  // Target connects to left handle (x, y + 37)
-  const sx = sourceNode.position.x + 204;
-  const sy = sourceNode.position.y + 37;
+  // Source output handle (right side)
+  const sx = sourceNode.position.x + NODE_WIDTH;
+  const sy = sourceNode.position.y + NODE_HEIGHT / 2;
+
+  // Target input handle (left side)
   const tx = targetNode.position.x;
-  const ty = targetNode.position.y + 37;
+  const ty = targetNode.position.y + NODE_HEIGHT / 2;
 
-  const dx = Math.abs(tx - sx);
-  const curvature = Math.max(dx * 0.45, 40);
+  // Compute smooth bezier curve
+  const dx = tx - sx;
+  const dy = ty - sy;
 
-  const path = `M ${sx} ${sy} C ${sx + curvature} ${sy}, ${tx - curvature} ${ty}, ${tx} ${ty}`;
+  let pathData = '';
+  if (dx >= 20) {
+    const curvature = Math.max(Math.abs(dx) * 0.45, 40);
+    pathData = `M ${sx} ${sy} C ${sx + curvature} ${sy}, ${tx - curvature} ${ty}, ${tx} ${ty}`;
+  } else {
+    // Looping / reverse connection curve
+    const loopOffsetY = Math.abs(dy) < 50 ? 60 : 0;
+    const midY = (sy + ty) / 2 + loopOffsetY;
+    pathData = `M ${sx} ${sy} C ${sx + 60} ${sy}, ${sx + 60} ${midY}, ${(sx + tx) / 2} ${midY} C ${tx - 60} ${midY}, ${tx - 60} ${ty}, ${tx} ${ty}`;
+  }
 
   const midX = (sx + tx) / 2;
   const midY = (sy + ty) / 2;
 
-  const isDenied = edge.access === 'deny';
-  const isEncrypted = edge.encrypted;
+  const isDenied = edge.metadata.access === 'deny';
+  const isEncrypted = edge.metadata.encrypted === true;
+  const proto = (edge.metadata.protocol ?? 'TCP').toUpperCase();
+  const ports = edge.metadata.ports ?? '';
+  const label = ports ? `${proto}:${ports}` : proto;
 
-  // Determine trust boundary transition
-  const sourceZone = sourceNode.metadata.zone ?? 'internal';
-  const targetZone = targetNode.metadata.zone ?? 'internal';
-  const isBoundaryCrossing = sourceZone !== targetZone;
-
-  let strokeColor = '#252c3b';
-  let markerId = 'arrowhead-normal';
+  // Stroke styling hierarchy
+  let strokeColor = '#3b4454';
   let strokeWidth = 1.5;
-  let strokeDasharray: string | undefined = undefined;
+  let strokeDasharray: string | undefined = isDenied ? '4 4' : undefined;
+  let markerId = 'arrowhead-normal';
 
   if (isOnAttackPath) {
     strokeColor = '#f85149';
-    markerId = 'arrowhead-critical';
     strokeWidth = 2.5;
-    strokeDasharray = '6 3';
+    strokeDasharray = '6 4';
+    markerId = 'arrowhead-attack';
   } else if (isLateralMovement) {
-    strokeColor = '#a371f7';
+    strokeColor = '#bc8cff';
+    strokeWidth = 2;
+    strokeDasharray = '5 3';
     markerId = 'arrowhead-lateral';
-    strokeWidth = 2;
-    strokeDasharray = '4 3';
-  } else if (isFocusedTarget) {
-    strokeColor = '#58a6ff';
-    markerId = 'arrowhead-active';
-    strokeWidth = 2.5;
-  } else if (isHoveredFromFinding || isVulnerable) {
+  } else if (isVulnerable || isHoveredFromFinding) {
     strokeColor = '#f85149';
-    markerId = 'arrowhead-critical';
     strokeWidth = 2;
-    strokeDasharray = '4 3';
+    markerId = 'arrowhead-vulnerable';
   } else if (isSelected) {
     strokeColor = '#58a6ff';
-    markerId = 'arrowhead-active';
     strokeWidth = 2;
+    markerId = 'arrowhead-selected';
   } else if (isDenied) {
-    strokeColor = '#3b4354';
+    strokeColor = '#5b6577';
+    strokeWidth = 1.5;
     markerId = 'arrowhead-denied';
-    strokeDasharray = '3 3';
   }
-
-  const portDisplay = edge.ports;
-  const protoDisplay = edge.protocol;
-  const label =
-    portDisplay && portDisplay !== 'ANY'
-      ? `${protoDisplay}:${portDisplay}`
-      : protoDisplay;
 
   return (
     <g
-      className={`cursor-pointer group transition-opacity duration-150 ${
-        isDimmed ? 'opacity-15 hover:opacity-70' : 'opacity-100'
+      className={`group cursor-pointer select-none transition-opacity duration-150 ${
+        isDimmed ? 'opacity-15' : 'opacity-100'
       }`}
       onClick={(e) => {
         e.stopPropagation();
         onSelect(edge.id);
       }}
     >
-      {/* Invisible thick path for generous hit detection */}
+      {/* Invisible wider hit area for easy selection */}
       <path
-        d={path}
+        d={pathData}
         fill="none"
         stroke="transparent"
-        strokeWidth={20}
+        strokeWidth={16}
         className="cursor-pointer"
       />
 
-      {/* Visible Directional Path */}
+      {/* Main Connection Path */}
       <path
-        d={path}
+        d={pathData}
         fill="none"
         stroke={strokeColor}
         strokeWidth={strokeWidth}
         strokeDasharray={strokeDasharray}
         markerEnd={`url(#${markerId})`}
-        className={`transition-colors group-hover:stroke-[#58a6ff] ${
-          isOnAttackPath ? 'attack-path-flow' : ''
-        }`}
+        className={isOnAttackPath ? 'attack-path-flow' : 'transition-colors duration-150'}
       />
 
-      {/* Edge Label Pill */}
+      {/* Compact Midpoint Specification Pill */}
       <foreignObject
-        x={midX - 60}
+        x={midX - 55}
         y={midY - 11}
-        width={120}
+        width={110}
         height={22}
-        className="overflow-visible pointer-events-auto"
+        className="pointer-events-none overflow-visible"
       >
-        <div
-          className={`text-[9px] font-mono px-1.5 py-0.5 rounded border text-center transition-all select-none truncate flex items-center justify-center space-x-1 ${
-            isOnAttackPath
-              ? 'bg-[#1b1114] border-[#f85149] text-[#f85149] ring-1 ring-[#f85149]/40'
-              : isVulnerable
-              ? 'bg-[#1a1114] border-[#da3633] text-[#f85149]'
-              : isSelected
-              ? 'bg-[#121b27] border-[#58a6ff] text-[#58a6ff] ring-1 ring-[#58a6ff]/40'
-              : isDenied
-              ? 'bg-[#14161b] border-[#2a303c] text-[#7d8590]'
-              : 'bg-[#0e1117] border-[#1c212c] text-[#7d8590] group-hover:border-[#384152] group-hover:text-[#c9d1d9]'
-          }`}
-          title={`${sourceNode.name} (${sourceZone}) → ${targetNode.name} (${targetZone}) [${isDenied ? 'DENY ' : ''}${label}${isEncrypted ? ' · TLS' : ''}${isBoundaryCrossing ? ' · Boundary Cross' : ''}]`}
-        >
-          {isEncrypted && (
-            <span title="Encrypted TLS Channel" className="inline-flex items-center">
-              <Lock className="w-2.5 h-2.5 shrink-0 text-[#3fb950]" />
-            </span>
-          )}
+        <div className="flex items-center justify-center h-full w-full">
+          <div
+            className={`pointer-events-auto px-1.5 py-0.5 rounded text-[9px] font-mono leading-none flex items-center space-x-1 border shadow-xs transition-transform group-hover:scale-105 ${
+              isOnAttackPath
+                ? 'bg-[#1c1214] border-[#f85149] text-[#f85149] font-bold'
+                : isVulnerable
+                ? 'bg-[#1c1214] border-[#da3633] text-[#f85149] font-semibold'
+                : isSelected
+                ? 'bg-[#141d2b] border-[#58a6ff] text-[#58a6ff] font-semibold'
+                : isDenied
+                ? 'bg-[#161a22] border-[#303746] text-[#8b949e]'
+                : 'bg-[#11151c] border-[#212631] text-[#8b949e] group-hover:border-[#388bfd] group-hover:text-white'
+            }`}
+          >
+            {isEncrypted && (
+              <span title="Encrypted TLS Channel">
+                <Lock className="w-2.5 h-2.5 text-[#3fb950] shrink-0" />
+              </span>
+            )}
 
-          {isDenied && (
-            <span className="text-[#f85149] font-bold text-[8px] shrink-0">DENY</span>
-          )}
+            {isDenied && (
+              <span className="text-[#f85149] font-bold text-[8px] uppercase">DENY</span>
+            )}
 
-          {attackHopOrder !== null && (
-            <span className="text-[#f85149] font-bold text-[8px] shrink-0">#{attackHopOrder}</span>
-          )}
+            {attackHopOrder !== null && (
+              <span className="text-[#f85149] font-bold text-[8px]">#{attackHopOrder}</span>
+            )}
 
-          <span className="truncate">{label}</span>
-
-          {isBoundaryCrossing && !isOnAttackPath && (
-            <span className="w-1 h-1 rounded-full bg-[#388bfd] shrink-0" title="Crosses Trust Boundary" />
-          )}
+            <span className="truncate">{label}</span>
+          </div>
         </div>
       </foreignObject>
     </g>

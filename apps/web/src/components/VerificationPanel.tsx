@@ -93,7 +93,7 @@ export const VerificationPanel: React.FC<VerificationPanelProps> = ({
 
   if (!verification) {
     return (
-      <div className="flex-1 overflow-y-auto p-6 bg-[#0d0f12] flex flex-col justify-between font-mono space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 bg-[#0d0f12] flex flex-col justify-between font-sans space-y-6">
         <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3">
           <FileCheck className="w-10 h-10 text-[#58a6ff]/60" />
           <div className="text-sm font-semibold text-[#e6edf3]">
@@ -135,7 +135,7 @@ export const VerificationPanel: React.FC<VerificationPanelProps> = ({
   const hasRegressions = newFindings.length > 0;
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 bg-[#0d0f12] text-xs font-mono space-y-4">
+    <div className="flex-1 overflow-y-auto p-4 bg-[#0d0f12] text-xs font-sans space-y-4">
       {/* 0. Engineering Export Bar */}
       {renderExportBar()}
 

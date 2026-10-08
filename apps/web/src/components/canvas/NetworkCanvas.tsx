@@ -1,19 +1,18 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Environment,
-  InfrastructureEdge,
   InfrastructureNode,
+  InfrastructureEdge,
   AttackPath,
   BlastRadiusAnalysisResult,
 } from '@pathforge/core';
-import { Finding, NodeType, NodeZone } from '@pathforge/shared';
-import { Flame, ShieldCheck, AlertOctagon, AlertTriangle, Layers, Plus } from 'lucide-react';
-import { CanvasNode } from './CanvasNode.js';
+import { NodeType, NodeZone, Finding } from '@pathforge/shared';
+import { CanvasNode, NODE_WIDTH, NODE_HEIGHT } from './CanvasNode.js';
 import { CanvasEdge } from './CanvasEdge.js';
-import { ConnectionPreview } from './ConnectionPreview.js';
 import { CanvasControls } from './CanvasControls.js';
 import { CanvasMinimap } from './CanvasMinimap.js';
-import { ConnectionDraft } from './types.js';
+import { ConnectionPreview } from './ConnectionPreview.js';
+import { Flame, Layers } from 'lucide-react';
 
 interface NetworkCanvasProps {
   environment: Environment;
@@ -28,7 +27,7 @@ interface NetworkCanvasProps {
   onCreateEdge: (sourceId: string, targetId: string) => void;
   onDeleteNode: (nodeId: string) => void;
   onDeleteEdge: (edgeId: string) => void;
-  activeFindings: Finding[];
+  activeFindings?: Finding[];
   hoveredFinding?: Finding | null;
   focusedElement?: { id: string; type: 'node' | 'edge'; timestamp: number } | null;
   activeScenarioId?: string;
@@ -39,7 +38,6 @@ interface NetworkCanvasProps {
 interface TrustZoneCluster {
   zone: NodeZone;
   label: string;
-  subLabel: string;
   stroke: string;
   fill: string;
   headerColor: string;
@@ -51,50 +49,44 @@ interface TrustZoneCluster {
 }
 
 const ZONE_METADATA: Record<
-  NodeZone,
-  { label: string; subLabel: string; stroke: string; fill: string; headerColor: string }
+  string,
+  { label: string; stroke: string; fill: string; headerColor: string }
 > = {
   public: {
     label: 'PUBLIC ZONE',
-    subLabel: 'UNTRUSTED / INTERNET',
-    stroke: '#3b4354',
-    fill: 'rgba(28, 34, 46, 0.25)',
+    stroke: '#484f58',
+    fill: 'rgba(33, 38, 45, 0.25)',
     headerColor: '#8b949e',
   },
   dmz: {
     label: 'DMZ / PERIMETER',
-    subLabel: 'INGRESS & REVERSE PROXY',
     stroke: '#1b7c75',
-    fill: 'rgba(20, 52, 54, 0.22)',
+    fill: 'rgba(27, 124, 117, 0.08)',
     headerColor: '#39c5bb',
   },
   internal: {
-    label: 'INTERNAL ZONE',
-    subLabel: 'APPLICATION & SERVICES',
+    label: 'INTERNAL APP TIER',
     stroke: '#1f6feb',
-    fill: 'rgba(20, 38, 64, 0.22)',
+    fill: 'rgba(31, 111, 235, 0.08)',
     headerColor: '#58a6ff',
-  },
-  restricted: {
-    label: 'RESTRICTED ZONE',
-    subLabel: 'DATABASE & DATA TIER',
-    stroke: '#9e6a03',
-    fill: 'rgba(46, 38, 18, 0.25)',
-    headerColor: '#e3b341',
-  },
-  management: {
-    label: 'MANAGEMENT ZONE',
-    subLabel: 'ADMINISTRATION & CONTROL',
-    stroke: '#8957e5',
-    fill: 'rgba(40, 24, 60, 0.22)',
-    headerColor: '#bc8cff',
   },
   private: {
     label: 'INTERNAL PRIVATE',
-    subLabel: 'PRIVATE SEGMENT',
     stroke: '#1f6feb',
-    fill: 'rgba(20, 38, 64, 0.22)',
+    fill: 'rgba(31, 111, 235, 0.08)',
     headerColor: '#58a6ff',
+  },
+  restricted: {
+    label: 'RESTRICTED DATA TIER',
+    stroke: '#9e6a03',
+    fill: 'rgba(158, 106, 3, 0.08)',
+    headerColor: '#e3b341',
+  },
+  management: {
+    label: 'MANAGEMENT & CONTROL',
+    stroke: '#8957e5',
+    fill: 'rgba(137, 87, 229, 0.08)',
+    headerColor: '#bc8cff',
   },
 };
 
@@ -111,24 +103,24 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   onCreateEdge,
   onDeleteNode,
   onDeleteEdge,
-  activeFindings,
+  activeFindings = [],
   hoveredFinding,
   focusedElement,
   activeScenarioId,
-  onOpenScenarioLab,
+  onOpenScenarioLab: _onOpenScenarioLab,
   onLoadScenario,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Viewport navigation state
-  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 50, y: 40 });
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [zoom, setZoom] = useState<number>(1.0);
   const [dimensions, setDimensions] = useState<{ width: number; height: number }>({
     width: 1200,
     height: 800,
   });
 
-  // Track container dimensions for minimap
+  // Track container dimensions
   useEffect(() => {
     const updateDims = () => {
       if (containerRef.current) {
@@ -143,7 +135,11 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     return () => window.removeEventListener('resize', updateDims);
   }, []);
 
-  // Node Dragging State
+  // Interaction State
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isSpacePressed, setIsSpacePressed] = useState(false);
+
   const [dragNode, setDragNode] = useState<{
     id: string;
     offsetX: number;
@@ -152,113 +148,15 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     currentY: number;
   } | null>(null);
 
-  // Connection Dragging State
-  const [connectionDraft, setConnectionDraft] = useState<ConnectionDraft | null>(null);
+  const [connectionDraft, setConnectionDraft] = useState<{
+    sourceNodeId: string;
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+  } | null>(null);
+
   const [hoveredTargetNodeId, setHoveredTargetNodeId] = useState<string | null>(null);
-
-  // Canvas Panning State
-  const [isPanning, setIsPanning] = useState<boolean>(false);
-  const [panStart, setPanStart] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [isSpacePressed, setIsSpacePressed] = useState<boolean>(false);
-  const [isDismissedEmptyState, setIsDismissedEmptyState] = useState<boolean>(false);
-
-  // Findings index for styling
-  const criticalAffectedNodes = new Set(
-    activeFindings
-      .filter((f) => f.severity === 'critical')
-      .flatMap((f) => f.affectedNodes)
-  );
-
-  const highAffectedNodes = new Set(
-    activeFindings
-      .filter((f) => f.severity === 'high')
-      .flatMap((f) => f.affectedNodes)
-  );
-
-  const affectedEdges = new Set(activeFindings.flatMap((f) => f.affectedEdges));
-
-  const hoveredFindingNodes = useMemo(() => {
-    return new Set(hoveredFinding?.affectedNodes ?? []);
-  }, [hoveredFinding]);
-
-  const hoveredFindingEdges = useMemo(() => {
-    return new Set(hoveredFinding?.affectedEdges ?? []);
-  }, [hoveredFinding]);
-
-  // Attack Path Traversal Index
-  const attackPathNodesList = useMemo(() => {
-    return selectedAttackPath?.nodes ?? [];
-  }, [selectedAttackPath]);
-
-  const attackPathEdgesList = useMemo(() => {
-    return selectedAttackPath?.edges ?? [];
-  }, [selectedAttackPath]);
-
-  const attackPathNodeIds = useMemo(() => {
-    return new Set(attackPathNodesList.map((n) => n.id));
-  }, [attackPathNodesList]);
-
-  const attackPathEdgeIds = useMemo(() => {
-    return new Set(attackPathEdgesList.map((e) => e.id));
-  }, [attackPathEdgesList]);
-
-  // Blast Radius Traversal Index
-  const lateralReachableNodesMap = useMemo(() => {
-    const map = new Map<string, { depth: number; isCritical: boolean }>();
-    if (!blastRadiusResult) return map;
-    for (const node of blastRadiusResult.blastRadius.reachableNodes) {
-      map.set(node.id, { depth: node.depth, isCritical: node.isCritical });
-    }
-    return map;
-  }, [blastRadiusResult]);
-
-  const lateralEdgeIds = useMemo(() => {
-    if (!blastRadiusResult) return new Set<string>();
-    return new Set(blastRadiusResult.blastRadius.reachableEdges.map((e) => e.id));
-  }, [blastRadiusResult]);
-
-  const compromisedNodeId = blastRadiusResult?.blastRadius.compromisedNode.id ?? null;
-
-  // Active focus modes that trigger background dimming
-  const isAttackPathFocused = selectedAttackPath !== null && selectedAttackPath !== undefined;
-  const isBlastRadiusFocused = !isAttackPathFocused && compromisedNodeId !== null;
-
-  // Center on focused element when requested (e.g. from "Locate on Canvas")
-  useEffect(() => {
-    if (!focusedElement) return;
-
-    if (focusedElement.type === 'node') {
-      const node = environment.getNode(focusedElement.id);
-      if (node && containerRef.current) {
-        const targetX = node.position.x + 102;
-        const targetY = node.position.y + 37;
-        const viewportW = containerRef.current.clientWidth;
-        const viewportH = containerRef.current.clientHeight;
-
-        setPan({
-          x: Math.round(viewportW / 2 - targetX * zoom),
-          y: Math.round(viewportH / 2 - targetY * zoom),
-        });
-      }
-    } else if (focusedElement.type === 'edge') {
-      const edge = environment.getEdge(focusedElement.id);
-      if (edge && containerRef.current) {
-        const sNode = environment.getNode(edge.source);
-        const tNode = environment.getNode(edge.target);
-        if (sNode && tNode) {
-          const midX = (sNode.position.x + tNode.position.x) / 2 + 102;
-          const midY = (sNode.position.y + tNode.position.y) / 2 + 37;
-          const viewportW = containerRef.current.clientWidth;
-          const viewportH = containerRef.current.clientHeight;
-
-          setPan({
-            x: Math.round(viewportW / 2 - midX * zoom),
-            y: Math.round(viewportH / 2 - midY * zoom),
-          });
-        }
-      }
-    }
-  }, [focusedElement, environment, zoom]);
 
   // Coordinate conversion helper
   const screenToCanvas = useCallback(
@@ -272,11 +170,104 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     [pan, zoom]
   );
 
+  // Auto-Fit Topology into Viewport
+  const fitToGraph = useCallback(() => {
+    if (!containerRef.current) return;
+    const currentNodes = environment.getNodes();
+    if (currentNodes.length === 0) {
+      setZoom(1.0);
+      setPan({ x: 0, y: 0 });
+      return;
+    }
+
+    const containerW = containerRef.current.clientWidth;
+    const containerH = containerRef.current.clientHeight;
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const n of currentNodes) {
+      minX = Math.min(minX, n.position.x);
+      minY = Math.min(minY, n.position.y);
+      maxX = Math.max(maxX, n.position.x + NODE_WIDTH);
+      maxY = Math.max(maxY, n.position.y + NODE_HEIGHT);
+    }
+
+    const graphW = Math.max(maxX - minX, 100);
+    const graphH = Math.max(maxY - minY, 100);
+    const graphCenterX = minX + graphW / 2;
+    const graphCenterY = minY + graphH / 2;
+
+    const padX = 70;
+    const padY = 70;
+    const availW = Math.max(containerW - padX * 2, 200);
+    const availH = Math.max(containerH - padY * 2, 200);
+
+    const scaleX = availW / graphW;
+    const scaleY = availH / graphH;
+
+    // Constrain zoom scale between 0.65 and 1.25 for ideal readability
+    const newZoom = Math.min(Math.max(Math.min(scaleX, scaleY), 0.65), 1.25);
+
+    const newPanX = Math.round(containerW / 2 - graphCenterX * newZoom);
+    const newPanY = Math.round(containerH / 2 - graphCenterY * newZoom);
+
+    setZoom(newZoom);
+    setPan({ x: newPanX, y: newPanY });
+  }, [environment]);
+
+  // Automatically trigger auto-fit when environment or scenario loads
+  useEffect(() => {
+    // Slight delay to ensure DOM dimensions are ready
+    const timer = setTimeout(() => {
+      fitToGraph();
+    }, 40);
+    return () => clearTimeout(timer);
+  }, [environment.id, activeScenarioId, fitToGraph]);
+
+  // Center on focused element from findings table
+  useEffect(() => {
+    if (!focusedElement || !containerRef.current) return;
+    if (focusedElement.type === 'node') {
+      const node = environment.getNode(focusedElement.id);
+      if (node) {
+        const viewportW = containerRef.current.clientWidth;
+        const viewportH = containerRef.current.clientHeight;
+        const targetX = node.position.x + NODE_WIDTH / 2;
+        const targetY = node.position.y + NODE_HEIGHT / 2;
+
+        setPan({
+          x: Math.round(viewportW / 2 - targetX * zoom),
+          y: Math.round(viewportH / 2 - targetY * zoom),
+        });
+      }
+    } else if (focusedElement.type === 'edge') {
+      const edge = environment.getEdge(focusedElement.id);
+      if (edge) {
+        const sNode = environment.getNode(edge.source);
+        const tNode = environment.getNode(edge.target);
+        if (sNode && tNode) {
+          const midX = (sNode.position.x + tNode.position.x + NODE_WIDTH) / 2;
+          const midY = (sNode.position.y + tNode.position.y + NODE_HEIGHT) / 2;
+          const viewportW = containerRef.current.clientWidth;
+          const viewportH = containerRef.current.clientHeight;
+
+          setPan({
+            x: Math.round(viewportW / 2 - midX * zoom),
+            y: Math.round(viewportH / 2 - midY * zoom),
+          });
+        }
+      }
+    }
+  }, [focusedElement, environment, zoom]);
+
   // Wheel zoom handler
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-    const newZoom = Math.min(Math.max(zoom * zoomFactor, 0.3), 2.5);
+    const newZoom = Math.min(Math.max(zoom * zoomFactor, 0.35), 2.5);
 
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
@@ -432,8 +423,8 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
 
     const canvasPos = screenToCanvas(e.clientX, e.clientY);
     const dropPosition = {
-      x: Math.round(canvasPos.x - 102),
-      y: Math.round(canvasPos.y - 37),
+      x: Math.round(canvasPos.x - NODE_WIDTH / 2),
+      y: Math.round(canvasPos.y - NODE_HEIGHT / 2),
     };
 
     onCreateNode(nodeType, dropPosition);
@@ -441,10 +432,10 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
 
   // Controls Handlers
   const handleZoomIn = () => setZoom((z) => Math.min(2.5, z * 1.2));
-  const handleZoomOut = () => setZoom((z) => Math.max(0.3, z / 1.2));
+  const handleZoomOut = () => setZoom((z) => Math.max(0.35, z / 1.2));
   const handleResetView = () => {
     setZoom(1.0);
-    setPan({ x: 50, y: 40 });
+    setPan({ x: 50, y: 50 });
   };
 
   const nodes = environment.getNodes();
@@ -473,20 +464,19 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       for (const n of zoneNodes) {
         minX = Math.min(minX, n.position.x);
         minY = Math.min(minY, n.position.y);
-        maxX = Math.max(maxX, n.position.x + 204);
-        maxY = Math.max(maxY, n.position.y + 74);
+        maxX = Math.max(maxX, n.position.x + NODE_WIDTH);
+        maxY = Math.max(maxY, n.position.y + NODE_HEIGHT);
       }
 
-      const padX = 28;
-      const padTop = 32;
-      const padBottom = 22;
+      const padX = 16;
+      const padTop = 26;
+      const padBottom = 16;
 
       const meta = ZONE_METADATA[zone] || ZONE_METADATA.internal;
 
       clusters.push({
         zone,
         label: meta.label,
-        subLabel: meta.subLabel,
         stroke: meta.stroke,
         fill: meta.fill,
         headerColor: meta.headerColor,
@@ -501,11 +491,74 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     return clusters;
   }, [nodes]);
 
+  // Set of nodes & edges involved in selected attack path
+  const attackPathNodesMap = useMemo(() => {
+    if (!selectedAttackPath) return new Map<string, { hopIndex: number; isOrigin: boolean; isTarget: boolean }>();
+    const map = new Map<string, { hopIndex: number; isOrigin: boolean; isTarget: boolean }>();
+
+    selectedAttackPath.nodes.forEach((n, idx) => {
+      map.set(n.id, {
+        hopIndex: idx,
+        isOrigin: idx === 0,
+        isTarget: idx === selectedAttackPath.nodes.length - 1,
+      });
+    });
+
+    return map;
+  }, [selectedAttackPath]);
+
+  const attackPathEdgesMap = useMemo(() => {
+    if (!selectedAttackPath) return new Map<string, number>();
+    const map = new Map<string, number>();
+    selectedAttackPath.edges.forEach((e, idx) => {
+      map.set(e.id, idx + 1);
+    });
+    return map;
+  }, [selectedAttackPath]);
+
+  // Set of nodes & edges involved in blast radius
+  const blastRadiusNodesMap = useMemo(() => {
+    if (!blastRadiusResult) return new Map<string, { depth: number; isCritical: boolean }>();
+    const map = new Map<string, { depth: number; isCritical: boolean }>();
+
+    blastRadiusResult.blastRadius.reachableNodes.forEach((asset) => {
+      map.set(asset.id, {
+        depth: asset.depth,
+        isCritical: asset.criticality === 'critical',
+      });
+    });
+
+    return map;
+  }, [blastRadiusResult]);
+
+  const blastRadiusEdgesSet = useMemo(() => {
+    if (!blastRadiusResult) return new Set<string>();
+    const set = new Set<string>();
+    blastRadiusResult.blastRadius.reachableEdges.forEach((e) => set.add(e.id));
+    blastRadiusResult.blastRadius.lateralMovementSteps.forEach((step) => set.add(step.edgeId));
+    return set;
+  }, [blastRadiusResult]);
+
+  // Nodes & Edges involved in hovered finding
+  const hoveredFindingNodes = useMemo(() => {
+    if (!hoveredFinding) return new Set<string>();
+    return new Set(hoveredFinding.affectedNodes);
+  }, [hoveredFinding]);
+
+  const hoveredFindingEdges = useMemo(() => {
+    if (!hoveredFinding) return new Set<string>();
+    return new Set(hoveredFinding.affectedEdges);
+  }, [hoveredFinding]);
+
+  const isGlobalDimmingActive = Boolean(
+    selectedAttackPath || blastRadiusResult || hoveredFinding
+  );
+
   return (
     <div
       ref={containerRef}
-      className={`flex-1 h-full canvas-grid relative overflow-hidden select-none ${
-        isSpacePressed || isPanning ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
+      className={`relative flex-1 h-full overflow-hidden canvas-grid ${
+        isSpacePressed ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
       }`}
       onMouseDown={handleCanvasMouseDown}
       onMouseMove={handleMouseMove}
@@ -514,20 +567,18 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      {/* Zoom and Pan Content Container */}
+      {/* Dynamic Viewport Transform Surface */}
       <div
+        className="absolute top-0 left-0 w-full h-full pointer-events-none"
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
           transformOrigin: '0 0',
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
         }}
       >
-        {/* SVG Layer for Trust Zones, Edges, and Connection Draft */}
+        {/* SVG Plane for Trust Zones, Edges & Connection Preview */}
         <svg
-          className="absolute inset-0 overflow-visible pointer-events-none"
-          style={{ width: '4000px', height: '3000px' }}
+          className="absolute top-0 left-0 overflow-visible pointer-events-auto"
+          style={{ width: 1, height: 1 }}
         >
           <defs>
             <marker
@@ -538,20 +589,10 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
               refY="3.5"
               orient="auto"
             >
-              <polygon points="0 0, 7 3.5, 0 7" fill="#3b4354" />
+              <polygon points="0 0, 7 3.5, 0 7" fill="#4b5563" />
             </marker>
             <marker
-              id="arrowhead-critical"
-              markerWidth="8"
-              markerHeight="8"
-              refX="7"
-              refY="4"
-              orient="auto"
-            >
-              <polygon points="0 0, 8 4, 0 8" fill="#f85149" />
-            </marker>
-            <marker
-              id="arrowhead-active"
+              id="arrowhead-selected"
               markerWidth="8"
               markerHeight="8"
               refX="7"
@@ -561,14 +602,34 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
               <polygon points="0 0, 8 4, 0 8" fill="#58a6ff" />
             </marker>
             <marker
-              id="arrowhead-lateral"
-              markerWidth="7"
-              markerHeight="7"
-              refX="6"
-              refY="3.5"
+              id="arrowhead-vulnerable"
+              markerWidth="8"
+              markerHeight="8"
+              refX="7"
+              refY="4"
               orient="auto"
             >
-              <polygon points="0 0, 7 3.5, 0 7" fill="#a371f7" />
+              <polygon points="0 0, 8 4, 0 8" fill="#f85149" />
+            </marker>
+            <marker
+              id="arrowhead-attack"
+              markerWidth="8"
+              markerHeight="8"
+              refX="7"
+              refY="4"
+              orient="auto"
+            >
+              <polygon points="0 0, 8 4, 0 8" fill="#f85149" />
+            </marker>
+            <marker
+              id="arrowhead-lateral"
+              markerWidth="8"
+              markerHeight="8"
+              refX="7"
+              refY="4"
+              orient="auto"
+            >
+              <polygon points="0 0, 8 4, 0 8" fill="#bc8cff" />
             </marker>
             <marker
               id="arrowhead-denied"
@@ -578,7 +639,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
               refY="3.5"
               orient="auto"
             >
-              <polygon points="0 0, 7 3.5, 0 7" fill="#3b4354" />
+              <polygon points="0 0, 7 3.5, 0 7" fill="#5b6577" />
             </marker>
           </defs>
 
@@ -591,7 +652,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
                 y={cluster.y}
                 width={cluster.width}
                 height={cluster.height}
-                rx={6}
+                rx={8}
                 fill={cluster.fill}
                 stroke={cluster.stroke}
                 strokeWidth={1}
@@ -605,22 +666,11 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
                 y={cluster.y + 16}
                 fill={cluster.headerColor}
                 fontSize="10"
-                fontFamily="JetBrains Mono, monospace"
+                fontFamily="Inter, sans-serif"
                 fontWeight="600"
-                letterSpacing="0.05em"
-              >
-                {cluster.label}
-              </text>
-
-              <text
-                x={cluster.x + 10}
-                y={cluster.y + 26}
-                fill="#596372"
-                fontSize="8"
-                fontFamily="JetBrains Mono, monospace"
                 letterSpacing="0.04em"
               >
-                {cluster.subLabel} · {cluster.nodeCount} ASSET{cluster.nodeCount > 1 ? 'S' : ''}
+                {cluster.label}
               </text>
             </g>
           ))}
@@ -631,17 +681,15 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
             const targetNode = environment.getNode(edge.target);
             if (!sourceNode || !targetNode) return null;
 
-            const isSelected = selectedEdgeId === edge.id;
-            const isOnAttackPath = attackPathEdgeIds.has(edge.id);
-            const attackHopOrder = isOnAttackPath
-              ? attackPathEdgesList.findIndex((e) => e.id === edge.id) + 1
-              : null;
-            const isLateralMovement = lateralEdgeIds.has(edge.id);
+            const isEdgeSelected = selectedEdgeId === edge.id;
+            const isVulnerable = activeFindings.some((f) => f.affectedEdges.includes(edge.id));
+            const isHovered = hoveredFindingEdges.has(edge.id);
+            const isOnPath = attackPathEdgesMap.has(edge.id);
+            const hopOrder = attackPathEdgesMap.get(edge.id) ?? null;
+            const isLateral = blastRadiusEdgesSet.has(edge.id);
 
-            // Compute Dimming: If attack path or blast radius is focused, dim unrelated edges
             const isDimmed =
-              (isAttackPathFocused && !isOnAttackPath) ||
-              (isBlastRadiusFocused && !isLateralMovement);
+              isGlobalDimmingActive && !isOnPath && !isLateral && !isHovered && !isEdgeSelected;
 
             return (
               <CanvasEdge
@@ -649,79 +697,78 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
                 edge={edge}
                 sourceNode={sourceNode}
                 targetNode={targetNode}
-                isSelected={isSelected}
-                isVulnerable={affectedEdges.has(edge.id)}
-                isHoveredFromFinding={hoveredFindingEdges.has(edge.id)}
-                isFocusedTarget={
-                  focusedElement?.type === 'edge' && focusedElement.id === edge.id
-                }
-                isOnAttackPath={isOnAttackPath}
-                attackHopOrder={attackHopOrder}
-                isLateralMovement={isLateralMovement}
+                isSelected={isEdgeSelected}
+                isVulnerable={isVulnerable}
+                isHoveredFromFinding={isHovered}
+                isOnAttackPath={isOnPath}
+                attackHopOrder={hopOrder}
+                isLateralMovement={isLateral}
                 isDimmed={isDimmed}
-                onSelect={(edgeId) => {
-                  onSelectEdge(edgeId);
-                  onSelectNode(null);
-                }}
+                onSelect={onSelectEdge}
               />
             );
           })}
 
-          {/* 3. Temporary Connection Draft Line */}
+          {/* 3. In-flight Edge Creation Draft */}
           {connectionDraft && <ConnectionPreview draft={connectionDraft} />}
         </svg>
 
-        {/* Nodes Interactive DOM Layer */}
-        <div className="absolute inset-0 pointer-events-auto">
+        {/* 4. Infrastructure Nodes Surface */}
+        <div className="absolute top-0 left-0 pointer-events-auto">
           {nodes.map((node: InfrastructureNode) => {
-            const degree = environment.graph.getDegree(node.id);
-            const isSelected = selectedNodeId === node.id;
-            const isCritical = criticalAffectedNodes.has(node.id);
-            const isHigh = !isCritical && highAffectedNodes.has(node.id);
-            const isConnectionTarget =
-              connectionDraft !== null &&
-              hoveredTargetNodeId === node.id &&
-              node.id !== connectionDraft.sourceNodeId;
+            const isNodeSelected = selectedNodeId === node.id;
+            const nodeFindings = activeFindings.filter((f) => f.affectedNodes.includes(node.id));
+            const isCritical = nodeFindings.some((f) => f.severity === 'critical');
+            const isHigh = nodeFindings.some((f) => f.severity === 'high');
+            const isHovered = hoveredFindingNodes.has(node.id);
 
-            const isOnAttackPath = attackPathNodeIds.has(node.id);
-            const attackHopIndex = isOnAttackPath
-              ? attackPathNodesList.findIndex((n) => n.id === node.id) + 1
-              : null;
-            const isAttackTarget =
-              isOnAttackPath && attackHopIndex === attackPathNodesList.length;
+            // Attack path metadata
+            const attackPathInfo = attackPathNodesMap.get(node.id);
+            const isOnPath = Boolean(attackPathInfo);
+            const hopIdx = attackPathInfo?.hopIndex ?? null;
+            const isAttackOrigin = attackPathInfo?.isOrigin ?? false;
+            const isAttackTarget = attackPathInfo?.isTarget ?? false;
 
-            const isCompromisedOrigin = node.id === compromisedNodeId;
-            const lateralInfo = lateralReachableNodesMap.get(node.id);
+            // Blast radius metadata
+            const blastInfo = blastRadiusNodesMap.get(node.id);
+            const isCompromisedOrigin = blastRadiusResult?.blastRadius.compromisedNode.id === node.id;
+            const lateralDepth = blastInfo?.depth ?? null;
+            const isLateralCritical = blastInfo?.isCritical ?? false;
 
-            // Compute Dimming: If attack path or blast radius is focused, dim unrelated nodes
             const isDimmed =
-              (isAttackPathFocused && !isOnAttackPath) ||
-              (isBlastRadiusFocused && !isCompromisedOrigin && !lateralInfo);
+              isGlobalDimmingActive &&
+              !isOnPath &&
+              !blastInfo &&
+              !isCompromisedOrigin &&
+              !isHovered &&
+              !isNodeSelected;
+
+            const inEdges = environment.graph.getIncomingEdges(node.id);
+            const outEdges = environment.graph.getOutgoingEdges(node.id);
 
             return (
               <CanvasNode
                 key={node.id}
                 node={node}
-                isSelected={isSelected}
+                isSelected={isNodeSelected}
                 isCritical={isCritical}
                 isHigh={isHigh}
-                isConnectionTarget={isConnectionTarget}
-                isHoveredFromFinding={hoveredFindingNodes.has(node.id)}
-                isFocusedTarget={
-                  focusedElement?.type === 'node' && focusedElement.id === node.id
-                }
-                isOnAttackPath={isOnAttackPath}
-                attackHopIndex={attackHopIndex}
+                isHoveredFromFinding={isHovered}
+                isConnectionTarget={hoveredTargetNodeId === node.id}
+                isOnAttackPath={isOnPath}
+                attackHopIndex={hopIdx}
+                isAttackOrigin={isAttackOrigin}
                 isAttackTarget={isAttackTarget}
                 isCompromisedOrigin={isCompromisedOrigin}
-                lateralDepth={lateralInfo?.depth ?? null}
-                isLateralCritical={lateralInfo?.isCritical ?? false}
+                lateralDepth={lateralDepth}
+                isLateralCritical={isLateralCritical}
                 isDimmed={isDimmed}
-                degree={degree}
-                onSelect={(nId) => {
-                  onSelectNode(nId);
-                  onSelectEdge(null);
+                degree={{
+                  inDegree: inEdges.length,
+                  outDegree: outEdges.length,
+                  total: inEdges.length + outEdges.length,
                 }}
+                onSelect={onSelectNode}
                 onStartDrag={handleStartDragNode}
                 onStartConnection={handleStartConnection}
                 onHoverConnectionTarget={setHoveredTargetNodeId}
@@ -733,123 +780,98 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
 
       {/* Mode / Environment Indicator Top Banner */}
       {selectedAttackPath ? (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded bg-[#1c1114]/95 border border-[#f85149]/60 text-[#f85149] text-[11px] font-mono flex items-center space-x-2 shadow-lg backdrop-blur-sm pointer-events-none select-none">
-          <Flame className="w-3.5 h-3.5 text-[#f85149]" />
-          <span className="font-bold">ATTACK VECTOR ACTIVE:</span>
-          <span className="text-[#f0f3f6]">
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1.5 rounded-md bg-[#181214]/95 border border-[#f85149]/60 text-[#f85149] text-xs font-sans flex items-center space-x-2.5 shadow-lg backdrop-blur-sm pointer-events-none select-none">
+          <Flame className="w-4 h-4 text-[#f85149] shrink-0" />
+          <span className="font-bold tracking-wide">ATTACK VECTOR:</span>
+          <span className="text-[#f0f3f6] font-semibold">
             {selectedAttackPath.entryPoint.name} → {selectedAttackPath.target.name}
           </span>
           <span className="text-[#8b949e]">·</span>
-          <span className="text-[#f85149] font-bold">Risk: {selectedAttackPath.riskScore}/100</span>
+          <span className="text-[#f85149] font-bold">
+            Risk: {selectedAttackPath.riskScore}/100 ({selectedAttackPath.risk.toUpperCase()})
+          </span>
+          <span className="text-[#8b949e]">·</span>
+          <span className="text-[#8b949e] font-mono">{selectedAttackPath.hopCount} Hops</span>
         </div>
       ) : activeScenarioId === 'chaos-lab' ? (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded bg-[#181124]/95 border border-[#8957e5]/50 text-[#bc8cff] text-[11px] font-mono flex items-center space-x-2 shadow-md backdrop-blur-sm pointer-events-none select-none">
-          <Flame className="w-3.5 h-3.5 text-[#bc8cff]" />
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 px-3.5 py-1.5 rounded-md bg-[#181124]/95 border border-[#8957e5]/50 text-[#bc8cff] text-xs font-sans flex items-center space-x-2.5 shadow-md backdrop-blur-sm pointer-events-none select-none">
+          <Flame className="w-4 h-4 text-[#bc8cff] shrink-0" />
           <span className="font-bold">CHAOS LAB ACTIVE</span>
           <span className="text-[#8b949e]">·</span>
-          <span className="text-[#8b949e]">Insecure topologies allowed and analyzed</span>
+          <span className="text-[#c9d1d9]">Arbitrary topologies evaluated dynamically</span>
         </div>
       ) : null}
 
       {/* Empty Canvas Workspace Prompt */}
-      {nodes.length === 0 && !isDismissedEmptyState && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 p-4 select-none">
-          <div className="w-full max-w-lg p-5 rounded bg-[#0d1016]/98 border border-[#1f2633] shadow-2xl backdrop-blur-md pointer-events-auto font-mono text-center space-y-4">
+      {nodes.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="p-8 max-w-md w-full bg-[#11151c]/90 border border-[#212631] rounded-xl text-center space-y-4 shadow-xl backdrop-blur-sm pointer-events-auto font-sans">
+            <div className="w-12 h-12 rounded-full bg-[#1f6feb]/20 border border-[#388bfd]/50 flex items-center justify-center mx-auto text-[#58a6ff]">
+              <Layers className="w-6 h-6" />
+            </div>
+
             <div className="space-y-1">
-              <div className="text-xs uppercase tracking-wider text-[#58a6ff] font-bold">
-                BUILD YOUR ENVIRONMENT
-              </div>
-              <p className="text-xs text-[#8b949e] max-w-md mx-auto leading-relaxed font-sans">
-                Model your infrastructure and test how trust, exposure, and attack paths behave.
+              <h2 className="text-base font-semibold text-[#f0f3f6]">Empty Architecture Canvas</h2>
+              <p className="text-xs text-[#8b949e] leading-relaxed">
+                Drag infrastructure components from the left palette onto the canvas, or load a verified reference scenario below.
               </p>
             </div>
 
-            {/* Quick Scenario Launch Grid */}
-            <div className="grid grid-cols-2 gap-2 text-left text-xs">
+            <div className="grid grid-cols-2 gap-2 pt-2">
               <button
                 onClick={() => onLoadScenario?.('secure-web-app')}
-                className="p-2.5 rounded bg-[#12161f] border border-[#1c222e] hover:border-[#3fb950] hover:bg-[#151f1a] transition-all text-left space-y-1 group"
+                className="p-2.5 rounded-md bg-[#161b24] hover:bg-[#1f2633] border border-[#212631] hover:border-[#388bfd] text-left transition-all cursor-pointer group"
               >
-                <div className="flex items-center space-x-1.5 text-[#3fb950] font-semibold text-xs">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Secure Web App</span>
+                <div className="text-xs font-semibold text-[#f0f3f6] group-hover:text-[#58a6ff]">
+                  Secure Web App
                 </div>
-                <div className="text-[10px] text-[#7d8590] group-hover:text-[#c9d1d9] leading-tight font-sans">
-                  Hardened 3-tier architecture with zero critical findings.
-                </div>
+                <div className="text-[10px] text-[#8b949e] mt-0.5">3-tier hardened baseline</div>
               </button>
 
               <button
                 onClick={() => onLoadScenario?.('public-db-exposure')}
-                className="p-2.5 rounded bg-[#12161f] border border-[#1c222e] hover:border-[#f85149] hover:bg-[#201316] transition-all text-left space-y-1 group"
+                className="p-2.5 rounded-md bg-[#161b24] hover:bg-[#1f2633] border border-[#212631] hover:border-[#da3633] text-left transition-all cursor-pointer group"
               >
-                <div className="flex items-center space-x-1.5 text-[#f85149] font-semibold text-xs">
-                  <AlertOctagon className="w-3.5 h-3.5" />
-                  <span>Public DB Exposure</span>
+                <div className="text-xs font-semibold text-[#f0f3f6] group-hover:text-[#f85149]">
+                  Public DB Exposure
                 </div>
-                <div className="text-[10px] text-[#7d8590] group-hover:text-[#c9d1d9] leading-tight font-sans">
-                  Direct database exposure. Test defensive remediation.
-                </div>
+                <div className="text-[10px] text-[#8b949e] mt-0.5">Vulnerable ingress demo</div>
               </button>
 
               <button
                 onClick={() => onLoadScenario?.('flat-network')}
-                className="p-2.5 rounded bg-[#12161f] border border-[#1c222e] hover:border-[#f0883e] hover:bg-[#211812] transition-all text-left space-y-1 group"
+                className="p-2.5 rounded-md bg-[#161b24] hover:bg-[#1f2633] border border-[#212631] hover:border-[#f0883e] text-left transition-all cursor-pointer group"
               >
-                <div className="flex items-center space-x-1.5 text-[#f0883e] font-semibold text-xs">
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                  <span>Flat Network</span>
+                <div className="text-xs font-semibold text-[#f0f3f6] group-hover:text-[#f0883e]">
+                  Flat Network
                 </div>
-                <div className="text-[10px] text-[#7d8590] group-hover:text-[#c9d1d9] leading-tight font-sans">
-                  Insufficient segmentation exposing administrative assets.
-                </div>
+                <div className="text-[10px] text-[#8b949e] mt-0.5">Missing segmentation</div>
               </button>
 
               <button
                 onClick={() => onLoadScenario?.('chaos-lab')}
-                className="p-2.5 rounded bg-[#12161f] border border-[#1c222e] hover:border-[#bc8cff] hover:bg-[#1b1226] transition-all text-left space-y-1 group"
+                className="p-2.5 rounded-md bg-[#161b24] hover:bg-[#1f2633] border border-[#212631] hover:border-[#bc8cff] text-left transition-all cursor-pointer group"
               >
-                <div className="flex items-center space-x-1.5 text-[#bc8cff] font-semibold text-xs">
-                  <Flame className="w-3.5 h-3.5" />
-                  <span>Chaos Lab</span>
+                <div className="text-xs font-semibold text-[#f0f3f6] group-hover:text-[#bc8cff]">
+                  Chaos Lab
                 </div>
-                <div className="text-[10px] text-[#7d8590] group-hover:text-[#c9d1d9] leading-tight font-sans">
-                  Intentional multi-flaw adversarial playground.
-                </div>
-              </button>
-            </div>
-
-            {/* Scratch building */}
-            <div className="pt-1 flex items-center justify-between border-t border-[#1c212c] text-xs">
-              <button
-                onClick={() => onOpenScenarioLab?.()}
-                className="text-[#8b949e] hover:text-[#f0f3f6] transition-colors flex items-center space-x-1 text-xs"
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>Browse Scenario Catalog</span>
-              </button>
-
-              <button
-                onClick={() => setIsDismissedEmptyState(true)}
-                className="px-3 py-1 rounded bg-[#1b2230] hover:bg-[#252f42] text-[#f0f3f6] text-xs font-semibold transition-colors flex items-center space-x-1 border border-[#2b3547]"
-              >
-                <Plus className="w-3.5 h-3.5 text-[#3fb950]" />
-                <span>Build from Scratch</span>
+                <div className="text-[10px] text-[#8b949e] mt-0.5">Unconstrained sandbox</div>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Floating Canvas Navigation Controls */}
+      {/* Floating Canvas Viewport Controls */}
       <CanvasControls
         zoom={zoom}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onResetView={handleResetView}
+        onFitView={fitToGraph}
       />
 
-      {/* Floating Technical Minimap */}
+      {/* Floating Canvas Minimap */}
       <CanvasMinimap
         nodes={nodes}
         pan={pan}
