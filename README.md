@@ -2,7 +2,15 @@
 
 > **Build. Break. Defend. Prove.**
 
+[![GitHub Repository](https://img.shields.io/badge/GitHub-TERMINATOR7732%2FPathForge-blue?logo=github)](https://github.com/TERMINATOR7732/PathForge)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-brightgreen)](https://terminator7732.github.io/PathForge/)
+[![CI Gate](https://github.com/TERMINATOR7732/PathForge/actions/workflows/pathforge-gate.yml/badge.svg)](https://github.com/TERMINATOR7732/PathForge/actions/workflows/pathforge-gate.yml)
+[![Deploy Pages](https://github.com/TERMINATOR7732/PathForge/actions/workflows/deploy.yml/badge.svg)](https://github.com/TERMINATOR7732/PathForge/actions/workflows/deploy.yml)
+
 PathForge is an interactive infrastructure security simulator and learning lab. It enables engineers, architects, and security practitioners to visually design virtual infrastructure topologies, intentionally introduce misconfigurations or anti-patterns, understand why those designs are dangerous through deterministic explanatory reasoning, safely simulate attacks against modeled environments, apply defensive remediations, and verify that attack paths have been eliminated.
+
+* **Live Public Demo**: [https://terminator7732.github.io/PathForge/](https://terminator7732.github.io/PathForge/)
+* **GitHub Repository**: [https://github.com/TERMINATOR7732/PathForge](https://github.com/TERMINATOR7732/PathForge)
 
 > **Notice**: PathForge performs deterministic analysis of modeled infrastructure and authorized repository/configuration evidence. It does not perform arbitrary real-world exploitation.
 
@@ -1236,7 +1244,7 @@ Engineering Decision: BLOCK (Exit code: 2)
 Clone the repository and install workspace dependencies:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/TERMINATOR7732/PathForge.git
 cd PathForge
 npm install
 ```
