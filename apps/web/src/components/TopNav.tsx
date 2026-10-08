@@ -5,7 +5,6 @@ import {
   Play,
   Download,
   Terminal,
-  RefreshCw,
   RotateCcw,
   ChevronDown,
   Layers,
@@ -13,6 +12,8 @@ import {
   FileCode,
   Printer,
   Image,
+  AlertTriangle,
+  ArrowRight,
 } from 'lucide-react';
 import { ValidationResult } from '@pathforge/shared';
 import { Environment, FixVerificationResult, getScenarioById } from '@pathforge/core';
@@ -21,7 +22,6 @@ import {
   exportReportAsJson,
   printOrSaveReportAsHtml,
   exportEnvironmentSvg,
-  exportTopologyModelJson,
 } from '../utils/exportHelpers.js';
 
 interface TopNavProps {
@@ -74,130 +74,133 @@ export const TopNav: React.FC<TopNavProps> = ({
 
   const currentScenario = getScenarioById(currentScenarioId);
   const scenarioName = currentScenario?.name ?? 'Custom Environment';
+  const findingsCount = validationResult?.findings.length ?? 0;
+  const criticalCount =
+    validationResult?.findings.filter((f) => f.severity === 'critical').length ?? 0;
 
   return (
-    <header className="h-12 border-b border-[#222630] bg-[#111318] flex items-center justify-between px-4 select-none z-30">
-      <div className="flex items-center space-x-3">
+    <header className="h-10 border-b border-[#1c212c] bg-[#0a0c10] flex items-center justify-between px-3 select-none z-30 font-mono">
+      {/* Left: Brand, Environment Selector, Validation State */}
+      <div className="flex items-center space-x-2.5">
         {/* Brand */}
-        <div className="flex items-center space-x-2">
-          <div className="w-5 h-5 rounded bg-[#388bfd]/10 border border-[#388bfd]/30 flex items-center justify-center text-[#388bfd]">
-            <Terminal className="w-3.5 h-3.5" />
+        <div className="flex items-center space-x-1.5 pr-1">
+          <div className="w-4.5 h-4.5 rounded-[2px] bg-[#58a6ff]/10 border border-[#58a6ff]/40 flex items-center justify-center text-[#58a6ff]">
+            <Terminal className="w-3 h-3" />
           </div>
-          <div className="flex items-baseline space-x-2">
-            <span className="font-semibold text-sm tracking-wide text-white font-mono">
-              PathForge
-            </span>
-            <span className="text-[10px] text-[#5c6370] uppercase font-mono tracking-wider hidden sm:inline">
-              v0.1.0 · Continuous Engineering
-            </span>
-          </div>
+          <span className="font-bold text-xs tracking-wider text-[#f0f3f6]">
+            PATHFORGE
+          </span>
         </div>
 
-        <div className="h-4 w-px bg-[#222630]" />
+        <div className="h-3.5 w-px bg-[#1c212c]" />
 
-        {/* Scenario Lab Trigger */}
-        <div className="flex items-center space-x-1.5">
-          <button
-            onClick={onOpenScenarioModal}
-            className="flex items-center space-x-2 px-2.5 py-1 rounded bg-[#181c24] border border-[#2a303c] text-xs text-[#e6edf3] font-mono hover:bg-[#202530] hover:border-[#388bfd]/60 transition-colors shadow-sm focus:outline-hidden focus:ring-1 focus:ring-[#388bfd]"
-            title="Open Scenario Lab to load preconfigured topologies"
-            aria-label="Select demo scenario"
-          >
-            <Layers className="w-3.5 h-3.5 text-[#58a6ff]" />
-            <span className="text-[#8b949e]">SCENARIO:</span>
-            <span className="font-semibold text-white truncate max-w-[150px] sm:max-w-[220px]">
-              {scenarioName}
-            </span>
-            <ChevronDown className="w-3 h-3 text-[#8b949e]" />
-          </button>
+        {/* Environment / Scenario Selector */}
+        <button
+          onClick={onOpenScenarioModal}
+          className="flex items-center space-x-1.5 px-2 py-1 rounded border border-[#1c212c] bg-[#11141c] hover:border-[#2f3747] hover:bg-[#161a24] text-xs transition-colors group"
+          title="Switch Environment Scenario"
+        >
+          <Layers className="w-3 h-3 text-[#58a6ff]" />
+          <span className="text-[#c9d1d9] group-hover:text-white font-medium text-[11px] truncate max-w-[200px]">
+            {scenarioName}
+          </span>
+          <ChevronDown className="w-3 h-3 text-[#7d8590] group-hover:text-[#c9d1d9]" />
+        </button>
 
-          {/* Reset Scenario Button */}
-          <button
-            onClick={onOpenResetModal}
-            className="flex items-center space-x-1 px-2 py-1 rounded bg-[#181c24] border border-[#2a303c] text-xs text-[#8b949e] hover:bg-[#241a18] hover:text-[#f85149] hover:border-[#da3633]/40 transition-colors font-mono focus:outline-hidden focus:ring-1 focus:ring-[#f85149]"
-            title="Reset scenario to original baseline definition"
-            aria-label="Reset scenario"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span className="hidden md:inline">Reset</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Middle Status Indicator */}
-      <div className="hidden lg:flex items-center space-x-3">
+        {/* Real-Time Security State Badge */}
         {isValidationStale ? (
-          <div className="flex items-center space-x-2 px-2.5 py-0.5 rounded bg-[#2b1f14] border border-[#f0883e]/50 text-[#f0883e] text-xs font-mono animate-pulse">
-            <RefreshCw className="w-3 h-3" />
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#d29922]/15 text-[#d29922] border border-[#d29922]/40 animate-pulse">
+            <AlertTriangle className="w-2.5 h-2.5" />
             <span>STALE — RE-ANALYZE REQUIRED</span>
-          </div>
-        ) : validationResult ? (
-          <div className="flex items-center space-x-2">
-            {validationResult.summary.passed ? (
-              <div className="flex items-center space-x-1.5 px-2.5 py-0.5 rounded bg-[#14261b] border border-[#238636]/50 text-[#3fb950] text-xs font-mono">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>VALIDATED · PRODUCTION GATE: PASSED</span>
-              </div>
-            ) : (
-              <div className="flex items-center space-x-2 px-2.5 py-0.5 rounded bg-[#2d1519] border border-[#da3633]/50 text-[#f85149] text-xs font-mono">
-                <ShieldAlert className="w-3.5 h-3.5" />
-                <span>
-                  VALIDATED · PRODUCTION GATE: BLOCKED ({validationResult.summary.totalFindings} FINDING
-                  {validationResult.summary.totalFindings > 1 ? 'S' : ''})
-                </span>
-              </div>
-            )}
-          </div>
+          </span>
+        ) : criticalCount > 0 ? (
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#da3633]/15 text-[#f85149] border border-[#da3633]/40">
+            <ShieldAlert className="w-2.5 h-2.5" />
+            <span>{criticalCount} CRITICAL ISSUE{criticalCount > 1 ? 'S' : ''}</span>
+          </span>
+        ) : findingsCount > 0 ? (
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#f0883e]/15 text-[#f0883e] border border-[#f0883e]/40">
+            <ShieldAlert className="w-2.5 h-2.5" />
+            <span>{findingsCount} FINDING{findingsCount > 1 ? 'S' : ''}</span>
+          </span>
         ) : (
-          <span className="text-xs text-[#5c6370] font-mono">Validation Pending</span>
+          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded text-[10px] font-bold bg-[#238636]/15 text-[#3fb950] border border-[#238636]/40">
+            <ShieldCheck className="w-2.5 h-2.5" />
+            <span>VERIFIED SECURE</span>
+          </span>
         )}
       </div>
 
-      {/* Action Buttons */}
+      {/* Center: Engineering Core Sequence */}
+      <div className="hidden lg:flex items-center space-x-2 text-[10px] text-[#484f58] tracking-wider uppercase font-semibold">
+        <span className="text-[#8b949e]">BUILD</span>
+        <ArrowRight className="w-2.5 h-2.5 text-[#30363d]" />
+        <span className="text-[#f85149]">BREAK</span>
+        <ArrowRight className="w-2.5 h-2.5 text-[#30363d]" />
+        <span className="text-[#58a6ff]">DEFEND</span>
+        <ArrowRight className="w-2.5 h-2.5 text-[#30363d]" />
+        <span className="text-[#3fb950]">PROVE</span>
+      </div>
+
+      {/* Right: Actions */}
       <div className="flex items-center space-x-2">
+        {/* Reset Scenario */}
+        <button
+          onClick={onOpenResetModal}
+          className="px-2 py-1 rounded border border-[#1c212c] bg-[#11141c] hover:border-[#2f3747] hover:bg-[#161a24] text-[#8b949e] hover:text-[#c9d1d9] text-[11px] font-medium transition-colors flex items-center space-x-1"
+          title="Reset topology to baseline scenario state"
+        >
+          <RotateCcw className="w-3 h-3" />
+          <span className="hidden sm:inline">Reset</span>
+        </button>
+
+        {/* Primary Action: Re-Analyze Environment */}
+        <button
+          onClick={onValidate}
+          className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center space-x-1.5 transition-all shadow-sm ${
+            isValidationStale
+              ? 'bg-[#d29922] text-[#0d0f12] hover:bg-[#e3b341] font-bold'
+              : 'bg-[#1f6feb] text-white hover:bg-[#388bfd]'
+          }`}
+          title="Execute deterministic security validation and rule engine"
+        >
+          <Play className="w-3 h-3 fill-current" />
+          <span>{isValidationStale ? 'Re-Analyze System' : 'Analyze System'}</span>
+        </button>
+
         {/* Export Dropdown */}
         <div className="relative" ref={exportDropdownRef}>
           <button
             onClick={() => setIsExportOpen(!isExportOpen)}
-            className="flex items-center space-x-1.5 px-2.5 py-1 rounded bg-[#181c24] border border-[#2a303c] text-xs text-[#c9d1d9] hover:bg-[#202530] hover:text-white hover:border-[#388bfd]/60 transition-colors font-mono focus:outline-hidden focus:ring-1 focus:ring-[#388bfd]"
-            title="Export engineering reports, diagrams, and topology"
-            aria-expanded={isExportOpen}
-            aria-haspopup="true"
-            aria-label="Export artifacts menu"
+            className="px-2 py-1 rounded border border-[#1c212c] bg-[#11141c] hover:border-[#2f3747] hover:bg-[#161a24] text-[#8b949e] hover:text-white text-[11px] font-medium transition-colors flex items-center space-x-1"
+            title="Export Evidence & Reports"
           >
-            <Download className="w-3 h-3 text-[#58a6ff]" />
+            <Download className="w-3 h-3" />
             <span className="hidden sm:inline">Export</span>
-            <ChevronDown className="w-3 h-3 text-[#8b949e]" />
+            <ChevronDown className="w-2.5 h-2.5 text-[#7d8590]" />
           </button>
 
           {isExportOpen && (
-            <div
-              className="absolute right-0 mt-1.5 w-60 rounded-md bg-[#161a22] border border-[#30363d] shadow-xl z-50 py-1 font-mono text-xs text-[#c9d1d9] space-y-0.5"
-              role="menu"
-            >
-              <div className="px-3 py-1 text-[10px] uppercase font-bold text-[#8b949e] border-b border-[#21262d]">
-                Engineering Artifacts
+            <div className="absolute right-0 mt-1 w-52 rounded bg-[#0f1218] border border-[#2f3747] shadow-xl py-1 z-50 text-xs font-mono">
+              <div className="px-3 py-1 text-[9px] uppercase tracking-wider text-[#484f58] font-bold border-b border-[#1c212c]">
+                Engineering Exports
               </div>
 
-              {environment && (
+              {environment && validationResult && (
                 <>
                   <button
                     onClick={() => {
                       exportReportAsMarkdown({
                         environment,
                         validationResult,
-                        verification: latestVerification,
+                        verification: latestVerification ?? null,
                       });
                       setIsExportOpen(false);
                     }}
-                    className="w-full flex items-center space-x-2 px-3 py-1.5 hover:bg-[#21262d] hover:text-white transition-colors text-left"
-                    role="menuitem"
+                    className="w-full px-3 py-1.5 text-left text-[#c9d1d9] hover:bg-[#161c28] hover:text-[#58a6ff] flex items-center space-x-2 text-[11px]"
                   >
                     <FileText className="w-3.5 h-3.5 text-[#58a6ff]" />
-                    <div className="truncate">
-                      <div className="font-medium text-white text-[11px]">Verification Report (.md)</div>
-                      <div className="text-[9px] text-[#8b949e]">Markdown proof artifact</div>
-                    </div>
+                    <span>Markdown Report (.md)</span>
                   </button>
 
                   <button
@@ -205,37 +208,14 @@ export const TopNav: React.FC<TopNavProps> = ({
                       exportReportAsJson({
                         environment,
                         validationResult,
-                        verification: latestVerification,
+                        verification: latestVerification ?? null,
                       });
                       setIsExportOpen(false);
                     }}
-                    className="w-full flex items-center space-x-2 px-3 py-1.5 hover:bg-[#21262d] hover:text-white transition-colors text-left"
-                    role="menuitem"
+                    className="w-full px-3 py-1.5 text-left text-[#c9d1d9] hover:bg-[#161c28] hover:text-[#58a6ff] flex items-center space-x-2 text-[11px]"
                   >
-                    <FileCode className="w-3.5 h-3.5 text-[#79c0ff]" />
-                    <div className="truncate">
-                      <div className="font-medium text-white text-[11px]">Verification Report (.json)</div>
-                      <div className="text-[9px] text-[#8b949e]">Machine-readable JSON schema</div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      printOrSaveReportAsHtml({
-                        environment,
-                        validationResult,
-                        verification: latestVerification,
-                      });
-                      setIsExportOpen(false);
-                    }}
-                    className="w-full flex items-center space-x-2 px-3 py-1.5 hover:bg-[#21262d] hover:text-white transition-colors text-left"
-                    role="menuitem"
-                  >
-                    <Printer className="w-3.5 h-3.5 text-[#3fb950]" />
-                    <div className="truncate">
-                      <div className="font-medium text-white text-[11px]">Print Report / Save as PDF</div>
-                      <div className="text-[9px] text-[#8b949e]">Print-styled HTML document</div>
-                    </div>
+                    <FileCode className="w-3.5 h-3.5 text-[#3fb950]" />
+                    <span>Audit Report (.json)</span>
                   </button>
 
                   <button
@@ -243,54 +223,44 @@ export const TopNav: React.FC<TopNavProps> = ({
                       exportEnvironmentSvg(environment);
                       setIsExportOpen(false);
                     }}
-                    className="w-full flex items-center space-x-2 px-3 py-1.5 hover:bg-[#21262d] hover:text-white transition-colors text-left"
-                    role="menuitem"
+                    className="w-full px-3 py-1.5 text-left text-[#c9d1d9] hover:bg-[#161c28] hover:text-[#58a6ff] flex items-center space-x-2 text-[11px]"
                   >
-                    <Image className="w-3.5 h-3.5 text-[#d2a8ff]" />
-                    <div className="truncate">
-                      <div className="font-medium text-white text-[11px]">Architecture Diagram (.svg)</div>
-                      <div className="text-[9px] text-[#8b949e]">Vector network topology</div>
-                    </div>
+                    <Image className="w-3.5 h-3.5 text-[#f0883e]" />
+                    <span>Vector Diagram (.svg)</span>
                   </button>
 
-                  <div className="h-px bg-[#21262d] my-1" />
+                  <button
+                    onClick={() => {
+                      printOrSaveReportAsHtml({
+                        environment,
+                        validationResult,
+                        verification: latestVerification ?? null,
+                      });
+                      setIsExportOpen(false);
+                    }}
+                    className="w-full px-3 py-1.5 text-left text-[#c9d1d9] hover:bg-[#161c28] hover:text-[#58a6ff] flex items-center space-x-2 text-[11px]"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-[#bc8cff]" />
+                    <span>Print / PDF Document</span>
+                  </button>
                 </>
               )}
 
+              <div className="my-1 border-t border-[#1c212c]" />
+
               <button
                 onClick={() => {
-                  if (environment) {
-                    exportTopologyModelJson(environment);
-                  } else {
-                    onExport();
-                  }
+                  onExport();
                   setIsExportOpen(false);
                 }}
-                className="w-full flex items-center space-x-2 px-3 py-1.5 hover:bg-[#21262d] hover:text-white transition-colors text-left"
-                role="menuitem"
+                className="w-full px-3 py-1.5 text-left text-[#c9d1d9] hover:bg-[#161c28] hover:text-white flex items-center space-x-2 text-[11px]"
               >
-                <Download className="w-3.5 h-3.5 text-[#8b949e]" />
-                <div className="truncate">
-                  <div className="font-medium text-white text-[11px]">Topology Model (.json)</div>
-                  <div className="text-[9px] text-[#8b949e]">Raw canvas graph definition</div>
-                </div>
+                <Download className="w-3.5 h-3.5 text-[#7d8590]" />
+                <span>Topology Definition (.json)</span>
               </button>
             </div>
           )}
         </div>
-
-        <button
-          onClick={onValidate}
-          className={`flex items-center space-x-1.5 px-3 py-1 rounded text-xs text-white font-medium transition-all font-mono shadow-sm ${
-            isValidationStale
-              ? 'bg-[#1f6feb] hover:bg-[#388bfd] ring-2 ring-[#388bfd]/50'
-              : 'bg-[#238636] hover:bg-[#2ea043]'
-          }`}
-          title="Run deterministic validation engine"
-        >
-          <Play className="w-3 h-3 fill-current" />
-          <span>{isValidationStale ? 'Revalidate Topology' : 'Validate Topology'}</span>
-        </button>
       </div>
     </header>
   );
