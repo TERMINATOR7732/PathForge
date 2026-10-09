@@ -12,7 +12,8 @@ import {
   X,
   ArrowRight,
   Layers,
-  BookOpen,
+  Sparkles,
+  PlusCircle,
 } from 'lucide-react';
 
 interface ScenarioModalProps {
@@ -20,6 +21,21 @@ interface ScenarioModalProps {
   activeScenarioId: string;
   onClose: () => void;
   onSelectScenario: (scenarioId: string) => void;
+}
+
+interface ScenarioOptionItem {
+  id: string;
+  name: string;
+  shortDescription: string;
+  purpose: string;
+  riskBadge: {
+    bg: string;
+    icon: React.ComponentType<{ className?: string }>;
+    label: string;
+  };
+  isRecommended?: boolean;
+  isScratch?: boolean;
+  flowPreview?: string;
 }
 
 const getRiskBadge = (level: ScenarioDefinition['riskLevel'], label: string) => {
@@ -70,11 +86,91 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
 
   if (!isOpen) return null;
 
-  const scenarios = getAllScenarios();
+  const catalogScenarios = getAllScenarios();
+
+  // Map into the ordered 5 options specified in Phase C:
+  // 1. Exposed database (recommended for beginners)
+  // 2. Flat network
+  // 3. Chaos Lab
+  // 4. Secure web application
+  // 5. Build from scratch
+  const publicDb = catalogScenarios.find((s) => s.id === 'public-db-exposure');
+  const flatNet = catalogScenarios.find((s) => s.id === 'flat-network');
+  const chaosLab = catalogScenarios.find((s) => s.id === 'chaos-lab');
+  const secureWeb = catalogScenarios.find((s) => s.id === 'secure-web-app');
+
+  const scenarioItems: ScenarioOptionItem[] = [
+    ...(publicDb
+      ? [
+          {
+            id: publicDb.id,
+            name: 'Exposed Database',
+            shortDescription: 'Understand public database reachability and access restrictions.',
+            purpose:
+              'Simulate a PostgreSQL database mistakenly exposed to public Internet ingress with no perimeter boundary. Learn how automated remediation restricts access.',
+            riskBadge: getRiskBadge(publicDb.riskLevel, 'Critical Exposure'),
+            isRecommended: true,
+            flowPreview: publicDb.topologyPreview,
+          },
+        ]
+      : []),
+    ...(flatNet
+      ? [
+          {
+            id: flatNet.id,
+            name: 'Flat Network',
+            shortDescription: 'Explore segmentation weaknesses and possible lateral movement.',
+            purpose:
+              'Analyze lateral traversal risks when internal corporate subnets bridge directly to incoming traffic without DMZ reverse proxies or VLAN isolation.',
+            riskBadge: getRiskBadge(flatNet.riskLevel, 'High Risk'),
+            flowPreview: flatNet.topologyPreview,
+          },
+        ]
+      : []),
+    ...(chaosLab
+      ? [
+          {
+            id: chaosLab.id,
+            name: 'Chaos Lab',
+            shortDescription: 'Experiment with deliberately unsafe or unrealistic connections.',
+            purpose:
+              'Multi-zone sandbox featuring anomalous bypasses, unencrypted channels, and extreme blast radiuses. Freely experiment with arbitrary topology changes.',
+            riskBadge: getRiskBadge(chaosLab.riskLevel, 'Unconstrained Chaos'),
+            flowPreview: chaosLab.topologyPreview,
+          },
+        ]
+      : []),
+    ...(secureWeb
+      ? [
+          {
+            id: secureWeb.id,
+            name: 'Secure Web Application',
+            shortDescription: 'Explore a well-structured application architecture.',
+            purpose:
+              'Production-ready 3-tier reference model: Ingress WAF, DMZ reverse proxy, microservice API tier, and isolated relational database and Redis cache.',
+            riskBadge: getRiskBadge(secureWeb.riskLevel, 'Hardened Baseline'),
+            flowPreview: secureWeb.topologyPreview,
+          },
+        ]
+      : []),
+    {
+      id: 'scratch',
+      name: 'Build from Scratch',
+      shortDescription: 'Start with an empty canvas and place your own components and connections.',
+      purpose:
+        'A blank engineering workspace. Drag components from the left palette onto the canvas, connect ports, and test your own architecture ideas against the security validator.',
+      riskBadge: {
+        bg: 'bg-[#161b24] text-[#8b949e] border-[#30363d]',
+        icon: PlusCircle,
+        label: 'Empty Canvas',
+      },
+      isScratch: true,
+    },
+  ];
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 font-sans select-none"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-2 sm:p-4 font-sans select-none overflow-x-hidden"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -82,90 +178,106 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
       aria-modal="true"
       aria-labelledby="scenario-modal-title"
     >
-      <div className="w-full max-w-3xl rounded-lg bg-[#111318] border border-[#30363d] shadow-2xl overflow-hidden flex flex-col max-h-[88vh]">
+      <div className="w-full max-w-3xl min-w-0 rounded-lg bg-[#111318] border border-[#30363d] shadow-2xl overflow-hidden flex flex-col max-h-[88vh]">
         {/* Header */}
-        <div className="px-5 py-3.5 border-b border-[#222630] bg-[#0d0f14] flex items-center justify-between">
+        <div className="px-3.5 sm:px-5 py-3.5 border-b border-[#222630] bg-[#0d0f14] flex items-center justify-between min-w-0">
           <div className="flex items-center space-x-2.5">
             <div className="w-6 h-6 rounded bg-[#388bfd]/15 border border-[#388bfd]/30 flex items-center justify-center text-[#58a6ff]">
               <Layers className="w-3.5 h-3.5" />
             </div>
             <div>
               <div id="scenario-modal-title" className="text-sm font-semibold text-white tracking-wide">
-                SCENARIO LAB
+                What would you like to explore?
               </div>
               <div className="text-[11px] text-[#8b949e]">
-                Prebuilt infrastructure security models & experimentation sandboxes
+                Select a verified reference model or start building your own infrastructure
               </div>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded text-[#8b949e] hover:text-white hover:bg-[#21262d] focus:outline-hidden focus:ring-1 focus:ring-[#388bfd] transition-colors"
-            title="Close scenario picker (Esc)"
-            aria-label="Close scenario picker"
+            className="p-1.5 rounded text-[#8b949e] hover:text-white hover:bg-[#212631] focus:outline-hidden focus:ring-1 focus:ring-[#388bfd] transition-colors cursor-pointer"
+            title="Close chooser (Esc)"
+            aria-label="Close scenario chooser"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Scenarios Grid */}
-        <div className="p-5 overflow-y-auto space-y-3.5 bg-[#0e1015]">
-          {scenarios.map((scenario) => {
-            const isActive = scenario.id === activeScenarioId;
-            const badge = getRiskBadge(scenario.riskLevel, scenario.riskLabel);
-            const BadgeIcon = badge.icon;
+        {/* Scenarios List */}
+        <div className="p-4 overflow-y-auto space-y-3 bg-[#0e1015]">
+          {scenarioItems.map((item) => {
+            const isActive =
+              (item.id === 'scratch' && activeScenarioId === 'scratch') ||
+              item.id === activeScenarioId;
+            const BadgeIcon = item.riskBadge.icon;
 
             return (
               <div
-                key={scenario.id}
-                className={`p-4 rounded-md border transition-all text-xs space-y-2.5 ${
+                key={item.id}
+                className={`p-3.5 rounded-md border transition-all text-xs space-y-2 ${
                   isActive
                     ? 'bg-[#161b24] border-[#388bfd]/80 shadow-md ring-1 ring-[#388bfd]/40'
+                    : item.isRecommended
+                    ? 'bg-[#13161c] border-[#388bfd]/50 hover:border-[#388bfd]'
                     : 'bg-[#13161c] border-[#222630] hover:border-[#30363d]'
                 }`}
               >
-                {/* Title & Badge */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
+                {/* Title & Badges */}
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-3">
+                  <div className="space-y-0.5 min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <span className="text-sm font-semibold text-white">
-                        {scenario.name}
+                        {item.name}
                       </span>
+                      {item.isRecommended && (
+                        <span className="px-2 py-0.5 rounded bg-[#388bfd]/20 text-[#58a6ff] border border-[#388bfd]/50 text-[10px] font-bold flex items-center space-x-1">
+                          <Sparkles className="w-2.5 h-2.5" />
+                          <span>RECOMMENDED FOR BEGINNERS</span>
+                        </span>
+                      )}
                       {isActive && (
-                        <span className="px-2 py-0.5 rounded bg-[#1f6feb]/20 text-[#58a6ff] border border-[#388bfd]/40 text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded bg-[#238636]/20 text-[#3fb950] border border-[#238636]/50 text-[10px] font-bold">
                           ACTIVE
                         </span>
                       )}
                     </div>
                     <div className="text-[11px] text-[#8b949e]">
-                      {scenario.shortDescription}
+                      {item.shortDescription}
                     </div>
                   </div>
 
                   <span
-                    className={`px-2.5 py-1 rounded text-[10px] font-semibold flex items-center space-x-1.5 border shrink-0 ${badge.bg}`}
+                    className={`px-2 py-0.5 rounded text-[10px] font-semibold flex items-center space-x-1.5 border shrink-0 ${item.riskBadge.bg}`}
                   >
                     <BadgeIcon className="w-3 h-3" />
-                    <span>{badge.label}</span>
+                    <span>{item.riskBadge.label}</span>
                   </span>
                 </div>
 
-                {/* Purpose */}
-                <div className="text-[11px] text-[#c9d1d9] leading-relaxed bg-[#0c0e12] p-2.5 rounded border border-[#1b1f27]">
-                  <strong className="text-[#8b949e] uppercase text-[10px] block mb-0.5">
-                    Purpose & Learning Objective:
-                  </strong>
-                  {scenario.purpose}
+                {/* Purpose / Narrative */}
+                <div className="text-[11px] text-[#c9d1d9] leading-relaxed bg-[#0c0e12] p-2 rounded border border-[#1b1f27]">
+                  {item.purpose}
                 </div>
 
-                {/* Topology & Action footer */}
-                <div className="flex items-center justify-between pt-1 text-[11px] text-[#8b949e] border-t border-[#1e232d]">
-                  <div className="flex items-center space-x-1.5 truncate max-w-md">
-                    <span className="text-[#5c6370]">Flow:</span>
-                    <span className="font-mono text-[#abb2bf] text-[10px] truncate">
-                      {scenario.topologyPreview}
-                    </span>
+                {/* Flow preview & action */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 text-[11px] text-[#8b949e] border-t border-[#1e232d] min-w-0">
+                  <div className="flex items-center space-x-1.5 min-w-0 overflow-hidden w-full sm:w-auto">
+                    {item.flowPreview && (
+                      <>
+                        <span className="text-[#5c6370] shrink-0">Flow:</span>
+                        <span className="font-mono text-[#abb2bf] text-[10px] truncate block min-w-0">
+                          {item.flowPreview}
+                        </span>
+                      </>
+                    )}
+                    {item.isScratch && (
+                      <span className="text-[#5c6370] shrink-0">Workspace:</span>
+                    )}
+                    {item.isScratch && (
+                      <span className="text-[#abb2bf] text-[10px] truncate block min-w-0">Empty canvas ready for drag-and-drop modeling</span>
+                    )}
                   </div>
 
                   {isActive ? (
@@ -176,12 +288,12 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
                   ) : (
                     <button
                       onClick={() => {
-                        onSelectScenario(scenario.id);
+                        onSelectScenario(item.id);
                         onClose();
                       }}
-                      className="px-3 py-1 rounded bg-[#1f6feb] text-white hover:bg-[#388bfd] transition-colors text-xs font-semibold flex items-center space-x-1.5 shadow-sm"
+                      className="px-3 py-1 rounded bg-[#1f6feb] text-white hover:bg-[#388bfd] transition-colors text-xs font-semibold flex items-center space-x-1.5 shadow-sm cursor-pointer shrink-0 self-end sm:self-auto"
                     >
-                      <span>Load Scenario</span>
+                      <span>{item.isScratch ? 'Start Empty Canvas' : 'Load Scenario'}</span>
                       <ArrowRight className="w-3 h-3" />
                     </button>
                   )}
@@ -192,19 +304,18 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
         </div>
 
         {/* Footer Note */}
-        <div className="px-5 py-3 border-t border-[#222630] bg-[#0d0f14] flex items-center justify-between text-[11px] text-[#8b949e]">
-          <div className="flex items-center space-x-1.5">
-            <BookOpen className="w-3.5 h-3.5 text-[#58a6ff]" />
-            <span>
-              Deterministic local-first engine. Insecure connections are permitted and analyzed.
-            </span>
+        <div className="px-4 sm:px-5 py-3 border-t border-[#222630] bg-[#0d0f14] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-[#8b949e]">
+          <div className="text-[#8b949e]">
+            Deterministic local-first security simulator. Insecure connections are permitted and analyzed.
           </div>
-          <button
-            onClick={onClose}
-            className="px-3 py-1 rounded bg-[#21262d] text-[#c9d1d9] hover:text-white hover:bg-[#30363d] transition-colors text-xs"
-          >
-            Close
-          </button>
+          <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
+            <button
+              onClick={onClose}
+              className="px-3 py-1 rounded bg-[#212631] text-[#c9d1d9] hover:text-white hover:bg-[#303746] transition-colors text-xs font-medium cursor-pointer"
+            >
+              Skip to Workbench
+            </button>
+          </div>
         </div>
       </div>
     </div>

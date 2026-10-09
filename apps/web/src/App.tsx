@@ -27,23 +27,56 @@ import { InspectorPanel } from './components/InspectorPanel.js';
 import { FindingsDrawer } from './components/FindingsDrawer.js';
 import { ScenarioModal } from './components/ScenarioModal.js';
 import { ResetScenarioModal } from './components/ResetScenarioModal.js';
+import { UnsavedChangesModal } from './components/UnsavedChangesModal.js';
+import { GuidanceBanner } from './components/GuidanceBanner.js';
+import { GuidedTourModal } from './components/GuidedTourModal.js';
 
 export const App: React.FC = () => {
   const initialScenarioId = useMemo(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const s = params.get('scenario');
+      if (s === 'scratch' || s === 'empty') return s;
       if (s && getScenarioById(s)) return s;
     }
     return getDefaultScenario().id;
   }, []);
 
   const [activeScenarioId, setActiveScenarioId] = useState<string>(initialScenarioId);
-  const [isScenarioModalOpen, setIsScenarioModalOpen] = useState<boolean>(false);
-  const [isResetModalOpen, setIsResetModalOpen] = useState<boolean>(false);
 
+  // Scenario Chooser first-use auto-open (Phase C)
+  const [isScenarioModalOpen, setIsScenarioModalOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      // If scenario explicitly requested in query, don't open chooser
+      if (params.has('scenario')) return false;
+      const visited = localStorage.getItem('pathforge_visited');
+      if (!visited) {
+        localStorage.setItem('pathforge_visited', 'true');
+        return true;
+      }
+    }
+    return false;
+  });
+
+  const [isResetModalOpen, setIsResetModalOpen] = useState<boolean>(false);
+  const [isUnsavedModalOpen, setIsUnsavedModalOpen] = useState<boolean>(false);
+  const [pendingScenarioId, setPendingScenarioId] = useState<string | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+
+  // Guided Tour modal state (Phase D)
+  const [isTourOpen, setIsTourOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('tour') === 'true') return true;
+    }
+    return false;
+  });
+
+  // Selection states
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+  const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null);
   const [selectedAttackPathId, setSelectedAttackPathId] = useState<string | null>(null);
   const [selectedCompromisedNodeId, setSelectedCompromisedNodeId] = useState<string | null>(null);
   const [isValidationStale, setIsValidationStale] = useState<boolean>(false);
@@ -77,6 +110,13 @@ export const App: React.FC = () => {
 
   // Load and hold authoritative Environment instance
   const [environment, setEnvironment] = useState<Environment>(() => {
+    if (initialScenarioId === 'scratch' || initialScenarioId === 'empty') {
+      return new Environment({
+        id: 'env-scratch',
+        name: 'Custom Architecture',
+        description: 'Blank infrastructure canvas ready for custom modeling.',
+      });
+    }
     return instantiateScenario(initialScenarioId);
   });
 
@@ -206,6 +246,8 @@ export const App: React.FC = () => {
     setSelectedCompromisedNodeId(nodeId);
     setSelectedNodeId(nodeId);
     setSelectedEdgeId(null);
+    setSelectedFinding(null);
+    setSelectedAttackPathId(null);
   }, []);
 
   const handleValidate = useCallback(() => {
@@ -247,22 +289,34 @@ export const App: React.FC = () => {
     lastAppliedRemediation,
   ]);
 
-  const handleLoadScenario = useCallback(
+  // Unconditional load implementation
+  const handleForceLoadScenario = useCallback(
     (scenarioId: string) => {
       setActiveScenarioId(scenarioId);
       setSelectedNodeId(null);
       setSelectedEdgeId(null);
+      setSelectedFinding(null);
       setSelectedAttackPathId(null);
       setSelectedCompromisedNodeId(null);
       setFocusedElement(null);
       setHoveredFinding(null);
       setResolvedFindings([]);
       setLastAppliedRemediation(null);
+      setHasUnsavedChanges(false);
 
-      // Cleanly instantiate new environment
-      const newEnv = instantiateScenario(scenarioId);
+      // Support "Build from Scratch" (Phase C option 5)
+      let newEnv: Environment;
+      if (scenarioId === 'scratch' || scenarioId === 'empty') {
+        newEnv = new Environment({
+          id: 'env-scratch',
+          name: 'Custom Architecture',
+          description: 'Blank infrastructure canvas ready for custom modeling.',
+        });
+      } else {
+        newEnv = instantiateScenario(scenarioId);
+      }
+
       const newResult = validatorEngine.evaluate(newEnv);
-
       setEnvironment(newEnv);
       setValidationResult(newResult);
       // Clean baseline snapshot matching new scenario
@@ -275,14 +329,74 @@ export const App: React.FC = () => {
     [validatorEngine, bumpGraphVersion]
   );
 
-  const handleResetScenario = useCallback(() => {
-    handleLoadScenario(activeScenarioId);
-  }, [handleLoadScenario, activeScenarioId]);
+  // Scenario loading with unsaved changes protection (Phase F)
+  const handleLoadScenario = useCallback(
+    (scenarioId: string) => {
+      if (hasUnsavedChanges) {
+        setPendingScenarioId(scenarioId);
+        setIsUnsavedModalOpen(true);
+      } else {
+        handleForceLoadScenario(scenarioId);
+      }
+    },
+    [hasUnsavedChanges, handleForceLoadScenario]
+  );
 
+  const handleResetScenario = useCallback(() => {
+    handleForceLoadScenario(activeScenarioId);
+  }, [handleForceLoadScenario, activeScenarioId]);
+
+  // Selection handlers to ensure coherent contextual panel state (Phase E)
+  const handleSelectNode = useCallback((id: string | null) => {
+    setSelectedNodeId(id);
+    if (id) {
+      setSelectedEdgeId(null);
+      setSelectedFinding(null);
+      setSelectedAttackPathId(null);
+    }
+  }, []);
+
+  const handleSelectEdge = useCallback((id: string | null) => {
+    setSelectedEdgeId(id);
+    if (id) {
+      setSelectedNodeId(null);
+      setSelectedFinding(null);
+      setSelectedAttackPathId(null);
+    }
+  }, []);
+
+  const handleSelectFinding = useCallback((finding: Finding | null) => {
+    setSelectedFinding(finding);
+    if (finding) {
+      setSelectedNodeId(null);
+      setSelectedEdgeId(null);
+      setSelectedAttackPathId(null);
+    }
+  }, []);
+
+  const handleSelectAttackPath = useCallback((pathId: string | null) => {
+    setSelectedAttackPathId(pathId);
+    if (pathId) {
+      setSelectedNodeId(null);
+      setSelectedEdgeId(null);
+      setSelectedFinding(null);
+    }
+  }, []);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedNodeId(null);
+    setSelectedEdgeId(null);
+    setSelectedFinding(null);
+    setSelectedAttackPathId(null);
+    setSelectedCompromisedNodeId(null);
+  }, []);
+
+  // Graph mutations with unsaved changes tracking (Phase F)
   const handleUpdateNodePosition = useCallback(
     (nodeId: string, x: number, y: number) => {
       const updated = environment.updateNodePosition(nodeId, x, y);
       if (updated) {
+        setHasUnsavedChanges(true);
         bumpGraphVersion();
       }
     },
@@ -292,27 +406,27 @@ export const App: React.FC = () => {
   const handleCreateNode = useCallback(
     (type: NodeType, position: { x: number; y: number }) => {
       const newNode = environment.createNode(type, position);
-      setSelectedNodeId(newNode.id);
-      setSelectedEdgeId(null);
+      handleSelectNode(newNode.id);
       setIsValidationStale(true);
+      setHasUnsavedChanges(true);
       bumpGraphVersion();
     },
-    [environment, bumpGraphVersion]
+    [environment, handleSelectNode, bumpGraphVersion]
   );
 
   const handleCreateEdge = useCallback(
     (sourceId: string, targetId: string) => {
       try {
         const newEdge = environment.createEdge(sourceId, targetId);
-        setSelectedEdgeId(newEdge.id);
-        setSelectedNodeId(null);
+        handleSelectEdge(newEdge.id);
         setIsValidationStale(true);
+        setHasUnsavedChanges(true);
         bumpGraphVersion();
       } catch (err) {
         console.error('Edge creation failed:', err);
       }
     },
-    [environment, bumpGraphVersion]
+    [environment, handleSelectEdge, bumpGraphVersion]
   );
 
   const handleDeleteNode = useCallback(
@@ -322,6 +436,7 @@ export const App: React.FC = () => {
         if (selectedNodeId === nodeId) setSelectedNodeId(null);
         if (selectedCompromisedNodeId === nodeId) setSelectedCompromisedNodeId(null);
         setIsValidationStale(true);
+        setHasUnsavedChanges(true);
         bumpGraphVersion();
       }
     },
@@ -334,6 +449,7 @@ export const App: React.FC = () => {
       if (deleted) {
         if (selectedEdgeId === edgeId) setSelectedEdgeId(null);
         setIsValidationStale(true);
+        setHasUnsavedChanges(true);
         bumpGraphVersion();
       }
     },
@@ -345,6 +461,7 @@ export const App: React.FC = () => {
       const updated = environment.updateNodeConfig(nodeId, config);
       if (updated) {
         setIsValidationStale(true);
+        setHasUnsavedChanges(true);
         bumpGraphVersion();
       }
     },
@@ -356,6 +473,7 @@ export const App: React.FC = () => {
       const updated = environment.updateEdgeConfig(edgeId, config);
       if (updated) {
         setIsValidationStale(true);
+        setHasUnsavedChanges(true);
         bumpGraphVersion();
       }
     },
@@ -367,14 +485,12 @@ export const App: React.FC = () => {
     (target: { id: string; type: 'node' | 'edge' }) => {
       setFocusedElement({ ...target, timestamp: Date.now() });
       if (target.type === 'node') {
-        setSelectedNodeId(target.id);
-        setSelectedEdgeId(null);
+        handleSelectNode(target.id);
       } else {
-        setSelectedEdgeId(target.id);
-        setSelectedNodeId(null);
+        handleSelectEdge(target.id);
       }
     },
-    []
+    [handleSelectNode, handleSelectEdge]
   );
 
   // Apply deterministic remediation action
@@ -416,8 +532,9 @@ export const App: React.FC = () => {
         title: action.title,
       });
 
-      // Mark validation as STALE (discipline principle)
+      // Mark validation as STALE and record unsaved changes
       setIsValidationStale(true);
+      setHasUnsavedChanges(true);
       bumpGraphVersion();
     },
     [environment, bumpGraphVersion]
@@ -432,17 +549,36 @@ export const App: React.FC = () => {
     a.download = `${environment.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-topology.json`;
     a.click();
     URL.revokeObjectURL(url);
+    setHasUnsavedChanges(false);
   };
 
+  // Close scenario chooser and offer guided tour if entering workspace for the first time
+  const handleCloseScenarioModal = useCallback(() => {
+    setIsScenarioModalOpen(false);
+    if (typeof window !== 'undefined') {
+      const tourCompleted = localStorage.getItem('pathforge_tour_completed');
+      if (!tourCompleted) {
+        setIsTourOpen(true);
+      }
+    }
+  }, []);
+
   const activeScenario = getScenarioById(activeScenarioId);
+  const pendingScenario =
+    pendingScenarioId === 'scratch'
+      ? { name: 'Build from Scratch' }
+      : pendingScenarioId
+      ? getScenarioById(pendingScenarioId)
+      : null;
 
   return (
-    <div className="pf-shell h-screen w-screen flex flex-col bg-[var(--pf-bg-app)] text-[var(--pf-text-primary)] overflow-hidden select-none font-sans">
+    <div className="pf-shell h-screen w-screen max-w-full flex flex-col bg-[var(--pf-bg-app)] text-[var(--pf-text-primary)] overflow-hidden select-none font-sans">
       {/* Top Navigation */}
       <TopNav
         currentScenarioId={activeScenarioId}
         onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
         onOpenResetModal={() => setIsResetModalOpen(true)}
+        onOpenTour={() => setIsTourOpen(true)}
         onValidate={handleValidate}
         onExport={handleExportJson}
         environment={environment}
@@ -458,31 +594,54 @@ export const App: React.FC = () => {
             handleCreateNode(type, { x: 300, y: 250 });
           }}
         />
-        <NetworkCanvas
-          environment={environment}
-          selectedNodeId={selectedNodeId}
-          selectedEdgeId={selectedEdgeId}
-          selectedAttackPath={selectedAttackPath}
-          blastRadiusResult={blastRadiusResult}
-          onSelectNode={setSelectedNodeId}
-          onSelectEdge={setSelectedEdgeId}
-          onUpdateNodePosition={handleUpdateNodePosition}
-          onCreateNode={handleCreateNode}
-          onCreateEdge={handleCreateEdge}
-          onDeleteNode={handleDeleteNode}
-          onDeleteEdge={handleDeleteEdge}
-          activeFindings={validationResult?.findings ?? []}
-          hoveredFinding={hoveredFinding}
-          focusedElement={focusedElement}
-          activeScenarioId={activeScenarioId}
-          onOpenScenarioLab={() => setIsScenarioModalOpen(true)}
-          onLoadScenario={handleLoadScenario}
-        />
+
+        {/* Center Canvas Area with Contextual Guidance Banner */}
+        <div className="relative flex-1 flex overflow-hidden min-h-0">
+          <NetworkCanvas
+            environment={environment}
+            selectedNodeId={selectedNodeId}
+            selectedEdgeId={selectedEdgeId}
+            selectedAttackPath={selectedAttackPath}
+            blastRadiusResult={blastRadiusResult}
+            onSelectNode={handleSelectNode}
+            onSelectEdge={handleSelectEdge}
+            onUpdateNodePosition={handleUpdateNodePosition}
+            onCreateNode={handleCreateNode}
+            onCreateEdge={handleCreateEdge}
+            onDeleteNode={handleDeleteNode}
+            onDeleteEdge={handleDeleteEdge}
+            activeFindings={validationResult?.findings ?? []}
+            hoveredFinding={hoveredFinding}
+            focusedElement={focusedElement}
+            activeScenarioId={activeScenarioId}
+            onOpenScenarioLab={() => setIsScenarioModalOpen(true)}
+            onLoadScenario={handleLoadScenario}
+          />
+
+          {/* State-Derived 'Your Next Step' Guidance Banner (Phase D) */}
+          <GuidanceBanner
+            isValidationStale={isValidationStale}
+            latestVerification={latestVerification}
+            validationResult={validationResult}
+            selectedFinding={selectedFinding}
+            selectedAttackPath={selectedAttackPath}
+            selectedNodeId={selectedNodeId}
+            selectedEdgeId={selectedEdgeId}
+            onValidate={handleValidate}
+          />
+        </div>
+
+        {/* Contextual Right Inspector (Phase E) */}
         <InspectorPanel
           environment={environment}
           selectedNodeId={selectedNodeId}
           selectedEdgeId={selectedEdgeId}
+          selectedFinding={selectedFinding}
+          selectedAttackPath={selectedAttackPath}
           findings={validationResult?.findings ?? []}
+          onClearSelection={handleClearSelection}
+          onApplyRemediation={handleApplyRemediation}
+          onLocateElement={handleLocateElement}
           onAnalyzeBlastRadius={handleAnalyzeBlastRadius}
           onUpdateNodeConfig={handleUpdateNodeConfig}
           onUpdateEdgeConfig={handleUpdateEdgeConfig}
@@ -501,7 +660,7 @@ export const App: React.FC = () => {
         latestVerification={latestVerification}
         attackPathAnalysis={attackPathAnalysis}
         selectedAttackPathId={selectedAttackPathId}
-        onSelectAttackPath={setSelectedAttackPathId}
+        onSelectAttackPath={handleSelectAttackPath}
         blastRadiusResult={blastRadiusResult}
         selectedCompromisedNodeId={selectedCompromisedNodeId}
         onSelectCompromisedNode={setSelectedCompromisedNodeId}
@@ -512,10 +671,11 @@ export const App: React.FC = () => {
         technicalDebt={technicalDebt}
         changeAnalysis={changeAnalysis}
         baselineSnapshot={baselineSnapshot}
+        selectedFindingId={selectedFinding?.id ?? null}
+        onSelectFinding={handleSelectFinding}
         onCaptureBaseline={handleCaptureBaseline}
         onSelectNode={(nodeId) => {
-          setSelectedNodeId(nodeId);
-          setSelectedEdgeId(null);
+          handleSelectNode(nodeId);
         }}
         onLocateElement={handleLocateElement}
         onHoverFinding={setHoveredFinding}
@@ -524,12 +684,15 @@ export const App: React.FC = () => {
         onRequestValidate={handleValidate}
       />
 
-      {/* Scenario Lab Picker Modal */}
+      {/* Scenario Lab Picker Modal (Phase C) */}
       <ScenarioModal
         isOpen={isScenarioModalOpen}
         activeScenarioId={activeScenarioId}
-        onClose={() => setIsScenarioModalOpen(false)}
-        onSelectScenario={handleLoadScenario}
+        onClose={handleCloseScenarioModal}
+        onSelectScenario={(scenarioId) => {
+          handleLoadScenario(scenarioId);
+          handleCloseScenarioModal();
+        }}
       />
 
       {/* Reset Scenario Confirmation Modal */}
@@ -538,6 +701,29 @@ export const App: React.FC = () => {
         scenarioName={activeScenario?.name ?? 'Current Scenario'}
         onClose={() => setIsResetModalOpen(false)}
         onConfirmReset={handleResetScenario}
+      />
+
+      {/* Unsaved Changes Confirmation Modal (Phase F) */}
+      <UnsavedChangesModal
+        isOpen={isUnsavedModalOpen}
+        targetScenarioName={pendingScenario?.name ?? 'Target Scenario'}
+        onStay={() => {
+          setIsUnsavedModalOpen(false);
+          setPendingScenarioId(null);
+        }}
+        onConfirmDiscard={() => {
+          if (pendingScenarioId) {
+            handleForceLoadScenario(pendingScenarioId);
+          }
+          setIsUnsavedModalOpen(false);
+          setPendingScenarioId(null);
+        }}
+      />
+
+      {/* Guided Tour Modal (Phase D) */}
+      <GuidedTourModal
+        isOpen={isTourOpen}
+        onClose={() => setIsTourOpen(false)}
       />
     </div>
   );

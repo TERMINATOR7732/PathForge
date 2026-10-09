@@ -160,7 +160,7 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({ onAddNodeTyp
 
   return (
     <aside
-      className={`border-r border-[var(--pf-border-default)] bg-[var(--pf-bg-panel)] flex flex-col h-full select-none transition-all duration-200 z-20 font-sans ${
+      className={`border-r border-[var(--pf-border-default)] bg-[var(--pf-bg-panel)] hidden md:flex flex-col h-full select-none transition-all duration-200 z-20 font-sans ${
         isCollapsed ? 'w-12' : 'w-60'
       }`}
     >

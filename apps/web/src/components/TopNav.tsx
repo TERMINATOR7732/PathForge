@@ -14,6 +14,7 @@ import {
   ArrowRight,
   Shield,
   Activity,
+  Compass,
 } from 'lucide-react';
 import { ValidationResult } from '@pathforge/shared';
 import { Environment, FixVerificationResult, getScenarioById } from '@pathforge/core';
@@ -28,6 +29,7 @@ interface TopNavProps {
   currentScenarioId: string;
   onOpenScenarioModal: () => void;
   onOpenResetModal: () => void;
+  onOpenTour?: () => void;
   onValidate: () => void;
   onExport: () => void;
   environment?: Environment;
@@ -40,6 +42,7 @@ export const TopNav: React.FC<TopNavProps> = ({
   currentScenarioId,
   onOpenScenarioModal,
   onOpenResetModal,
+  onOpenTour,
   onValidate,
   onExport,
   environment,
@@ -81,11 +84,11 @@ export const TopNav: React.FC<TopNavProps> = ({
     validationResult?.findings.filter((f) => f.severity === 'high').length ?? 0;
 
   return (
-    <header className="pf-shell-header h-11 border-b border-[var(--pf-border-default)] bg-[var(--pf-bg-panel)] flex items-center justify-between px-3.5 select-none z-30 font-sans">
+    <header className="pf-shell-header h-11 border-b border-[var(--pf-border-default)] bg-[var(--pf-bg-panel)] flex items-center justify-between px-2 sm:px-3.5 select-none z-30 font-sans min-w-0 max-w-full">
       {/* 1. PRODUCT BRAND & ENVIRONMENT SELECTOR */}
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
         {/* Brand */}
-        <div className="flex items-center space-x-2 pr-1">
+        <div className="flex items-center space-x-2 pr-1 shrink-0">
           <div className="w-6 h-6 rounded bg-[var(--pf-accent-subtle)] border border-[var(--pf-border-focus)] flex items-center justify-center text-[var(--pf-accent)]">
             <Shield className="w-3.5 h-3.5" />
           </div>
@@ -93,29 +96,29 @@ export const TopNav: React.FC<TopNavProps> = ({
             <span className="font-bold text-sm tracking-tight text-[var(--pf-text-primary)] font-sans">
               PATHFORGE
             </span>
-            <span className="text-[10px] text-[var(--pf-text-muted)] font-mono tracking-wider uppercase">
+            <span className="text-[10px] text-[var(--pf-text-muted)] font-mono tracking-wider uppercase hidden sm:inline">
               WORKBENCH
             </span>
           </div>
         </div>
 
-        <div className="h-4 w-px bg-[var(--pf-border-subtle)]" />
+        <div className="h-4 w-px bg-[var(--pf-border-subtle)] hidden sm:block shrink-0" />
 
         {/* Environment / Scenario Selector */}
-        <div className="flex items-center space-x-1.5">
-          <span className="text-[10px] uppercase font-semibold text-[var(--pf-text-muted)] tracking-wider hidden sm:inline">
+        <div className="flex items-center space-x-1.5 min-w-0">
+          <span className="text-[10px] uppercase font-semibold text-[var(--pf-text-muted)] tracking-wider hidden md:inline">
             Scenario:
           </span>
           <button
             onClick={onOpenScenarioModal}
-            className="pf-btn pf-btn-secondary flex items-center space-x-2 px-2.5 py-1 text-xs"
+            className="pf-btn pf-btn-secondary flex items-center space-x-1.5 px-2 sm:px-2.5 py-1 text-xs min-w-0"
             title="Switch Environment Scenario (Ctrl+O)"
           >
-            <Layers className="w-3.5 h-3.5 text-[var(--pf-accent)]" />
-            <span className="text-xs font-semibold text-[var(--pf-text-primary)] truncate max-w-[210px]">
+            <Layers className="w-3.5 h-3.5 text-[var(--pf-accent)] shrink-0" />
+            <span className="text-xs font-semibold text-[var(--pf-text-primary)] truncate max-w-[85px] sm:max-w-[210px]">
               {scenarioName}
             </span>
-            <ChevronDown className="w-3 h-3 text-[var(--pf-text-muted)]" />
+            <ChevronDown className="w-3 h-3 text-[var(--pf-text-muted)] shrink-0" />
           </button>
         </div>
       </div>
@@ -132,54 +135,71 @@ export const TopNav: React.FC<TopNavProps> = ({
       </div>
 
       {/* 3. RIGHT: VALIDATION STATE & WORKBENCH ACTIONS */}
-      <div className="flex items-center space-x-2.5">
+      <div className="flex items-center space-x-1.5 sm:space-x-2.5 shrink-0">
         {/* Real-Time Security State Badge */}
         {isValidationStale ? (
           <span className="pf-badge pf-status-warning animate-pulse">
             <AlertTriangle className="w-3 h-3 shrink-0" />
-            <span>STALE · RE-ANALYZE</span>
+            <span className="hidden sm:inline">STALE · RE-ANALYZE</span>
+            <span className="sm:hidden">STALE</span>
           </span>
         ) : criticalCount > 0 ? (
           <span className="pf-badge pf-status-critical">
             <ShieldAlert className="w-3 h-3 shrink-0" />
-            <span>{criticalCount} CRITICAL</span>
+            <span className="hidden sm:inline">{criticalCount} CRITICAL</span>
+            <span className="sm:hidden">{criticalCount} CRIT</span>
           </span>
         ) : highCount > 0 ? (
           <span className="pf-badge pf-status-high">
             <ShieldAlert className="w-3 h-3 shrink-0" />
-            <span>{highCount} HIGH RISK</span>
+            <span className="hidden sm:inline">{highCount} HIGH RISK</span>
+            <span className="sm:hidden">{highCount} HIGH</span>
           </span>
         ) : findingsCount > 0 ? (
           <span className="pf-badge pf-status-warning">
             <ShieldAlert className="w-3 h-3 shrink-0" />
-            <span>{findingsCount} FINDING{findingsCount > 1 ? 'S' : ''}</span>
+            <span>{findingsCount}</span>
           </span>
         ) : (
           <span className="pf-badge pf-status-verified">
             <ShieldCheck className="w-3 h-3 shrink-0" />
-            <span>VERIFIED SECURE</span>
+            <span className="hidden sm:inline">VERIFIED SECURE</span>
+            <span className="sm:hidden">SECURE</span>
           </span>
         )}
 
         {/* Primary Action: Analyze System */}
         <button
           onClick={onValidate}
-          className="pf-btn pf-btn-primary px-3 py-1.5 text-xs font-semibold shadow-xs"
+          className="pf-btn pf-btn-primary px-2 sm:px-3 py-1.5 text-xs font-semibold shadow-xs"
           title="Run complete deterministic security analysis"
         >
           <Activity className="w-3.5 h-3.5" />
-          <span>Analyze System</span>
+          <span className="hidden sm:inline">Analyze System</span>
+          <span className="sm:hidden">Analyze</span>
         </button>
 
         {/* Reset Scenario Action */}
         <button
           onClick={onOpenResetModal}
-          className="pf-btn pf-btn-secondary px-2.5 py-1.5 text-xs"
+          className="pf-btn pf-btn-secondary px-2.5 py-1.5 text-xs hidden sm:inline-flex"
           title="Reset environment topology to baseline"
         >
           <RotateCcw className="w-3 h-3 text-[var(--pf-text-muted)]" />
           <span className="hidden md:inline">Reset</span>
         </button>
+
+        {/* Guided Tour Action */}
+        {onOpenTour && (
+          <button
+            onClick={onOpenTour}
+            className="pf-btn pf-btn-secondary px-2.5 py-1.5 text-xs hidden sm:inline-flex"
+            title="Start Guided Tour"
+          >
+            <Compass className="w-3 h-3 text-[var(--pf-accent)]" />
+            <span className="hidden md:inline">Tour</span>
+          </button>
+        )}
 
         {/* Export Dropdown Menu */}
         <div className="relative" ref={exportDropdownRef}>

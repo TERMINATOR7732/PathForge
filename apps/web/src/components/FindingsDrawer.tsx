@@ -62,6 +62,8 @@ interface FindingsDrawerProps {
   technicalDebt?: TechnicalDebtAssessment | null;
   changeAnalysis?: ChangeAnalysisResult | null;
   baselineSnapshot?: EnvironmentSnapshot | null;
+  selectedFindingId?: string | null;
+  onSelectFinding?: (finding: Finding | null) => void;
   onCaptureBaseline?: () => void;
   onSelectNode: (nodeId: string) => void;
   onLocateElement: (target: { id: string; type: 'node' | 'edge' }) => void;
@@ -124,6 +126,8 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   technicalDebt,
   changeAnalysis = null,
   baselineSnapshot = null,
+  selectedFindingId = null,
+  onSelectFinding,
   onCaptureBaseline,
   onSelectNode,
   onLocateElement,
@@ -144,8 +148,14 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   const [intelSubTab, setIntelSubTab] = useState<IntelSubTab>('architecture');
 
   const [expandedFindingId, setExpandedFindingId] = useState<string | null>(
-    findings[0]?.id ?? null
+    selectedFindingId ?? findings[0]?.id ?? null
   );
+
+  useEffect(() => {
+    if (selectedFindingId) {
+      setExpandedFindingId(selectedFindingId);
+    }
+  }, [selectedFindingId]);
 
   // Auto-switch to verification tab if new verification arrives
   useEffect(() => {
@@ -669,7 +679,10 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
                           return (
                             <div
                               key={f.id}
-                              onClick={() => setExpandedFindingId(f.id)}
+                              onClick={() => {
+                                setExpandedFindingId(f.id);
+                                onSelectFinding?.(f);
+                              }}
                               onMouseEnter={() => onHoverFinding(f)}
                               onMouseLeave={() => onHoverFinding(null)}
                               className={`p-2 rounded-md border cursor-pointer text-xs transition-all ${
@@ -752,73 +765,12 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
                           </div>
                         </div>
 
-                        {/* Structured Evidence Banner */}
-                        {currentFinding.evidence && (
-                          <div className="p-2 rounded bg-[#161b24] border border-[#212631] flex flex-wrap items-center gap-x-3.5 gap-y-1 text-xs text-[#8b949e]">
-                            <span className="text-[#58a6ff] font-bold uppercase tracking-wider text-[10px]">
-                              EVIDENCE:
-                            </span>
-                            {currentFinding.evidence.protocol && (
-                              <span>
-                                Protocol:{' '}
-                                <strong className="text-[#f0f3f6] font-mono">
-                                  {currentFinding.evidence.protocol}
-                                </strong>
-                              </span>
-                            )}
-                            {currentFinding.evidence.ports && (
-                              <span>
-                                Port:{' '}
-                                <strong className="text-[#f0f3f6] font-mono">
-                                  {currentFinding.evidence.ports}
-                                </strong>
-                              </span>
-                            )}
-                            {currentFinding.evidence.access && (
-                              <span>
-                                Access:{' '}
-                                <strong
-                                  className={`font-mono ${
-                                    currentFinding.evidence.access === 'deny'
-                                      ? 'text-[#f85149]'
-                                      : 'text-[#3fb950]'
-                                  }`}
-                                >
-                                  {currentFinding.evidence.access.toUpperCase()}
-                                </strong>
-                              </span>
-                            )}
-                            {currentFinding.evidence.encrypted !== undefined && (
-                              <span>
-                                Channel:{' '}
-                                <strong
-                                  className={
-                                    currentFinding.evidence.encrypted
-                                      ? 'text-[#3fb950]'
-                                      : 'text-[#e3b341]'
-                                  }
-                                >
-                                  {currentFinding.evidence.encrypted ? 'Encrypted' : 'Unencrypted'}
-                                </strong>
-                              </span>
-                            )}
-                            {currentFinding.evidence.targetZone && (
-                              <span>
-                                Dest Zone:{' '}
-                                <strong className="text-[#f0f3f6] uppercase font-mono">
-                                  {currentFinding.evidence.targetZone}
-                                </strong>
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Explanation Grid (Root cause & Threat Impact) */}
+                        {/* 1 & 2: Plain-English Explanation Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div className="p-3 rounded-lg bg-[#161b24] border border-[#212631] space-y-1.5">
                             <div className="text-[10px] uppercase text-[#f85149] font-bold tracking-wider flex items-center space-x-1.5">
                               <HelpCircle className="w-3.5 h-3.5" />
-                              <span>1. Root Cause & Architectural Risk</span>
+                              <span>1. What is wrong</span>
                             </div>
                             <div className="text-[#c9d1d9] leading-relaxed text-xs">
                               {currentFinding.whyItMatters}
@@ -828,7 +780,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
                           <div className="p-3 rounded-lg bg-[#161b24] border border-[#212631] space-y-1.5">
                             <div className="text-[10px] uppercase text-[#f0883e] font-bold tracking-wider flex items-center space-x-1.5">
                               <AlertTriangle className="w-3.5 h-3.5" />
-                              <span>2. Threat Impact & Exploitation Path</span>
+                              <span>2. Why it matters</span>
                             </div>
                             <div className="text-[#c9d1d9] leading-relaxed text-xs">
                               {currentFinding.impact}
@@ -836,18 +788,53 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
                           </div>
                         </div>
 
-                        {/* Recommended Architecture Comparison */}
-                        <RecommendedArchitectureView finding={currentFinding} />
+                        {/* 3: Where the issue appears */}
+                        <div className="p-3 rounded-lg bg-[#161b24] border border-[#212631] space-y-2">
+                          <div className="text-[10px] uppercase text-[#58a6ff] font-bold tracking-wider flex items-center space-x-1.5">
+                            <Crosshair className="w-3.5 h-3.5" />
+                            <span>3. Where the issue appears</span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs">
+                            {currentFinding.affectedNodes.map((nId) => {
+                              const n = environment.getNode(nId);
+                              return (
+                                <button
+                                  key={nId}
+                                  onClick={() => {
+                                    onSelectNode(nId);
+                                    onLocateElement({ id: nId, type: 'node' });
+                                  }}
+                                  className="px-2 py-0.5 rounded bg-[#1f6feb]/15 border border-[#388bfd]/40 text-[#58a6ff] hover:bg-[#1f6feb]/25 transition-colors cursor-pointer text-[11px] flex items-center space-x-1"
+                                  title="Click to center and inspect node on canvas"
+                                >
+                                  <span className="text-[#8b949e] text-[10px]">Node:</span>
+                                  <span className="font-semibold">{n?.name ?? nId}</span>
+                                </button>
+                              );
+                            })}
+                            {currentFinding.affectedEdges.map((eId) => (
+                              <button
+                                key={eId}
+                                onClick={() => onLocateElement({ id: eId, type: 'edge' })}
+                                className="px-2 py-0.5 rounded bg-[#da3633]/15 border border-[#da3633]/40 text-[#f85149] hover:bg-[#da3633]/25 transition-colors cursor-pointer text-[11px] flex items-center space-x-1 font-mono"
+                                title="Click to center and inspect connection on canvas"
+                              >
+                                <span className="text-[#8b949e] text-[10px]">Edge:</span>
+                                <span>{eId}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
 
-                        {/* Remediation Action Panel */}
+                        {/* 4: What the user can do next (Remediation) */}
                         <div className="p-3.5 rounded-lg bg-[#161b24] border border-[#212631] space-y-2">
                           <div className="text-[10px] uppercase text-[#3fb950] font-bold tracking-wider flex items-center justify-between">
                             <span className="flex items-center space-x-1.5">
                               <Wrench className="w-3.5 h-3.5" />
-                              <span>Remediation Guidance</span>
+                              <span>4. What you can do next</span>
                             </span>
                             <span className="text-[#8b949e] lowercase font-normal">
-                              deterministic resolution
+                              defensive remediation
                             </span>
                           </div>
 
@@ -868,7 +855,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
                                           finding: currentFinding,
                                         })
                                       }
-                                      className="px-3 py-1.5 rounded bg-[#238636]/20 border border-[#238636] text-[#7ee787] hover:bg-[#238636] hover:text-white transition-all flex items-center space-x-1.5 text-xs font-semibold cursor-pointer"
+                                      className="px-3 py-1.5 rounded bg-[#238636] border border-[#2ea043] text-white hover:bg-[#2ea043] transition-all flex items-center space-x-1.5 text-xs font-semibold cursor-pointer shadow-xs"
                                     >
                                       <Wrench className="w-3.5 h-3.5" />
                                       <span>{action.title}</span>
@@ -889,40 +876,52 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
                           )}
                         </div>
 
-                        {/* Affected Components */}
-                        <div className="flex items-center flex-wrap gap-2 pt-1 text-xs">
-                          <span className="text-[#8b949e] font-semibold">Affected Assets:</span>
-                          {currentFinding.affectedNodes.map((nId) => (
-                            <button
-                              key={nId}
-                              onClick={() => {
-                                onSelectNode(nId);
-                                onLocateElement({ id: nId, type: 'node' });
-                              }}
-                              className="px-2 py-0.5 rounded bg-[#1f6feb]/15 border border-[#388bfd]/40 text-[#58a6ff] hover:bg-[#1f6feb]/25 transition-colors cursor-pointer font-mono text-[11px]"
-                              title="Click to center and inspect node"
-                            >
-                              {nId}
-                            </button>
-                          ))}
-                          {currentFinding.affectedEdges.length > 0 && (
-                            <>
-                              <span className="text-[#8b949e] font-semibold ml-2">Connections:</span>
-                              {currentFinding.affectedEdges.map((eId) => (
-                                <button
-                                  key={eId}
-                                  onClick={() =>
-                                    onLocateElement({ id: eId, type: 'edge' })
-                                  }
-                                  className="px-2 py-0.5 rounded bg-[#da3633]/15 border border-[#da3633]/40 text-[#f85149] hover:bg-[#da3633]/25 transition-colors cursor-pointer font-mono text-[11px]"
-                                  title="Click to center and inspect connection"
-                                >
-                                  {eId}
-                                </button>
-                              ))}
-                            </>
-                          )}
-                        </div>
+                        {/* Recommended Architecture Comparison */}
+                        <RecommendedArchitectureView finding={currentFinding} />
+
+                        {/* Expandable Technical Evidence & Rule Details */}
+                        <details className="rounded-lg bg-[#161b24] border border-[#212631] p-3 text-xs space-y-2 group">
+                          <summary className="text-[10px] uppercase font-bold text-[#8b949e] tracking-wider cursor-pointer flex items-center justify-between list-none">
+                            <div className="flex items-center space-x-2">
+                              <span>Technical Evidence & Rule Details</span>
+                              <span className="font-mono text-[10px] text-[#58a6ff]">({currentFinding.ruleId})</span>
+                            </div>
+                            <ChevronDown className="w-3.5 h-3.5 transition-transform group-open:rotate-180" />
+                          </summary>
+                          <div className="pt-2 border-t border-[#212631] space-y-1.5 text-[11px] text-[#8b949e]">
+                            <div>
+                              Rule ID: <strong className="text-[#c9d1d9] font-mono">{currentFinding.ruleId}</strong>
+                            </div>
+                            <div>
+                              Rule Category: <strong className="text-[#c9d1d9] capitalize">{currentFinding.category.replace('_', ' ')}</strong>
+                            </div>
+                            {currentFinding.evidence?.protocol && (
+                              <div>
+                                Protocol: <strong className="text-[#f0f3f6] font-mono">{currentFinding.evidence.protocol}</strong>
+                              </div>
+                            )}
+                            {currentFinding.evidence?.ports && (
+                              <div>
+                                Port: <strong className="text-[#f0f3f6] font-mono">{currentFinding.evidence.ports}</strong>
+                              </div>
+                            )}
+                            {currentFinding.evidence?.access && (
+                              <div>
+                                Access Policy: <strong className="text-[#f0f3f6] font-mono uppercase">{currentFinding.evidence.access}</strong>
+                              </div>
+                            )}
+                            {currentFinding.evidence?.encrypted !== undefined && (
+                              <div>
+                                Encryption: <strong className="text-[#f0f3f6] font-mono">{currentFinding.evidence.encrypted ? 'TLS Encrypted' : 'Cleartext'}</strong>
+                              </div>
+                            )}
+                            {currentFinding.evidence?.targetZone && (
+                              <div>
+                                Destination Zone: <strong className="text-[#f0f3f6] font-mono uppercase">{currentFinding.evidence.targetZone}</strong>
+                              </div>
+                            )}
+                          </div>
+                        </details>
 
                         {/* Cross-Analysis Shortcuts */}
                         <div className="flex items-center space-x-2 pt-2 border-t border-[#212631] text-xs">
