@@ -33,6 +33,7 @@ interface NetworkCanvasProps {
   activeScenarioId?: string;
   onOpenScenarioLab?: () => void;
   onLoadScenario?: (scenarioId: string) => void;
+  onNodeDragStart?: () => void;
 }
 
 interface TrustZoneCluster {
@@ -148,6 +149,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
   activeScenarioId,
   onOpenScenarioLab: _onOpenScenarioLab,
   onLoadScenario,
+  onNodeDragStart,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -189,8 +191,11 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     id: string;
     offsetX: number;
     offsetY: number;
+    initialX: number;
+    initialY: number;
     currentX: number;
     currentY: number;
+    hasMoved: boolean;
   } | null>(null);
 
   const [connectionDraft, setConnectionDraft] = useState<{
@@ -295,15 +300,52 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     }
   };
 
+  // Zoom directly to selected node
+  const handleZoomToSelected = useCallback(() => {
+    if (!selectedNodeId || !containerRef.current) return;
+    const node = environment.getNode(selectedNodeId);
+    if (!node) return;
+    const targetX = node.position.x + NODE_WIDTH / 2;
+    const targetY = node.position.y + NODE_HEIGHT / 2;
+    const viewportW = containerRef.current.clientWidth;
+    const viewportH = containerRef.current.clientHeight;
+    const newZoom = 1.0;
+    setZoom(newZoom);
+    setPan({
+      x: Math.round(viewportW / 2 - targetX * newZoom),
+      y: Math.round(viewportH / 2 - targetY * newZoom),
+    });
+  }, [selectedNodeId, environment]);
+
+  const handleZoomIn = useCallback(() => setZoom((z) => Math.min(2.5, z * 1.2)), []);
+  const handleZoomOut = useCallback(() => setZoom((z) => Math.max(0.35, z / 1.2)), []);
+  const handleResetView = useCallback(() => {
+    setZoom(1.0);
+    setPan({ x: 50, y: 50 });
+  }, []);
+
   // Keyboard navigation & Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !e.repeat && (e.target as HTMLElement).tagName !== 'INPUT') {
-        setIsSpacePressed(true);
-      } else if (
-        (e.key === 'Delete' || e.key === 'Backspace') &&
-        (e.target as HTMLElement).tagName !== 'INPUT'
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
       ) {
+        return;
+      }
+
+      // If any modal dialog is open, do not intercept canvas shortcuts
+      if (typeof document !== 'undefined' && document.querySelector('[role="dialog"]')) {
+        return;
+      }
+
+      if (e.code === 'Space' && !e.repeat) {
+        setIsSpacePressed(true);
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedNodeId) {
           onDeleteNode(selectedNodeId);
           onSelectNode(null);
@@ -314,6 +356,23 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       } else if (e.key === 'Escape') {
         onSelectNode(null);
         onSelectEdge(null);
+      } else if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (e.key.toLowerCase() === 'f') {
+          e.preventDefault();
+          fitToGraph();
+        } else if (e.key.toLowerCase() === 'z' && selectedNodeId) {
+          e.preventDefault();
+          handleZoomToSelected();
+        } else if (e.key === '0') {
+          e.preventDefault();
+          handleResetView();
+        } else if (e.key === '+' || e.key === '=') {
+          e.preventDefault();
+          handleZoomIn();
+        } else if (e.key === '-') {
+          e.preventDefault();
+          handleZoomOut();
+        }
       }
     };
 
@@ -329,7 +388,19 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [selectedNodeId, selectedEdgeId, onDeleteNode, onDeleteEdge, onSelectNode, onSelectEdge]);
+  }, [
+    selectedNodeId,
+    selectedEdgeId,
+    onDeleteNode,
+    onDeleteEdge,
+    onSelectNode,
+    onSelectEdge,
+    fitToGraph,
+    handleZoomToSelected,
+    handleResetView,
+    handleZoomIn,
+    handleZoomOut,
+  ]);
 
   // Node Drag Initiation Handler
   const handleStartDragNode = (nodeId: string, clientX: number, clientY: number) => {
@@ -341,8 +412,11 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       id: nodeId,
       offsetX: canvasPos.x - node.position.x,
       offsetY: canvasPos.y - node.position.y,
+      initialX: node.position.x,
+      initialY: node.position.y,
       currentX: node.position.x,
       currentY: node.position.y,
+      hasMoved: false,
     });
   };
 
@@ -384,8 +458,19 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       const newX = Math.round(canvasPos.x - dragNode.offsetX);
       const newY = Math.round(canvasPos.y - dragNode.offsetY);
 
-      setDragNode((prev) => (prev ? { ...prev, currentX: newX, currentY: newY } : null));
-      onUpdateNodePosition(dragNode.id, newX, newY);
+      const hasMoved =
+        dragNode.hasMoved ||
+        Math.abs(newX - dragNode.initialX) > 2 ||
+        Math.abs(newY - dragNode.initialY) > 2;
+
+      if (!dragNode.hasMoved && hasMoved) {
+        onNodeDragStart?.();
+      }
+
+      setDragNode((prev) => (prev ? { ...prev, currentX: newX, currentY: newY, hasMoved } : null));
+      if (hasMoved) {
+        onUpdateNodePosition(dragNode.id, newX, newY);
+      }
       return;
     }
 
@@ -410,7 +495,9 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     }
 
     if (dragNode) {
-      onUpdateNodePosition(dragNode.id, dragNode.currentX, dragNode.currentY);
+      if (dragNode.hasMoved) {
+        onUpdateNodePosition(dragNode.id, dragNode.currentX, dragNode.currentY);
+      }
       setDragNode(null);
     }
 
@@ -441,14 +528,6 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
     };
 
     onCreateNode(nodeType, dropPosition);
-  };
-
-  // Controls Handlers
-  const handleZoomIn = () => setZoom((z) => Math.min(2.5, z * 1.2));
-  const handleZoomOut = () => setZoom((z) => Math.max(0.35, z / 1.2));
-  const handleResetView = () => {
-    setZoom(1.0);
-    setPan({ x: 50, y: 50 });
   };
 
   const nodes = environment.getNodes();
@@ -878,10 +957,12 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
       {/* Floating Canvas Viewport Controls */}
       <CanvasControls
         zoom={zoom}
+        selectedNodeId={selectedNodeId}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onResetView={handleResetView}
         onFitView={fitToGraph}
+        onZoomToSelected={handleZoomToSelected}
       />
 
       {/* Floating Canvas Minimap */}

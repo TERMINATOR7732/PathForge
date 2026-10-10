@@ -243,15 +243,15 @@ export const CanvasNode: React.FC<CanvasNodeProps> = ({
       {/* Row 2: Asset Identity Name */}
       <div className="pl-3 pr-2.5 py-0.5">
         <div
-          className="text-xs font-semibold text-[#f0f3f6] truncate font-sans tracking-tight"
-          title={node.name}
+          className="text-sm font-semibold text-[#f0f3f6] truncate font-sans tracking-tight"
+          title={`${node.name} (${node.type.replace('_', ' ')})\nZone: ${zoneName}\nCIDR: ${node.metadata.cidr || 'N/A'}\nService: ${servicePort ? `${serviceProtocol}:${servicePort}` : 'None'}\nCriticality: ${node.metadata.criticality || 'medium'}`}
         >
           {node.name}
         </div>
       </div>
 
       {/* Row 3: Trust Zone & Service Specs */}
-      <div className="flex items-center justify-between pl-3 pr-2.5 pb-2 text-[9px]">
+      <div className="flex items-center justify-between pl-3 pr-2.5 pb-2 text-2xs">
         {/* Trust Zone Pill */}
         <span className="px-1.5 py-0.5 rounded bg-[#0d1117] text-[#8b949e] border border-[#212631] font-mono uppercase font-semibold">
           {zoneName}
@@ -263,7 +263,7 @@ export const CanvasNode: React.FC<CanvasNodeProps> = ({
             {serviceProtocol}:{servicePort}
           </span>
         ) : (
-          <span className="text-[9px] font-mono text-[#484f58] uppercase">
+          <span className="text-2xs font-mono text-[#484f58] uppercase">
             {catConfig.category}
           </span>
         )}

@@ -15,6 +15,12 @@ import {
   Shield,
   Activity,
   Compass,
+  Undo2,
+  Redo2,
+  Search,
+  Keyboard,
+  PanelRightClose,
+  PanelRightOpen,
 } from 'lucide-react';
 import { ValidationResult } from '@pathforge/shared';
 import { Environment, FixVerificationResult, getScenarioById } from '@pathforge/core';
@@ -36,6 +42,14 @@ interface TopNavProps {
   latestVerification?: FixVerificationResult | null;
   validationResult: ValidationResult | null;
   isValidationStale?: boolean;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  onOpenSearch?: () => void;
+  onOpenShortcuts?: () => void;
+  isInspectorOpen?: boolean;
+  onToggleInspector?: () => void;
 }
 
 export const TopNav: React.FC<TopNavProps> = ({
@@ -49,6 +63,14 @@ export const TopNav: React.FC<TopNavProps> = ({
   latestVerification = null,
   validationResult,
   isValidationStale = false,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
+  onOpenSearch,
+  onOpenShortcuts,
+  isInspectorOpen = true,
+  onToggleInspector,
 }) => {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const exportDropdownRef = useRef<HTMLDivElement>(null);
@@ -115,12 +137,59 @@ export const TopNav: React.FC<TopNavProps> = ({
             title="Switch Environment Scenario (Ctrl+O)"
           >
             <Layers className="w-3.5 h-3.5 text-[var(--pf-accent)] shrink-0" />
-            <span className="text-xs font-semibold text-[var(--pf-text-primary)] truncate max-w-[85px] sm:max-w-[210px]">
+            <span className="text-xs font-semibold text-[var(--pf-text-primary)] truncate max-w-[85px] sm:max-w-[170px]">
               {scenarioName}
             </span>
             <ChevronDown className="w-3 h-3 text-[var(--pf-text-muted)] shrink-0" />
           </button>
         </div>
+
+        {/* Quick Search */}
+        {onOpenSearch && (
+          <button
+            onClick={onOpenSearch}
+            className="pf-btn pf-btn-secondary hidden sm:inline-flex items-center space-x-1.5 px-2 py-1 text-xs"
+            title="Search components (Ctrl+K)"
+          >
+            <Search className="w-3.5 h-3.5 text-[var(--pf-text-muted)]" />
+            <span className="hidden lg:inline text-[var(--pf-text-secondary)]">Search</span>
+            <kbd className="hidden lg:inline font-mono text-[10px] bg-[var(--pf-bg-app)] px-1 rounded border border-[var(--pf-border-subtle)] text-[var(--pf-text-muted)]">
+              ⌘K
+            </kbd>
+          </button>
+        )}
+
+        {/* Graph History Undo / Redo */}
+        {(onUndo || onRedo) && (
+          <div className="flex items-center space-x-0.5 border-l border-[var(--pf-border-subtle)] pl-1.5 ml-0.5">
+            <button
+              onClick={onUndo}
+              disabled={!canUndo}
+              className={`p-1 rounded text-xs transition-colors ${
+                canUndo
+                  ? 'text-[var(--pf-text-secondary)] hover:text-[var(--pf-text-primary)] hover:bg-[var(--pf-bg-hover)]'
+                  : 'text-[var(--pf-text-subtle)] opacity-40 cursor-not-allowed'
+              }`}
+              title="Undo change (Ctrl+Z)"
+              aria-label="Undo"
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={onRedo}
+              disabled={!canRedo}
+              className={`p-1 rounded text-xs transition-colors ${
+                canRedo
+                  ? 'text-[var(--pf-text-secondary)] hover:text-[var(--pf-text-primary)] hover:bg-[var(--pf-bg-hover)]'
+                  : 'text-[var(--pf-text-subtle)] opacity-40 cursor-not-allowed'
+              }`}
+              title="Redo change (Ctrl+Y)"
+              aria-label="Redo"
+            >
+              <Redo2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 2. CENTER: ENGINEERING CORE PIPELINE (Build -> Break -> Defend -> Prove) */}
@@ -178,6 +247,36 @@ export const TopNav: React.FC<TopNavProps> = ({
           <span className="hidden sm:inline">Analyze System</span>
           <span className="sm:hidden">Analyze</span>
         </button>
+
+        {/* Toggle Inspector */}
+        {onToggleInspector && (
+          <button
+            onClick={onToggleInspector}
+            className={`pf-btn pf-btn-secondary px-2 py-1.5 text-xs hidden sm:inline-flex items-center space-x-1 ${
+              isInspectorOpen ? 'border-[var(--pf-border-focus)] text-[var(--pf-accent)]' : ''
+            }`}
+            title={`Toggle Inspector (${isInspectorOpen ? 'Collapse' : 'Expand'}) (Alt+I)`}
+          >
+            {isInspectorOpen ? (
+              <PanelRightClose className="w-3.5 h-3.5" />
+            ) : (
+              <PanelRightOpen className="w-3.5 h-3.5" />
+            )}
+            <span className="hidden lg:inline">{isInspectorOpen ? 'Inspector' : 'Inspect'}</span>
+          </button>
+        )}
+
+        {/* Shortcuts Cheatsheet */}
+        {onOpenShortcuts && (
+          <button
+            onClick={onOpenShortcuts}
+            className="pf-btn pf-btn-secondary px-2 py-1.5 text-xs hidden sm:inline-flex items-center space-x-1"
+            title="Keyboard Shortcuts Cheatsheet (?)"
+          >
+            <Keyboard className="w-3.5 h-3.5 text-[var(--pf-text-muted)]" />
+            <span className="hidden xl:inline">Shortcuts</span>
+          </button>
+        )}
 
         {/* Reset Scenario Action */}
         <button

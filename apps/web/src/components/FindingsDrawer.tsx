@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Finding, RuleCategory, Severity, ValidationResult } from '@pathforge/shared';
 import {
   Environment,
@@ -41,6 +41,14 @@ import { ProductionReadinessPanel } from './ProductionReadinessPanel.js';
 import { TestingIntelligencePanel } from './TestingIntelligencePanel.js';
 import { TechnicalDebtPanel } from './TechnicalDebtPanel.js';
 import { ChangeAnalysisPanel } from './ChangeAnalysisPanel.js';
+
+import {
+  loadUiPreferences,
+  saveUiPreferences,
+  clampConsoleHeight,
+  MIN_CONSOLE_HEIGHT,
+  DEFAULT_CONSOLE_HEIGHT,
+} from '../utils/uiPreferences.js';
 
 interface FindingsDrawerProps {
   findings: Finding[];
@@ -140,9 +148,138 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       if (params.get('console') === 'open') return true;
+      if (params.get('console') === 'closed') return false;
+      const prefs = loadUiPreferences();
+      return prefs.isConsoleOpen;
     }
     return false;
-  }); // Default collapsed into dock to let canvas dominate!
+  });
+
+  const [consoleHeight, setConsoleHeight] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const prefs = loadUiPreferences();
+      return clampConsoleHeight(prefs.consoleHeight);
+    }
+    return DEFAULT_CONSOLE_HEIGHT;
+  });
+
+  const [isDragging, setIsDragging] = useState(false);
+  const dragCleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (dragCleanupRef.current) {
+        dragCleanupRef.current();
+      }
+    };
+  }, []);
+
+  const handleToggleOpen = (open?: boolean) => {
+    setIsOpen((prev) => {
+      const next = typeof open === 'boolean' ? open : !prev;
+      saveUiPreferences({ isConsoleOpen: next });
+      return next;
+    });
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+    const startY = e.clientY;
+    const startH = isOpen ? consoleHeight : MIN_CONSOLE_HEIGHT;
+
+    const onPointerMove = (moveEvt: PointerEvent) => {
+      moveEvt.preventDefault();
+      const delta = startY - moveEvt.clientY;
+      const maxH = typeof window !== 'undefined' ? Math.floor(window.innerHeight * 0.75) : 800;
+      const nextH = Math.max(MIN_CONSOLE_HEIGHT, Math.min(maxH, startH + delta));
+      setConsoleHeight(nextH);
+      if (!isOpen && delta > 20) {
+        setIsOpen(true);
+        saveUiPreferences({ isConsoleOpen: true });
+      }
+    };
+
+    const cleanup = () => {
+      setIsDragging(false);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      dragCleanupRef.current = null;
+    };
+    dragCleanupRef.current = cleanup;
+
+    const onPointerUp = () => {
+      cleanup();
+      setConsoleHeight((currentH) => {
+        saveUiPreferences({ consoleHeight: currentH });
+        return currentH;
+      });
+    };
+
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+  };
+
+  const handleKeyDownDivider = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setIsOpen(true);
+      setConsoleHeight((h) => {
+        const maxH = typeof window !== 'undefined' ? Math.floor(window.innerHeight * 0.75) : 800;
+        const nextH = Math.min(maxH, h + 24);
+        saveUiPreferences({ consoleHeight: nextH, isConsoleOpen: true });
+        return nextH;
+      });
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setConsoleHeight((h) => {
+        if (h <= MIN_CONSOLE_HEIGHT + 24) {
+          setIsOpen(false);
+          saveUiPreferences({ isConsoleOpen: false });
+          return h;
+        }
+        const nextH = Math.max(MIN_CONSOLE_HEIGHT, h - 24);
+        saveUiPreferences({ consoleHeight: nextH });
+        return nextH;
+      });
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleToggleOpen();
+    }
+  };
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      // If any modal dialog is open, do not intercept drawer toggle shortcuts
+      if (typeof document !== 'undefined' && document.querySelector('[role="dialog"]')) {
+        return;
+      }
+
+      if ((e.ctrlKey && e.key === '`') || (e.altKey && e.key.toLowerCase() === 'c')) {
+        e.preventDefault();
+        handleToggleOpen();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
   const [primaryMode, setPrimaryMode] = useState<PrimaryMode>('findings');
   const [threatSubTab, setThreatSubTab] = useState<ThreatSubTab>('attack-paths');
   const [intelSubTab, setIntelSubTab] = useState<IntelSubTab>('architecture');
@@ -296,10 +433,34 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
   return (
     <>
       <div
-        className={`border-t border-[#212631] bg-[#11151c] transition-all duration-200 select-none flex flex-col font-sans z-30 ${
-          isOpen ? 'h-80 md:h-[320px]' : 'h-10'
-        }`}
+        style={{ height: isOpen ? `${consoleHeight}px` : '40px' }}
+        className={`border-t border-[#212631] bg-[#11151c] ${
+          isDragging ? '' : 'transition-[height] duration-200'
+        } select-none flex flex-col font-sans z-30 min-h-0 relative`}
       >
+        {/* Resize Divider Bar (VS Code style drag-to-resize) */}
+        <div
+          role="separator"
+          tabIndex={0}
+          aria-label="Resize console divider"
+          aria-valuenow={isOpen ? consoleHeight : 40}
+          aria-valuemin={MIN_CONSOLE_HEIGHT}
+          aria-valuemax={typeof window !== 'undefined' ? Math.floor(window.innerHeight * 0.75) : 800}
+          title="Drag up or down to resize console (Double-click to toggle, Arrow keys to adjust)"
+          className={`h-2 -mt-1 w-full cursor-row-resize flex items-center justify-center group relative z-40 select-none transition-colors ${
+            isDragging ? 'bg-[var(--pf-accent)]/80' : 'hover:bg-[var(--pf-accent)]/20'
+          }`}
+          onPointerDown={handlePointerDown}
+          onDoubleClick={() => handleToggleOpen()}
+          onKeyDown={handleKeyDownDivider}
+        >
+          <div
+            className={`h-[2px] w-12 rounded-full transition-colors ${
+              isDragging ? 'bg-white' : 'bg-[var(--pf-border-strong)] group-hover:bg-[var(--pf-accent)]'
+            }`}
+          />
+        </div>
+
         {/* ======================================================== */}
         {/* DOCK BAR (COLLAPSED COMMAND DOCK)                         */}
         {/* ======================================================== */}
@@ -442,8 +603,9 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
 
             {/* Expand / Collapse Button */}
             <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="flex items-center space-x-1 px-2 py-1 rounded border border-[#212631] bg-[#11151c] hover:border-[#303746] hover:bg-[#1a212d] text-slate-300 hover:text-white text-xs font-semibold transition-colors cursor-pointer"
+              onClick={() => handleToggleOpen()}
+              className="flex items-center space-x-1.5 px-2.5 py-1 rounded border border-[#212631] bg-[#11151c] hover:border-[#303746] hover:bg-[#1a212d] text-slate-300 hover:text-white text-xs font-semibold transition-colors cursor-pointer"
+              title={isOpen ? 'Collapse Console (Ctrl+` or Alt+C)' : 'Expand Console (Ctrl+` or Alt+C)'}
             >
               <span>{isOpen ? 'Collapse Console' : 'Open Console'}</span>
               {isOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
@@ -682,6 +844,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
                               onClick={() => {
                                 setExpandedFindingId(f.id);
                                 onSelectFinding?.(f);
+                                handleLocateFinding(f);
                               }}
                               onMouseEnter={() => onHoverFinding(f)}
                               onMouseLeave={() => onHoverFinding(null)}

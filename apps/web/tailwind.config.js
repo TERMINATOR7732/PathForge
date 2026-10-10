@@ -21,6 +21,16 @@ export default {
         'pf-danger': 'var(--pf-danger)',
         'pf-info': 'var(--pf-info)',
       },
+      fontSize: {
+        '2xs': ['var(--pf-font-size-2xs, 11px)', { lineHeight: 'var(--pf-line-height-tight, 1.25)' }],
+        xs: ['var(--pf-font-size-xs, 13px)', { lineHeight: 'var(--pf-line-height-tight, 1.25)' }],
+        sm: ['var(--pf-font-size-sm, 15px)', { lineHeight: 'var(--pf-line-height-normal, 1.5)' }],
+        base: ['var(--pf-font-size-base, 17px)', { lineHeight: 'var(--pf-line-height-normal, 1.5)' }],
+        md: ['var(--pf-font-size-md, 20px)', { lineHeight: 'var(--pf-line-height-normal, 1.5)' }],
+        lg: ['var(--pf-font-size-lg, 24px)', { lineHeight: 'var(--pf-line-height-tight, 1.25)' }],
+        xl: ['var(--pf-font-size-xl, 28px)', { lineHeight: 'var(--pf-line-height-tight, 1.25)' }],
+        '2xl': ['var(--pf-font-size-2xl, 34px)', { lineHeight: 'var(--pf-line-height-tight, 1.25)' }],
+      },
       fontFamily: {
         sans: [
           'Inter',

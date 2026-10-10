@@ -56,6 +56,22 @@
   --pf-space-5: 20px;
   --pf-space-6: 24px;
 
+  /* Centralized Typography Scale (Microsoft Word 15 pt reference ≈ 20 CSS px) */
+  --pf-font-size-2xs: 11px;  /* Micro tags, minimal indicators */
+  --pf-font-size-xs: 13px;   /* Compact badges, port numbers, metadata */
+  --pf-font-size-sm: 15px;   /* Secondary labels, tooltips, table subtext, compact buttons */
+  --pf-font-size-base: 17px; /* Medium interface text, secondary body, form fields */
+  --pf-font-size-md: 20px;   /* Standard Body Text (~15pt Word reference), descriptions, narrative */
+  --pf-font-size-lg: 24px;   /* Subheadings, panel section headers */
+  --pf-font-size-xl: 28px;   /* Primary section headers, modal headers */
+  --pf-font-size-2xl: 34px;  /* Main display titles, high-emphasis metrics */
+
+  /* Line Heights */
+  --pf-line-height-tight: 1.25;
+  --pf-line-height-snug: 1.375;
+  --pf-line-height-normal: 1.5;
+  --pf-line-height-relaxed: 1.65;
+
   /* Font Families */
   --pf-font-ui: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --pf-font-mono: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', Menlo, Consolas, monospace;

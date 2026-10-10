@@ -33,6 +33,8 @@ import {
   HelpCircle,
   Network,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface InspectorPanelProps {
@@ -42,6 +44,8 @@ interface InspectorPanelProps {
   selectedFinding?: Finding | null;
   selectedAttackPath?: AttackPath | null;
   findings: Finding[];
+  isOpen?: boolean;
+  onToggleOpen?: () => void;
   onClearSelection?: () => void;
   onApplyRemediation?: (action: RemediationAction, finding: Finding) => void;
   onLocateElement?: (target: { id: string; type: 'node' | 'edge' }) => void;
@@ -124,6 +128,8 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   selectedFinding = null,
   selectedAttackPath = null,
   findings,
+  isOpen = true,
+  onToggleOpen,
   onClearSelection,
   onApplyRemediation,
   onLocateElement,
@@ -326,8 +332,43 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
     Boolean(selectedFinding) ||
     Boolean(selectedAttackPath);
 
+  if (!isOpen) {
+    return (
+      <div className="w-10 border-l border-[#212631] bg-[#11151c] flex flex-col items-center py-2.5 h-full select-none font-sans shrink-0 z-20 transition-all duration-200">
+        <button
+          onClick={onToggleOpen}
+          className="p-1.5 rounded text-[#8b949e] hover:text-[#58a6ff] hover:bg-[#161b24] transition-colors cursor-pointer"
+          title="Expand Inspector (Alt+I)"
+          aria-label="Expand Inspector"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+
+        {hasAnySelection && (
+          <div
+            className="w-2 h-2 rounded-full bg-[#388bfd] my-2 animate-pulse"
+            title="Selection active - Click to expand inspector"
+          />
+        )}
+
+        <div
+          onClick={onToggleOpen}
+          className="flex-1 flex items-center justify-center cursor-pointer select-none py-4 text-[#8b949e] hover:text-[#f0f3f6] transition-colors"
+          title="Click to expand inspector"
+        >
+          <span
+            className="text-[11px] font-bold tracking-widest uppercase font-mono"
+            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+          >
+            INSPECTOR
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <aside className={`w-80 border-l border-[#212631] bg-[#11151c] flex-col h-full select-none text-xs font-sans ${hasAnySelection ? 'flex fixed inset-y-0 right-0 z-40 max-w-[90vw] md:static' : 'hidden lg:flex'}`}>
+    <aside className="w-80 lg:w-92 border-l border-[#212631] bg-[#11151c] flex flex-col h-full select-none text-xs font-sans shrink-0 z-20 transition-all duration-200">
       {/* Panel Header */}
       <div className="h-10 px-3.5 border-b border-[#212631] bg-[#161b24] flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-2">
@@ -377,6 +418,17 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
               aria-label="Close inspector"
             >
               <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {onToggleOpen && (
+            <button
+              onClick={onToggleOpen}
+              className="p-1 rounded text-[#8b949e] hover:text-white hover:bg-[#212631] transition-colors cursor-pointer"
+              title="Collapse Inspector (Alt+I)"
+              aria-label="Collapse inspector"
+            >
+              <ChevronRight className="w-4 h-4" />
             </button>
           )}
         </div>

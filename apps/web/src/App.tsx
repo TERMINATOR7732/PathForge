@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   serializeEnvironment,
+  deserializeEnvironment,
   Environment,
   createEnvironmentSnapshot,
   verifyFix,
@@ -30,6 +31,9 @@ import { ResetScenarioModal } from './components/ResetScenarioModal.js';
 import { UnsavedChangesModal } from './components/UnsavedChangesModal.js';
 import { GuidanceBanner } from './components/GuidanceBanner.js';
 import { GuidedTourModal } from './components/GuidedTourModal.js';
+import { SearchNodesModal } from './components/SearchNodesModal.js';
+import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal.js';
+import { loadUiPreferences, saveUiPreferences } from './utils/uiPreferences.js';
 
 export const App: React.FC = () => {
   const initialScenarioId = useMemo(() => {
@@ -101,6 +105,27 @@ export const App: React.FC = () => {
   // graphVersion integer counter to trigger reactive UI re-renders on domain graph mutation
   const [graphVersion, setGraphVersion] = useState<number>(0);
   const bumpGraphVersion = useCallback(() => setGraphVersion((v) => v + 1), []);
+
+  // Persistent UI Preferences (Inspector open by default: true)
+  const [isInspectorOpen, setIsInspectorOpen] = useState<boolean>(() => {
+    return loadUiPreferences().isInspectorOpen;
+  });
+
+  const handleToggleInspector = useCallback(() => {
+    setIsInspectorOpen((prev) => {
+      const next = !prev;
+      saveUiPreferences({ isInspectorOpen: next });
+      return next;
+    });
+  }, []);
+
+  // Modal dialog states
+  const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
+
+  // Undo / Redo History Stacks
+  const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [redoStack, setRedoStack] = useState<string[]>([]);
 
   // Initialize rule engine
   const validatorEngine = useMemo(() => {
@@ -303,6 +328,8 @@ export const App: React.FC = () => {
       setResolvedFindings([]);
       setLastAppliedRemediation(null);
       setHasUnsavedChanges(false);
+      setUndoStack([]);
+      setRedoStack([]);
 
       // Support "Build from Scratch" (Phase C option 5)
       let newEnv: Environment;
@@ -345,6 +372,131 @@ export const App: React.FC = () => {
   const handleResetScenario = useCallback(() => {
     handleForceLoadScenario(activeScenarioId);
   }, [handleForceLoadScenario, activeScenarioId]);
+
+  // History Snapshot Management (Undo / Redo)
+  const pushHistorySnapshot = useCallback(() => {
+    const serialized = serializeEnvironment(environment);
+    setUndoStack((prev) => [...prev.slice(-29), serialized]);
+    setRedoStack([]);
+  }, [environment]);
+
+  const handleUndo = useCallback(() => {
+    if (undoStack.length === 0) return;
+    const previousSnapshot = undoStack[undoStack.length - 1];
+    const newUndoStack = undoStack.slice(0, -1);
+
+    const currentSnapshot = serializeEnvironment(environment);
+    setRedoStack((prev) => [...prev.slice(-29), currentSnapshot]);
+    setUndoStack(newUndoStack);
+
+    try {
+      const restoredEnv = deserializeEnvironment(previousSnapshot);
+      setEnvironment(restoredEnv);
+      const newResult = validatorEngine.evaluate(restoredEnv);
+      setValidationResult(newResult);
+      setIsValidationStale(true);
+      setHasUnsavedChanges(true);
+      if (selectedNodeId && !restoredEnv.getNode(selectedNodeId)) {
+        setSelectedNodeId(null);
+      }
+      if (selectedEdgeId && !restoredEnv.getEdge(selectedEdgeId)) {
+        setSelectedEdgeId(null);
+      }
+      bumpGraphVersion();
+    } catch (err) {
+      console.error('Failed to restore undo state:', err);
+    }
+  }, [undoStack, environment, validatorEngine, selectedNodeId, selectedEdgeId, bumpGraphVersion]);
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.length === 0) return;
+    const nextSnapshot = redoStack[redoStack.length - 1];
+    const newRedoStack = redoStack.slice(0, -1);
+
+    const currentSnapshot = serializeEnvironment(environment);
+    setUndoStack((prev) => [...prev.slice(-29), currentSnapshot]);
+    setRedoStack(newRedoStack);
+
+    try {
+      const restoredEnv = deserializeEnvironment(nextSnapshot);
+      setEnvironment(restoredEnv);
+      const newResult = validatorEngine.evaluate(restoredEnv);
+      setValidationResult(newResult);
+      setIsValidationStale(true);
+      setHasUnsavedChanges(true);
+      if (selectedNodeId && !restoredEnv.getNode(selectedNodeId)) {
+        setSelectedNodeId(null);
+      }
+      if (selectedEdgeId && !restoredEnv.getEdge(selectedEdgeId)) {
+        setSelectedEdgeId(null);
+      }
+      bumpGraphVersion();
+    } catch (err) {
+      console.error('Failed to restore redo state:', err);
+    }
+  }, [redoStack, environment, validatorEngine, selectedNodeId, selectedEdgeId, bumpGraphVersion]);
+
+  // Global Keyboard Shortcuts (Ctrl+Z, Ctrl+Y, Ctrl+K, ?, Alt+I)
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      // If any modal dialog is open, do not intercept workbench shortcuts
+      if (typeof document !== 'undefined' && document.querySelector('[role="dialog"]')) {
+        return;
+      }
+
+      // Undo: Ctrl+Z / Cmd+Z (without shift)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+        return;
+      }
+
+      // Redo: Ctrl+Y / Cmd+Y OR Ctrl+Shift+Z / Cmd+Shift+Z
+      if (
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') ||
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && e.shiftKey)
+      ) {
+        e.preventDefault();
+        handleRedo();
+        return;
+      }
+
+      // Quick Search: Ctrl+K / Cmd+K
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsSearchOpen((prev) => !prev);
+        return;
+      }
+
+      // Shortcuts help: ? (without ctrl/meta/alt)
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        setIsShortcutsOpen((prev) => !prev);
+        return;
+      }
+
+      // Toggle Inspector: Alt+I
+      if (e.altKey && e.key.toLowerCase() === 'i') {
+        e.preventDefault();
+        handleToggleInspector();
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [handleUndo, handleRedo, handleToggleInspector]);
 
   // Selection handlers to ensure coherent contextual panel state (Phase E)
   const handleSelectNode = useCallback((id: string | null) => {
@@ -405,18 +557,20 @@ export const App: React.FC = () => {
 
   const handleCreateNode = useCallback(
     (type: NodeType, position: { x: number; y: number }) => {
+      pushHistorySnapshot();
       const newNode = environment.createNode(type, position);
       handleSelectNode(newNode.id);
       setIsValidationStale(true);
       setHasUnsavedChanges(true);
       bumpGraphVersion();
     },
-    [environment, handleSelectNode, bumpGraphVersion]
+    [environment, handleSelectNode, bumpGraphVersion, pushHistorySnapshot]
   );
 
   const handleCreateEdge = useCallback(
     (sourceId: string, targetId: string) => {
       try {
+        pushHistorySnapshot();
         const newEdge = environment.createEdge(sourceId, targetId);
         handleSelectEdge(newEdge.id);
         setIsValidationStale(true);
@@ -426,11 +580,12 @@ export const App: React.FC = () => {
         console.error('Edge creation failed:', err);
       }
     },
-    [environment, handleSelectEdge, bumpGraphVersion]
+    [environment, handleSelectEdge, bumpGraphVersion, pushHistorySnapshot]
   );
 
   const handleDeleteNode = useCallback(
     (nodeId: string) => {
+      pushHistorySnapshot();
       const deleted = environment.removeNode(nodeId);
       if (deleted) {
         if (selectedNodeId === nodeId) setSelectedNodeId(null);
@@ -440,11 +595,12 @@ export const App: React.FC = () => {
         bumpGraphVersion();
       }
     },
-    [environment, selectedNodeId, selectedCompromisedNodeId, bumpGraphVersion]
+    [environment, selectedNodeId, selectedCompromisedNodeId, bumpGraphVersion, pushHistorySnapshot]
   );
 
   const handleDeleteEdge = useCallback(
     (edgeId: string) => {
+      pushHistorySnapshot();
       const deleted = environment.removeEdge(edgeId);
       if (deleted) {
         if (selectedEdgeId === edgeId) setSelectedEdgeId(null);
@@ -453,11 +609,12 @@ export const App: React.FC = () => {
         bumpGraphVersion();
       }
     },
-    [environment, selectedEdgeId, bumpGraphVersion]
+    [environment, selectedEdgeId, bumpGraphVersion, pushHistorySnapshot]
   );
 
   const handleUpdateNodeConfig = useCallback(
     (nodeId: string, config: Parameters<typeof environment.updateNodeConfig>[1]) => {
+      pushHistorySnapshot();
       const updated = environment.updateNodeConfig(nodeId, config);
       if (updated) {
         setIsValidationStale(true);
@@ -465,11 +622,12 @@ export const App: React.FC = () => {
         bumpGraphVersion();
       }
     },
-    [environment, bumpGraphVersion]
+    [environment, bumpGraphVersion, pushHistorySnapshot]
   );
 
   const handleUpdateEdgeConfig = useCallback(
     (edgeId: string, config: Parameters<typeof environment.updateEdgeConfig>[1]) => {
+      pushHistorySnapshot();
       const updated = environment.updateEdgeConfig(edgeId, config);
       if (updated) {
         setIsValidationStale(true);
@@ -477,7 +635,7 @@ export const App: React.FC = () => {
         bumpGraphVersion();
       }
     },
-    [environment, bumpGraphVersion]
+    [environment, bumpGraphVersion, pushHistorySnapshot]
   );
 
   // Focus and Canvas navigation
@@ -497,6 +655,8 @@ export const App: React.FC = () => {
   const handleApplyRemediation = useCallback(
     (action: RemediationAction) => {
       if (!action.isAutomated) return;
+
+      pushHistorySnapshot();
 
       if (action.type === 'deny-edge' && action.targetEdgeId) {
         environment.updateEdgeConfig(action.targetEdgeId, { access: 'deny' });
@@ -537,7 +697,7 @@ export const App: React.FC = () => {
       setHasUnsavedChanges(true);
       bumpGraphVersion();
     },
-    [environment, bumpGraphVersion]
+    [environment, bumpGraphVersion, pushHistorySnapshot]
   );
 
   const handleExportJson = () => {
@@ -585,6 +745,14 @@ export const App: React.FC = () => {
         latestVerification={latestVerification}
         validationResult={validationResult}
         isValidationStale={isValidationStale}
+        canUndo={undoStack.length > 0}
+        canRedo={redoStack.length > 0}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onOpenSearch={() => setIsSearchOpen(true)}
+        onOpenShortcuts={() => setIsShortcutsOpen(true)}
+        isInspectorOpen={isInspectorOpen}
+        onToggleInspector={handleToggleInspector}
       />
 
       {/* Main Workspace Body */}
@@ -606,6 +774,7 @@ export const App: React.FC = () => {
             onSelectNode={handleSelectNode}
             onSelectEdge={handleSelectEdge}
             onUpdateNodePosition={handleUpdateNodePosition}
+            onNodeDragStart={pushHistorySnapshot}
             onCreateNode={handleCreateNode}
             onCreateEdge={handleCreateEdge}
             onDeleteNode={handleDeleteNode}
@@ -639,6 +808,8 @@ export const App: React.FC = () => {
           selectedFinding={selectedFinding}
           selectedAttackPath={selectedAttackPath}
           findings={validationResult?.findings ?? []}
+          isOpen={isInspectorOpen}
+          onToggleOpen={handleToggleInspector}
           onClearSelection={handleClearSelection}
           onApplyRemediation={handleApplyRemediation}
           onLocateElement={handleLocateElement}
@@ -724,6 +895,22 @@ export const App: React.FC = () => {
       <GuidedTourModal
         isOpen={isTourOpen}
         onClose={() => setIsTourOpen(false)}
+      />
+
+      {/* Node Quick Search Modal (Ctrl+K) */}
+      <SearchNodesModal
+        isOpen={isSearchOpen}
+        environment={environment}
+        onClose={() => setIsSearchOpen(false)}
+        onSelectNode={(nodeId) => {
+          handleLocateElement({ id: nodeId, type: 'node' });
+        }}
+      />
+
+      {/* Keyboard Shortcuts Cheatsheet Modal (?) */}
+      <KeyboardShortcutsModal
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
       />
     </div>
   );

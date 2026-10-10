@@ -16,6 +16,7 @@ import {
   Boxes,
 } from 'lucide-react';
 import { CoreNodeType } from '@pathforge/shared';
+import { loadUiPreferences, saveUiPreferences } from '../utils/uiPreferences.js';
 
 interface PaletteItem {
   type: CoreNodeType;
@@ -156,12 +157,26 @@ interface ComponentPaletteProps {
 }
 
 export const ComponentPalette: React.FC<ComponentPaletteProps> = ({ onAddNodeType }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const prefs = loadUiPreferences();
+      return !prefs.isPaletteOpen;
+    }
+    return false;
+  });
+
+  const handleToggleCollapse = () => {
+    setIsCollapsed((prev) => {
+      const next = !prev;
+      saveUiPreferences({ isPaletteOpen: !next });
+      return next;
+    });
+  };
 
   return (
     <aside
       className={`border-r border-[var(--pf-border-default)] bg-[var(--pf-bg-panel)] hidden md:flex flex-col h-full select-none transition-all duration-200 z-20 font-sans ${
-        isCollapsed ? 'w-12' : 'w-60'
+        isCollapsed ? 'w-12' : 'w-64'
       }`}
     >
       {/* Header Bar */}
@@ -174,9 +189,10 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({ onAddNodeTyp
         )}
 
         <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={handleToggleCollapse}
           className="p-1 rounded text-[var(--pf-text-muted)] hover:text-[var(--pf-text-primary)] hover:bg-[var(--pf-bg-panel-hover)] transition-colors ml-auto cursor-pointer"
           title={isCollapsed ? 'Expand Component Palette' : 'Collapse Palette'}
+          aria-label={isCollapsed ? 'Expand Component Palette' : 'Collapse Component Palette'}
         >
           {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -187,7 +203,7 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({ onAddNodeTyp
         {PALETTE_GROUPS.map((group) => (
           <div key={group.id} className="space-y-1.5">
             {!isCollapsed && (
-              <div className="text-[10px] uppercase font-bold tracking-wider text-[var(--pf-text-muted)] px-1">
+              <div className="text-2xs uppercase font-bold tracking-wider text-[var(--pf-text-muted)] px-1">
                 {group.title}
               </div>
             )}
@@ -235,14 +251,14 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({ onAddNodeTyp
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-[var(--pf-text-primary)] group-hover:text-[var(--pf-accent)] truncate">
+                        <span className="text-sm font-semibold text-[var(--pf-text-primary)] group-hover:text-[var(--pf-accent)] truncate">
                           {item.label}
                         </span>
-                        <span className="text-[9px] font-mono px-1 py-0.2 rounded bg-[var(--pf-bg-app)] text-[var(--pf-text-muted)] border border-[var(--pf-border-subtle)] shrink-0 font-medium">
+                        <span className="text-2xs font-mono px-1.5 py-0.2 rounded bg-[var(--pf-bg-app)] text-[var(--pf-text-muted)] border border-[var(--pf-border-subtle)] shrink-0 font-medium">
                           {item.zone}
                         </span>
                       </div>
-                      <div className="text-[10px] text-[var(--pf-text-muted)] truncate mt-0.5">
+                      <div className="text-xs text-[var(--pf-text-muted)] truncate mt-0.5">
                         {item.desc}
                       </div>
                     </div>
@@ -256,7 +272,7 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({ onAddNodeTyp
 
       {/* Footer Instructions */}
       {!isCollapsed && (
-        <div className="p-2.5 border-t border-[var(--pf-border-subtle)] bg-[var(--pf-bg-panel)] text-[10px] text-[var(--pf-text-muted)] space-y-0.5 shrink-0">
+        <div className="p-2.5 border-t border-[var(--pf-border-subtle)] bg-[var(--pf-bg-panel)] text-xs text-[var(--pf-text-muted)] space-y-0.5 shrink-0">
           <div className="font-semibold text-[var(--pf-text-secondary)] uppercase tracking-wide">Usage</div>
           <div>• Drag tile onto canvas</div>
           <div>• Drag port to connect nodes</div>

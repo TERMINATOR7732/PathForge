@@ -13,8 +13,8 @@ html, body {
   background-color: var(--pf-bg-app);
   color: var(--pf-text-primary);
   font-family: var(--pf-font-ui);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--pf-font-size-base, 17px);
+  line-height: var(--pf-line-height-normal, 1.5);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -53,13 +53,13 @@ button:disabled {
 /* Explicit Select Normalization — Eliminates browser-default white select */
 select {
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--pf-font-size-sm, 15px);
   line-height: inherit;
   background-color: var(--pf-bg-panel);
   color: var(--pf-text-primary);
   border: 1px solid var(--pf-border-default);
   border-radius: var(--pf-radius-sm);
-  padding: 4px 8px;
+  padding: 6px 10px;
   cursor: pointer;
   outline: none;
   transition: border-color 150ms ease, background-color 150ms ease;
@@ -83,16 +83,17 @@ select option {
 /* Explicit Input Normalization */
 input, textarea {
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--pf-font-size-sm, 15px);
   line-height: inherit;
   background-color: var(--pf-bg-panel);
   color: var(--pf-text-primary);
   border: 1px solid var(--pf-border-default);
   border-radius: var(--pf-radius-sm);
-  padding: 6px 10px;
+  padding: 7px 12px;
   outline: none;
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
+
 
 input:hover, textarea:hover {
   border-color: var(--pf-border-strong);
