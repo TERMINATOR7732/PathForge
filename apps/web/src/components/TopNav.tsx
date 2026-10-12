@@ -12,7 +12,6 @@ import {
   Image,
   AlertTriangle,
   ArrowRight,
-  Shield,
   Activity,
   Compass,
   Undo2,
@@ -30,6 +29,7 @@ import {
   printOrSaveReportAsHtml,
   exportEnvironmentSvg,
 } from '../utils/exportHelpers.js';
+import { PathForgeLogo } from './PathForgeLogo.js';
 
 interface TopNavProps {
   currentScenarioId: string;
@@ -111,9 +111,7 @@ export const TopNav: React.FC<TopNavProps> = ({
       <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
         {/* Brand */}
         <div className="flex items-center space-x-2 pr-1 shrink-0">
-          <div className="w-6 h-6 rounded bg-[var(--pf-accent-subtle)] border border-[var(--pf-border-focus)] flex items-center justify-center text-[var(--pf-accent)]">
-            <Shield className="w-3.5 h-3.5" />
-          </div>
+          <PathForgeLogo className="w-6 h-6 shrink-0" />
           <div className="flex items-baseline space-x-1.5">
             <span className="font-bold text-sm tracking-tight text-[var(--pf-text-primary)] font-sans">
               PATHFORGE
