@@ -130,6 +130,7 @@ export const TopNav: React.FC<TopNavProps> = ({
             Scenario:
           </span>
           <button
+            data-testid="topnav-scenario-button"
             onClick={onOpenScenarioModal}
             className="pf-btn pf-btn-secondary flex items-center space-x-1.5 px-2 sm:px-2.5 py-1 text-xs min-w-0"
             title="Switch Environment Scenario (Ctrl+O)"

@@ -46,6 +46,7 @@ import {
   loadUiPreferences,
   saveUiPreferences,
   clampConsoleHeight,
+  getResponsiveMaxConsoleHeight,
   MIN_CONSOLE_HEIGHT,
   DEFAULT_CONSOLE_HEIGHT,
 } from '../utils/uiPreferences.js';
@@ -174,6 +175,20 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
     };
   }, []);
 
+  useEffect(() => {
+    const handleResize = () => {
+      setConsoleHeight((currentH) => {
+        const clamped = clampConsoleHeight(currentH);
+        if (clamped !== currentH) {
+          saveUiPreferences({ consoleHeight: clamped });
+        }
+        return clamped;
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const handleToggleOpen = (open?: boolean) => {
     setIsOpen((prev) => {
       const next = typeof open === 'boolean' ? open : !prev;
@@ -191,7 +206,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
     const onPointerMove = (moveEvt: PointerEvent) => {
       moveEvt.preventDefault();
       const delta = startY - moveEvt.clientY;
-      const maxH = typeof window !== 'undefined' ? Math.floor(window.innerHeight * 0.75) : 800;
+      const maxH = typeof window !== 'undefined' ? getResponsiveMaxConsoleHeight(window.innerHeight) : 800;
       const nextH = Math.max(MIN_CONSOLE_HEIGHT, Math.min(maxH, startH + delta));
       setConsoleHeight(nextH);
       if (!isOpen && delta > 20) {
@@ -231,7 +246,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
       e.preventDefault();
       setIsOpen(true);
       setConsoleHeight((h) => {
-        const maxH = typeof window !== 'undefined' ? Math.floor(window.innerHeight * 0.75) : 800;
+        const maxH = typeof window !== 'undefined' ? getResponsiveMaxConsoleHeight(window.innerHeight) : 800;
         const nextH = Math.min(maxH, h + 24);
         saveUiPreferences({ consoleHeight: nextH, isConsoleOpen: true });
         return nextH;
@@ -445,7 +460,7 @@ export const FindingsDrawer: React.FC<FindingsDrawerProps> = ({
           aria-label="Resize console divider"
           aria-valuenow={isOpen ? consoleHeight : 40}
           aria-valuemin={MIN_CONSOLE_HEIGHT}
-          aria-valuemax={typeof window !== 'undefined' ? Math.floor(window.innerHeight * 0.75) : 800}
+          aria-valuemax={typeof window !== 'undefined' ? getResponsiveMaxConsoleHeight(window.innerHeight) : 800}
           title="Drag up or down to resize console (Double-click to toggle, Arrow keys to adjust)"
           className={`h-2 -mt-1 w-full cursor-row-resize flex items-center justify-center group relative z-40 select-none transition-colors ${
             isDragging ? 'bg-[var(--pf-accent)]/80' : 'hover:bg-[var(--pf-accent)]/20'

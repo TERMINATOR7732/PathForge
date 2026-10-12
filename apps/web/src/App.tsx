@@ -34,6 +34,7 @@ import { GuidedTourModal } from './components/GuidedTourModal.js';
 import { SearchNodesModal } from './components/SearchNodesModal.js';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal.js';
 import { loadUiPreferences, saveUiPreferences } from './utils/uiPreferences.js';
+import { getNonOverlappingPosition } from './utils/canvasPlacement.js';
 
 export const App: React.FC = () => {
   const initialScenarioId = useMemo(() => {
@@ -712,15 +713,9 @@ export const App: React.FC = () => {
     setHasUnsavedChanges(false);
   };
 
-  // Close scenario chooser and offer guided tour if entering workspace for the first time
+  // Close scenario chooser
   const handleCloseScenarioModal = useCallback(() => {
     setIsScenarioModalOpen(false);
-    if (typeof window !== 'undefined') {
-      const tourCompleted = localStorage.getItem('pathforge_tour_completed');
-      if (!tourCompleted) {
-        setIsTourOpen(true);
-      }
-    }
   }, []);
 
   const activeScenario = getScenarioById(activeScenarioId);
@@ -759,7 +754,11 @@ export const App: React.FC = () => {
       <div className="pf-shell-main flex-1 flex overflow-hidden min-h-0">
         <ComponentPalette
           onAddNodeType={(type) => {
-            handleCreateNode(type, { x: 300, y: 250 });
+            const position = getNonOverlappingPosition(
+              environment.getNodes(),
+              { x: 300, y: 250 }
+            );
+            handleCreateNode(type, position);
           }}
         />
 
@@ -860,6 +859,7 @@ export const App: React.FC = () => {
         isOpen={isScenarioModalOpen}
         activeScenarioId={activeScenarioId}
         onClose={handleCloseScenarioModal}
+        onStartTour={() => setIsTourOpen(true)}
         onSelectScenario={(scenarioId) => {
           handleLoadScenario(scenarioId);
           handleCloseScenarioModal();

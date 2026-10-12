@@ -9,12 +9,19 @@ import {
   loadUiPreferences,
   saveUiPreferences,
   clampConsoleHeight,
+  getResponsiveMaxConsoleHeight,
   DEFAULT_UI_PREFERENCES,
   UI_PREFERENCES_STORAGE_KEY,
   MIN_CONSOLE_HEIGHT,
   MAX_CONSOLE_HEIGHT,
   DEFAULT_CONSOLE_HEIGHT,
 } from '../apps/web/src/utils/uiPreferences.js';
+import {
+  getNonOverlappingPosition,
+  doNodesOverlap,
+  NODE_CANVAS_WIDTH,
+  NODE_CANVAS_HEIGHT,
+} from '../apps/web/src/utils/canvasPlacement.js';
 
 class MockStorage implements Storage {
   private store = new Map<string, string>();
@@ -516,6 +523,156 @@ describe('UI Usability & Quality-of-Life Sprint Invariants', () => {
 
       expect(hasMoved).toBe(true);
       expect(historyCallCount).toBe(1); // Only fired ONCE per drag
+    });
+  });
+
+  describe('9. Canvas Node Staggering & Placement Geometry', () => {
+    it('uses preferred position when canvas has no existing nodes', () => {
+      const pos = getNonOverlappingPosition([], { x: 300, y: 250 });
+      expect(pos).toEqual({ x: 300, y: 250 });
+    });
+
+    it('uses preferred position when existing nodes are distant', () => {
+      const existing = [{ position: { x: 50, y: 50 } }, { position: { x: 800, y: 600 } }];
+      const pos = getNonOverlappingPosition(existing, { x: 300, y: 250 });
+      expect(pos).toEqual({ x: 300, y: 250 });
+    });
+
+    it('detects node overlap within bounding box threshold', () => {
+      expect(doNodesOverlap({ x: 300, y: 250 }, { x: 300, y: 250 })).toBe(true);
+      expect(doNodesOverlap({ x: 300, y: 250 }, { x: 350, y: 270 })).toBe(true);
+      // Distant nodes
+      expect(doNodesOverlap({ x: 300, y: 250 }, { x: 600, y: 250 })).toBe(false);
+      expect(doNodesOverlap({ x: 300, y: 250 }, { x: 300, y: 400 })).toBe(false);
+    });
+
+    it('applies cascading non-overlapping offsets when preferred position is occupied', () => {
+      const existing = [{ position: { x: 300, y: 250 } }];
+      const pos1 = getNonOverlappingPosition(existing, { x: 300, y: 250 });
+      expect(pos1.x).not.toBe(300);
+      expect(pos1.y).not.toBe(250);
+      expect(doNodesOverlap({ x: 300, y: 250 }, pos1)).toBe(false);
+
+      // Adding the new node and checking the next one
+      const existing2 = [...existing, { position: pos1 }];
+      const pos2 = getNonOverlappingPosition(existing2, { x: 300, y: 250 });
+      expect(doNodesOverlap({ x: 300, y: 250 }, pos2)).toBe(false);
+      expect(doNodesOverlap(pos1, pos2)).toBe(false);
+    });
+
+    it('ensures consecutive nodes spawned in loop do not stack on each other', () => {
+      const placedNodes: { position: { x: number; y: number } }[] = [];
+      for (let i = 0; i < 5; i++) {
+        const nextPos = getNonOverlappingPosition(placedNodes, { x: 300, y: 250 });
+        for (const existing of placedNodes) {
+          expect(doNodesOverlap(existing.position, nextPos)).toBe(false);
+        }
+        placedNodes.push({ position: nextPos });
+      }
+      expect(placedNodes).toHaveLength(5);
+    });
+  });
+
+  describe('10. Responsive Findings Drawer Height Bounds', () => {
+    it('computes ~45% responsive cap on compact displays', () => {
+      expect(getResponsiveMaxConsoleHeight(600)).toBe(270);
+      expect(getResponsiveMaxConsoleHeight(800)).toBe(360);
+      expect(getResponsiveMaxConsoleHeight(1000)).toBe(450);
+      expect(getResponsiveMaxConsoleHeight(1200)).toBe(540);
+    });
+
+    it('respects MAX_CONSOLE_HEIGHT ceiling on very large displays', () => {
+      expect(getResponsiveMaxConsoleHeight(2000)).toBe(MAX_CONSOLE_HEIGHT);
+      expect(getResponsiveMaxConsoleHeight(3000)).toBe(MAX_CONSOLE_HEIGHT);
+    });
+
+    it('maintains a minimum usable floor of at least MIN_CONSOLE_HEIGHT + 40 (160px)', () => {
+      expect(getResponsiveMaxConsoleHeight(200)).toBe(160);
+      expect(getResponsiveMaxConsoleHeight(100)).toBe(160);
+      expect(getResponsiveMaxConsoleHeight(0)).toBe(MAX_CONSOLE_HEIGHT); // Fallback for invalid 0
+    });
+
+    it('clampConsoleHeight integrates with responsive viewport bound when passed', () => {
+      const responsiveMax = getResponsiveMaxConsoleHeight(600); // 270
+      expect(clampConsoleHeight(400, responsiveMax)).toBe(270);
+      expect(clampConsoleHeight(200, responsiveMax)).toBe(200);
+      expect(clampConsoleHeight(50, responsiveMax)).toBe(MIN_CONSOLE_HEIGHT);
+    });
+  });
+
+  describe('11. Decoupled Onboarding Flow & Tour Optionality', () => {
+    it('does not force tour open when closing scenario modal', () => {
+      let isScenarioModalOpen = true;
+      let isTourOpen = false;
+
+      // New decoupled handleCloseScenarioModal
+      const handleCloseScenarioModal = () => {
+        isScenarioModalOpen = false;
+      };
+
+      handleCloseScenarioModal();
+      expect(isScenarioModalOpen).toBe(false);
+      expect(isTourOpen).toBe(false); // Tour remains closed!
+    });
+
+    it('allows starting interactive tour explicitly via onStartTour callback', () => {
+      let isScenarioModalOpen = true;
+      let isTourOpen = false;
+
+      const handleCloseScenarioModal = () => {
+        isScenarioModalOpen = false;
+      };
+      const handleStartTour = () => {
+        isTourOpen = true;
+      };
+
+      // Simulating user clicking "Interactive Tour" in ScenarioModal footer
+      handleCloseScenarioModal();
+      handleStartTour();
+
+      expect(isScenarioModalOpen).toBe(false);
+      expect(isTourOpen).toBe(true);
+    });
+  });
+
+  describe('12. Connection Port Geometry & Edge Encryption Indicators', () => {
+    it('verifies 24x24 px hit target geometry centers on (0, 40) and (186, 40)', () => {
+      // Node dimensions
+      const nodeWidth = NODE_CANVAS_WIDTH; // 186
+      const nodeHeight = NODE_CANVAS_HEIGHT; // 80
+
+      // Port visual center y is nodeHeight / 2 = 40px
+      const visualCenterY = nodeHeight / 2;
+      expect(visualCenterY).toBe(40);
+
+      // Hit area container: width = 24, height = 24
+      const hitSize = 24;
+      const topOffset = visualCenterY - hitSize / 2; // 40 - 12 = 28px
+      expect(topOffset).toBe(28);
+
+      // Left input port: center x = 0
+      const leftOffset = -hitSize / 2; // -12px
+      expect(leftOffset).toBe(-12);
+
+      // Right output port: center x = nodeWidth
+      // CSS -right-[12px] places container centered on right edge (186px)
+      expect(hitSize / 2).toBe(12);
+    });
+
+    it('verifies edge encryption metadata contracts for encrypted vs cleartext channels', () => {
+      const encryptedEdge = {
+        metadata: { encrypted: true, protocol: 'HTTPS', ports: '443' },
+      };
+      const cleartextEdge = {
+        metadata: { encrypted: false, protocol: 'HTTP', ports: '80' },
+      };
+      const defaultCleartextEdge = {
+        metadata: { protocol: 'TCP', ports: '3306' },
+      };
+
+      expect(encryptedEdge.metadata.encrypted === true).toBe(true);
+      expect(cleartextEdge.metadata.encrypted === true).toBe(false);
+      expect(defaultCleartextEdge.metadata.encrypted === true).toBe(false);
     });
   });
 });

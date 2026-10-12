@@ -216,6 +216,7 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({ onAddNodeTyp
                   return (
                     <button
                       key={item.type}
+                      data-testid={`palette-item-${item.type}`}
                       draggable
                       onDragStart={(e) => {
                         e.dataTransfer.setData('application/pathforge-node-type', item.type);
@@ -233,6 +234,7 @@ export const ComponentPalette: React.FC<ComponentPaletteProps> = ({ onAddNodeTyp
                 return (
                   <div
                     key={item.type}
+                    data-testid={`palette-item-${item.type}`}
                     draggable
                     onDragStart={(e) => {
                       e.dataTransfer.setData('application/pathforge-node-type', item.type);

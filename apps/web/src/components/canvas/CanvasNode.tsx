@@ -172,19 +172,25 @@ export const CanvasNode: React.FC<CanvasNodeProps> = ({
       onMouseEnter={() => onHoverConnectionTarget(node.id)}
       onMouseLeave={() => onHoverConnectionTarget(null)}
     >
-      {/* Input Connection Handle (Left) */}
+      {/* Input Connection Handle (Left) - 24x24px hit area, 10x10px visual dot */}
       <div
-        className="absolute -left-[5px] top-[35px] w-2.5 h-2.5 rounded-full bg-[#11151c] border-2 border-[#58a6ff] hover:bg-[#58a6ff] hover:scale-125 transition-transform z-20 cursor-pointer"
+        data-testid="node-port-input"
+        className="absolute -left-[12px] top-[28px] w-[24px] h-[24px] flex items-center justify-center z-20 cursor-pointer group/inport"
         title="Inbound Traffic Port (Click/Drop to Connect)"
         onMouseEnter={() => onHoverConnectionTarget(node.id)}
-      />
+      >
+        <div className="w-[10px] h-[10px] rounded-full bg-[#11151c] border-2 border-[#58a6ff] group-hover/inport:bg-[#58a6ff] group-hover/inport:scale-125 transition-transform" />
+      </div>
 
-      {/* Output Connection Handle (Right) */}
+      {/* Output Connection Handle (Right) - 24x24px hit area, 10x10px visual dot */}
       <div
-        className="absolute -right-[5px] top-[35px] w-2.5 h-2.5 rounded-full bg-[#11151c] border-2 border-[#3fb950] hover:bg-[#3fb950] hover:scale-125 transition-transform z-20 cursor-crosshair"
+        data-testid="node-port-output"
+        className="absolute -right-[12px] top-[28px] w-[24px] h-[24px] flex items-center justify-center z-20 cursor-crosshair group/outport"
         title="Outbound Traffic Port (Drag to Target)"
         onMouseDown={handleOutputHandleMouseDown}
-      />
+      >
+        <div className="w-[10px] h-[10px] rounded-full bg-[#11151c] border-2 border-[#3fb950] group-hover/outport:bg-[#3fb950] group-hover/outport:scale-125 transition-transform" />
+      </div>
 
       {/* Left Tier Accent Stripe */}
       <div

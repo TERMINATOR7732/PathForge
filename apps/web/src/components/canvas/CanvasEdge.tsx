@@ -1,6 +1,6 @@
 import React from 'react';
 import { InfrastructureEdge, InfrastructureNode } from '@pathforge/core';
-import { Lock } from 'lucide-react';
+import { Lock, Unlock } from 'lucide-react';
 import { NODE_WIDTH, NODE_HEIGHT } from './CanvasNode.js';
 
 interface CanvasEdgeProps {
@@ -125,9 +125,9 @@ export const CanvasEdge: React.FC<CanvasEdgeProps> = ({
 
       {/* Compact Midpoint Specification Pill */}
       <foreignObject
-        x={midX - 55}
+        x={midX - 62}
         y={midY - 11}
-        width={110}
+        width={124}
         height={22}
         className="pointer-events-none overflow-visible"
       >
@@ -145,9 +145,23 @@ export const CanvasEdge: React.FC<CanvasEdgeProps> = ({
                 : 'bg-[#11151c] border-[#212631] text-[#8b949e] group-hover:border-[#388bfd] group-hover:text-white'
             }`}
           >
-            {isEncrypted && (
-              <span title="Encrypted TLS Channel">
+            {isEncrypted ? (
+              <span
+                title="Encrypted Channel (TLS/mTLS)"
+                aria-label="Encrypted Channel"
+                data-testid="edge-encrypted-indicator"
+                className="inline-flex items-center"
+              >
                 <Lock className="w-2.5 h-2.5 text-[#3fb950] shrink-0" />
+              </span>
+            ) : (
+              <span
+                title="Unencrypted Cleartext Channel"
+                aria-label="Unencrypted Cleartext Channel"
+                data-testid="edge-unencrypted-indicator"
+                className="inline-flex items-center"
+              >
+                <Unlock className="w-2.5 h-2.5 text-[#e3b341] shrink-0" />
               </span>
             )}
 

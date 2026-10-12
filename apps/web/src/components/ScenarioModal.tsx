@@ -14,6 +14,7 @@ import {
   Layers,
   Sparkles,
   PlusCircle,
+  HelpCircle,
 } from 'lucide-react';
 
 interface ScenarioModalProps {
@@ -21,6 +22,7 @@ interface ScenarioModalProps {
   activeScenarioId: string;
   onClose: () => void;
   onSelectScenario: (scenarioId: string) => void;
+  onStartTour?: () => void;
 }
 
 interface ScenarioOptionItem {
@@ -72,6 +74,7 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
   activeScenarioId,
   onClose,
   onSelectScenario,
+  onStartTour,
 }) => {
   React.useEffect(() => {
     if (!isOpen) return;
@@ -309,7 +312,22 @@ export const ScenarioModal: React.FC<ScenarioModalProps> = ({
             Deterministic local-first security simulator. Insecure connections are permitted and analyzed.
           </div>
           <div className="flex items-center space-x-2 shrink-0 self-end sm:self-auto">
+            {onStartTour && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onStartTour();
+                }}
+                className="px-3 py-1 rounded bg-[#212631] text-[#58a6ff] hover:text-white hover:bg-[#1f6feb]/30 border border-[#388bfd]/30 transition-colors text-xs font-medium cursor-pointer flex items-center space-x-1.5"
+                title="Start the interactive walkthrough tour"
+              >
+                <HelpCircle className="w-3.5 h-3.5 text-[#58a6ff]" />
+                <span>Interactive Tour</span>
+              </button>
+            )}
             <button
+              type="button"
               onClick={onClose}
               className="px-3 py-1 rounded bg-[#212631] text-[#c9d1d9] hover:text-white hover:bg-[#303746] transition-colors text-xs font-medium cursor-pointer"
             >
