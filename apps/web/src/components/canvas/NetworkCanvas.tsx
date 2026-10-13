@@ -905,7 +905,7 @@ export const NetworkCanvas: React.FC<NetworkCanvasProps> = ({
             <div className="space-y-1">
               <h2 className="text-base font-semibold text-[#f0f3f6]">Empty Architecture Canvas</h2>
               <p className="text-xs text-[#8b949e] leading-relaxed">
-                Drag infrastructure components from the left palette onto the canvas, or load a verified reference scenario below.
+                Start by adding a component from the palette, or load a scenario to explore a working network.
               </p>
             </div>
 

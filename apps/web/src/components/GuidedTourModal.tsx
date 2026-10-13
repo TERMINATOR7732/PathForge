@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Compass,
   ArrowRight,
@@ -31,11 +31,11 @@ const TOUR_STEPS: TourStep[] = [
     icon: Layers,
     accentColor: 'text-[#58a6ff] bg-[#388bfd]/20 border-[#388bfd]/50',
     description:
-      'The center viewport is your interactive topology canvas. Visualize systems across trust zones: Public ingress, DMZ perimeter, Internal application tier, and Restricted data tier.',
+      'The center viewport is your interactive topology canvas. Start with a clean blank canvas to build custom networks from scratch, or load predefined reference scenarios from the Scenario menu.',
     keyPoints: [
       'Pan and zoom freely or click the center/fit button.',
       'Trust zone boundaries automatically cluster and frame nodes.',
-      'Hover over components or connections to view instant details.',
+      'Build from scratch with the palette or switch to predefined scenarios anytime.',
     ],
   },
   {
@@ -45,7 +45,7 @@ const TOUR_STEPS: TourStep[] = [
     description:
       'Model architectures using components from the left palette (Internet, Firewalls, Web Servers, APIs, Databases). Draw directional connections between node ports.',
     keyPoints: [
-      'Click or drag palette items onto the canvas to place nodes.',
+      'Click or drag palette items onto the canvas to place nodes and build from scratch.',
       'Connect ports to specify protocols (HTTPS, TCP, SSH) and access policies.',
       'Arbitrary and insecure connections are permitted so you can explore anti-patterns.',
     ],
@@ -79,7 +79,7 @@ const TOUR_STEPS: TourStep[] = [
     icon: Wrench,
     accentColor: 'text-[#e3b341] bg-[#d29922]/20 border-[#d29922]/50',
     description:
-      'Test defensive hypotheses by editing connection properties in the right inspector, or clicking "Apply Fix" on a finding for automated remediation.',
+      'Test defensive hypotheses by editing connection properties in the right inspector, adding or removing nodes, or clicking "Apply Fix" on a finding for automated remediation.',
     keyPoints: [
       'Restrict ports to match target services (e.g. 5432 for Postgres).',
       'Enforce TLS/HTTPS encryption or switch access policies to DENY.',
@@ -106,6 +106,30 @@ export const GuidedTourModal: React.FC<GuidedTourModalProps> = ({
 }) => {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentStepIndex(0);
+    }
+  }, [isOpen]);
+
+  const handleComplete = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pathforge_tour_completed', 'true');
+    }
+    onClose();
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleComplete();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const currentStep = TOUR_STEPS[currentStepIndex];
@@ -125,13 +149,6 @@ export const GuidedTourModal: React.FC<GuidedTourModalProps> = ({
     if (!isFirst) {
       setCurrentStepIndex((prev) => prev - 1);
     }
-  };
-
-  const handleComplete = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('pathforge_tour_completed', 'true');
-    }
-    onClose();
   };
 
   return (

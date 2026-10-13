@@ -9,7 +9,6 @@ import {
   FixVerificationResult,
   instantiateScenario,
   getScenarioById,
-  getDefaultScenario,
   analyzeAttackPaths,
   analyzeBlastRadius,
   analyzeArchitecture,
@@ -41,25 +40,19 @@ export const App: React.FC = () => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const s = params.get('scenario');
-      if (s === 'scratch' || s === 'empty') return s;
+      if (s === 'scratch' || s === 'empty') return 'scratch';
       if (s && getScenarioById(s)) return s;
     }
-    return getDefaultScenario().id;
+    return 'scratch';
   }, []);
 
   const [activeScenarioId, setActiveScenarioId] = useState<string>(initialScenarioId);
 
-  // Scenario Chooser first-use auto-open (Phase C)
+  // Scenario Chooser modal state (accessible via TopNav or canvas actions)
   const [isScenarioModalOpen, setIsScenarioModalOpen] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      // If scenario explicitly requested in query, don't open chooser
-      if (params.has('scenario')) return false;
-      const visited = localStorage.getItem('pathforge_visited');
-      if (!visited) {
-        localStorage.setItem('pathforge_visited', 'true');
-        return true;
-      }
+      if (params.get('scenario-modal') === 'true') return true;
     }
     return false;
   });
@@ -69,11 +62,16 @@ export const App: React.FC = () => {
   const [pendingScenarioId, setPendingScenarioId] = useState<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
 
-  // Guided Tour modal state (Phase D)
+  // Guided Tour modal state - Automatically launches on first visit unless previously completed/dismissed
   const [isTourOpen, setIsTourOpen] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       if (params.get('tour') === 'true') return true;
+      if (params.get('tour') === 'false') return false;
+      const tourCompleted = localStorage.getItem('pathforge_tour_completed');
+      if (!tourCompleted) {
+        return true;
+      }
     }
     return false;
   });
@@ -718,7 +716,10 @@ export const App: React.FC = () => {
     setIsScenarioModalOpen(false);
   }, []);
 
-  const activeScenario = getScenarioById(activeScenarioId);
+  const activeScenario =
+    activeScenarioId === 'scratch' || activeScenarioId === 'empty'
+      ? { name: 'Custom Architecture' }
+      : getScenarioById(activeScenarioId);
   const pendingScenario =
     pendingScenarioId === 'scratch'
       ? { name: 'Build from Scratch' }
@@ -795,6 +796,7 @@ export const App: React.FC = () => {
             selectedAttackPath={selectedAttackPath}
             selectedNodeId={selectedNodeId}
             selectedEdgeId={selectedEdgeId}
+            nodeCount={environment.getNodes().length}
             onValidate={handleValidate}
           />
         </div>

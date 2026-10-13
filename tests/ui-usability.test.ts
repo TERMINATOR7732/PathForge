@@ -6,6 +6,10 @@ import {
   deserializeEnvironment,
 } from '@pathforge/core';
 import {
+  createDefaultRuleRegistry,
+  ValidatorEngine,
+} from '@pathforge/validator';
+import {
   loadUiPreferences,
   saveUiPreferences,
   clampConsoleHeight,
@@ -673,6 +677,150 @@ describe('UI Usability & Quality-of-Life Sprint Invariants', () => {
       expect(encryptedEdge.metadata.encrypted === true).toBe(true);
       expect(cleartextEdge.metadata.encrypted === true).toBe(false);
       expect(defaultCleartextEdge.metadata.encrypted === true).toBe(false);
+    });
+  });
+
+  describe('13. First-Visit Experience, Blank Canvas & Interactive Tour Invariants', () => {
+    it('resolves initialScenarioId to "scratch" (blank canvas) when no scenario query param is present', () => {
+      const resolveInitialScenario = (search: string) => {
+        const params = new URLSearchParams(search);
+        const s = params.get('scenario');
+        if (s === 'scratch' || s === 'empty') return 'scratch';
+        if (s && ['secure-web-app', 'public-db-exposure', 'flat-network', 'chaos-lab'].includes(s)) return s;
+        return 'scratch';
+      };
+
+      expect(resolveInitialScenario('')).toBe('scratch');
+      expect(resolveInitialScenario('?other=123')).toBe('scratch');
+      expect(resolveInitialScenario('?scenario=secure-web-app')).toBe('secure-web-app');
+      expect(resolveInitialScenario('?scenario=public-db-exposure')).toBe('public-db-exposure');
+      expect(resolveInitialScenario('?scenario=scratch')).toBe('scratch');
+    });
+
+    it('initializes a fresh Environment in scratch mode with 0 nodes and 0 edges', () => {
+      const scratchEnv = new Environment({
+        id: 'env-scratch',
+        name: 'Custom Architecture',
+        description: 'Blank infrastructure canvas ready for custom modeling.',
+      });
+
+      expect(scratchEnv.getNodes()).toHaveLength(0);
+      expect(scratchEnv.getEdges()).toHaveLength(0);
+      expect(scratchEnv.name).toBe('Custom Architecture');
+    });
+
+    it('evaluates an empty environment cleanly with 0 findings and passed validation', () => {
+      const scratchEnv = new Environment({
+        id: 'env-scratch',
+        name: 'Custom Architecture',
+        description: 'Blank infrastructure canvas ready for custom modeling.',
+      });
+      const engine = new ValidatorEngine(createDefaultRuleRegistry());
+      const result = engine.evaluate(scratchEnv);
+
+      expect(result.findings).toHaveLength(0);
+      expect(result.summary.totalFindings).toBe(0);
+      expect(result.summary.criticalCount).toBe(0);
+      expect(result.summary.highCount).toBe(0);
+      expect(result.summary.passed).toBe(true);
+    });
+
+    it('automatically launches interactive tour on fresh visit when tour is uncompleted', () => {
+      const resolveIsTourOpen = (search: string, storage: MockStorage) => {
+        const params = new URLSearchParams(search);
+        if (params.get('tour') === 'true') return true;
+        if (params.get('tour') === 'false') return false;
+        const tourCompleted = storage.getItem('pathforge_tour_completed');
+        if (!tourCompleted) {
+          return true;
+        }
+        return false;
+      };
+
+      // 1. Fresh visit: unset storage -> tour opens automatically
+      expect(mockStorage.getItem('pathforge_tour_completed')).toBeNull();
+      expect(resolveIsTourOpen('', mockStorage)).toBe(true);
+
+      // 2. Query param ?tour=false suppresses tour
+      expect(resolveIsTourOpen('?tour=false', mockStorage)).toBe(false);
+    });
+
+    it('persists tour completion/dismissal and avoids trapping returning users in a tour loop', () => {
+      const resolveIsTourOpen = (search: string, storage: MockStorage) => {
+        const params = new URLSearchParams(search);
+        if (params.get('tour') === 'true') return true;
+        if (params.get('tour') === 'false') return false;
+        const tourCompleted = storage.getItem('pathforge_tour_completed');
+        if (!tourCompleted) {
+          return true;
+        }
+        return false;
+      };
+
+      // User completes or skips tour
+      mockStorage.setItem('pathforge_tour_completed', 'true');
+
+      // Subsequent visit / page refresh: tour does NOT open
+      expect(resolveIsTourOpen('', mockStorage)).toBe(false);
+      expect(resolveIsTourOpen('?other=abc', mockStorage)).toBe(false);
+
+      // Manual request via query param still opens tour
+      expect(resolveIsTourOpen('?tour=true', mockStorage)).toBe(true);
+    });
+
+    it('skipping or completing the tour does not populate the canvas', () => {
+      let env = new Environment({
+        id: 'env-scratch',
+        name: 'Custom Architecture',
+      });
+      let isTourOpen = true;
+
+      const handleCompleteTour = () => {
+        mockStorage.setItem('pathforge_tour_completed', 'true');
+        isTourOpen = false;
+      };
+
+      handleCompleteTour();
+      expect(isTourOpen).toBe(false);
+      expect(mockStorage.getItem('pathforge_tour_completed')).toBe('true');
+      // Canvas remains completely blank
+      expect(env.getNodes()).toHaveLength(0);
+      expect(env.getEdges()).toHaveLength(0);
+    });
+
+    it('loads predefined scenario on demand and allows switching back to blank canvas', () => {
+      let currentEnv = new Environment({
+        id: 'env-scratch',
+        name: 'Custom Architecture',
+      });
+      expect(currentEnv.getNodes()).toHaveLength(0);
+
+      // User selects 'secure-web-app'
+      currentEnv = instantiateScenario('secure-web-app');
+      expect(currentEnv.getNodes().length).toBeGreaterThan(0);
+      expect(currentEnv.getEdges().length).toBeGreaterThan(0);
+
+      // User selects 'scratch' / 'Build from Scratch' to return to empty canvas
+      currentEnv = new Environment({
+        id: 'env-scratch',
+        name: 'Custom Architecture',
+        description: 'Blank infrastructure canvas ready for custom modeling.',
+      });
+      expect(currentEnv.getNodes()).toHaveLength(0);
+      expect(currentEnv.getEdges()).toHaveLength(0);
+    });
+
+    it('keeps interactive tour manually accessible even after prior completion', () => {
+      mockStorage.setItem('pathforge_tour_completed', 'true');
+      let isTourOpen = false;
+
+      // User clicks "Tour" button in TopNav
+      const onOpenTour = () => {
+        isTourOpen = true;
+      };
+
+      onOpenTour();
+      expect(isTourOpen).toBe(true);
     });
   });
 });

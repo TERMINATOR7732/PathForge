@@ -109,7 +109,9 @@ export const SearchNodesModal: React.FC<SearchNodesModalProps> = ({
         <div className="max-h-80 overflow-y-auto p-2 space-y-1">
           {filteredNodes.length === 0 ? (
             <div className="py-8 text-center text-[#8b949e] text-xs">
-              No components match &quot;{query}&quot;
+              {query
+                ? `No components match "${query}"`
+                : 'No components on canvas yet. Add components from the palette to search.'}
             </div>
           ) : (
             filteredNodes.map((n, idx) => {

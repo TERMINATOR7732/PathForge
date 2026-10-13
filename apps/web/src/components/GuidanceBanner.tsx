@@ -11,6 +11,7 @@ interface GuidanceBannerProps {
   selectedAttackPath?: AttackPath | null;
   selectedNodeId?: string | null;
   selectedEdgeId?: string | null;
+  nodeCount?: number;
   onValidate?: () => void;
 }
 
@@ -22,6 +23,7 @@ export const GuidanceBanner: React.FC<GuidanceBannerProps> = ({
   selectedAttackPath,
   selectedNodeId,
   selectedEdgeId,
+  nodeCount,
   onValidate,
 }) => {
   const [isDismissed, setIsDismissed] = useState(false);
@@ -32,7 +34,7 @@ export const GuidanceBanner: React.FC<GuidanceBannerProps> = ({
     selectedAttackPath?.id ?? ''
   }-${selectedFinding?.id ?? ''}-${selectedNodeId ?? ''}-${selectedEdgeId ?? ''}-${
     validationResult?.findings.length ?? 0
-  }`;
+  }-${nodeCount ?? ''}`;
 
   useEffect(() => {
     if (currentStateHash !== lastStateHash) {
@@ -119,6 +121,16 @@ export const GuidanceBanner: React.FC<GuidanceBannerProps> = ({
         badge: 'ANALYSIS COMPLETED',
         badgeColor: 'text-[#f0883e] bg-[#f0883e]/20 border-[#f0883e]/50',
         text: 'Select a finding in the bottom console to understand the risk and explore attack vectors.',
+        actionLabel: null,
+        onAction: undefined,
+      };
+    }
+
+    if (typeof nodeCount === 'number' && nodeCount === 0) {
+      return {
+        badge: 'EMPTY CANVAS',
+        badgeColor: 'text-[#58a6ff] bg-[#388bfd]/20 border-[#388bfd]/50',
+        text: 'Start by adding a component from the palette, or load a scenario to explore a working network.',
         actionLabel: null,
         onAction: undefined,
       };
